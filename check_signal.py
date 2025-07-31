@@ -158,6 +158,7 @@ for code in ticker_list:
         market_state = info.get("marketState", "UNKNOWN")
         market_price = info.get("regularMarketPrice", None)
         close_price = info.get("previousClose", None)
+        close_price_label = "前日終値"
         price = market_price if market_price and market_price != close_price else close_price
         price_label = "現在価格" if market_price and market_price != close_price else "終値"
 
