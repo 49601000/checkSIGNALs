@@ -119,10 +119,8 @@ def get_market_status(exchange: str, state: str) -> str:
         status_text = "取引中" if is_open else "取引終了"
     else:
         status_text = "休場中"
-
     return f"{label}の市場状態: {status_text}"
     }
-    return f"{label} {state_translation.get(state, '不明')}"
 
 # 市場情報取得
 first_ticker = yf.Ticker(ticker)
