@@ -161,7 +161,8 @@ for code in ticker_list:
         avg_loss = loss.rolling(14).mean().replace(0, 1e-10)
         rs = avg_gain / avg_loss
         df["RSI"] = 100 - (100 / (1 + rs))
-                df_valid = df.dropna()
+        
+        df_valid = df.dropna()
         if df_valid.empty:
             st.warning(f"{code}: 有効なテクニカル指標がありません。")
             continue
