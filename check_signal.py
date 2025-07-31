@@ -75,7 +75,7 @@ def judge_signal(price, ma25, ma75, rsi, bb_lower1):
     else:
         return "シグナルなし", "🟢", 0
 
-# 🧭ティッカーから市場を特定
+# 🧭 ティッカーから取引所を判別
 def get_exchange_name(ticker: str) -> str:
     if ticker.endswith(".T") or ticker.isdigit():
         return "東証"
@@ -88,27 +88,19 @@ def get_exchange_name(ticker: str) -> str:
     else:
         return "その他"
 
+# ⏰ 日付をまたぐ時間帯にも対応した営業判定関数
+def is_market_open(now, open_time, close_time):
+    if open_time < close_time:
+        return open_time <= now <= close_time
+    else:
+        return now >= open_time or now <= close_time
 
-# 🧭市場状態
+# 🧭 市場状態の表示テキスト生成
 from datetime import datetime, time
 import pytz
 
-# 取引所判定用関数（事前に定義しておく）
-def get_exchange_name(ticker: str) -> str:
-    if ticker.endswith(".T") or ticker.isdigit():
-        return "東証"
-    info = yf.Ticker(ticker).info
-    exchange = info.get("exchange", "").upper()
-    if exchange == "NASDAQ":
-        return "NASDAQ"
-    elif exchange == "NYSE":
-        return "NYSE"
-    else:
-        return "その他"
-
-# 市場状態判定関数（あなたのコードを元に整理済み）
 def get_market_status(exchange: str, state: str) -> str:
-    now_jst = datetime.now(pytz.timezone("Asia/Tokyo"))
+    now_jst = datetime.now(pytz.timezone("Asia/Tokyo")).time()
     status_map = {
         "NASDAQ": ("NASDAQ", time(22,30), time(5,0)),
         "NYSE":   ("NYSE",   time(22,30), time(5,0)),
@@ -117,8 +109,8 @@ def get_market_status(exchange: str, state: str) -> str:
     label, open_time, close_time = status_map.get(exchange, ("不明", None, None))
 
     if state == "CLOSED" and open_time and close_time:
-        if open_time <= now_jst.time() <= close_time:
-            return f"{label} 営業時間内（取得不可）"
+        if is_market_open(now_jst, open_time, close_time):
+            return f"{label} 営業時間内（marketState=取得不可）"
         else:
             return f"{label} 閉場中"
 
@@ -129,7 +121,6 @@ def get_market_status(exchange: str, state: str) -> str:
         "CLOSED": "閉場中",
         "UNKNOWN": "不明"
     }
-
     return f"{label} {state_translation.get(state, '不明')}"
 
 # 市場情報取得
@@ -140,6 +131,8 @@ market_state_jp = get_market_status(exchange_name, market_state)
 
 # Streamlit表示
 st.write(f"🕒 現在の市場状態：**{market_state_jp}**")
+
+
 # 🔁 メインロジック（単一ティッカー対応）
 for code in ticker_list:
     try:
