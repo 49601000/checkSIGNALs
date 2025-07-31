@@ -1,0 +1,192 @@
+import streamlit as st
+import yfinance as yf
+import pandas as pd
+import math
+
+
+st.set_page_config(page_title="✅任意銘柄の買いシグナルをチェック", page_icon="📊")
+st.title("✅買いシグナルチェッカー")
+
+# 📊 TICKER取得
+# ユーザーがティッカーを入力
+ticker = st.text_input("ティッカーシンボルを入力してください（例: AAPL, VYM, MSFTなど）", value="AAPL")
+
+def convert_ticker(ticker):
+    ticker = ticker.strip().upper()
+    # 既に.T, .TWO, .KS, .HKなどが付いている場合や、英字始まりならそのまま
+    if ticker.endswith('.T') or not ticker.isdigit():
+        return ticker
+    # 数字だけなら東証銘柄として.T付与
+    return ticker + ".T"
+  
+# 🏷️ 英語→日本語 銘柄名マップ
+name_map = {
+    "TOYOTA MOTOR CORP": "トヨタ自動車",
+    "MITSUBISHI UFJ FINANCIAL GROUP": "三菱UFJフィナンシャル・グループ",
+    "SONY GROUP CORP": "ソニーグループ",
+    "KDDI CORP": "KDDI",
+    "NTT INC": "NTT",
+    "SUMITOMO CHEMICAL COMPANY":"住友化学",
+    "TOKYU FUDOSAN HOLDINGS CORPORAT":"東急不動産",
+    "WATTS CO LTD":"ワッツ",
+    "TOKYO METRO CO LTD":"東京メトロ",
+    "SOFTBANK CORP.":"ソフトバンク",
+    "HAZAMA ANDO CORP":"安藤ハザマ",
+    "INPEX CORPORATION":"インペックス",
+    "MITSUBISHI HC CAPITAL INC":"三菱HCキャピタル",
+    "KYUSHU ELECTRIC POWER CO INC":"九州電力",
+    "KIKKOMAN CORP":"キッコーマン",
+    "MATSUI SECURITIES CO":"松井証券",
+    "ASTELLAS PHARMA":"アステラス製薬",
+    "SANSHA ELECTRIC MANUFACTURING":"三社電機製作所",
+    "NIPPON GEAR CO LTD":"日ギア工業",
+    "ONAMBA CO LTD":"オーナンバ",
+    "MORITO CO LTD":"モリト",
+    "MITSUBISHI CHEMICAL GROUP CORP":"三菱化学グループ",
+    "NIPPON SIGNAL CO":"日信号",
+    "CREATE MEDIC CO":"クリエート",
+    "JAPAN FOUNDATION ENGINEERING CO":"日基礎",
+    # 必要に応じて追加
+}
+
+# 🎯 ボリンジャーバンド判定関数の定義
+def judge_bb_signal(price, bb_upper1, bb_upper2, bb_lower1, bb_lower2):
+    if price >= bb_upper2:
+        return "非常に割高（+2σ以上）", "🔥", 3
+    elif price >= bb_upper1:
+        return "やや割高（+1σ以上）", "📈", 2
+    elif price <= bb_lower2:
+        return "過度な売られすぎ（-2σ以下）", "🧊", 3
+    elif price <= bb_lower1:
+        return "やや売られ気味（-1σ以下）", "📉", 2
+    else:
+        return "平均圏（±1σ内）", "⚪️", 1
+
+# 🎯 押し目＆RSIによるシグナル判定
+def judge_signal(price, ma25, ma75, rsi,bb_lower1):
+    if rsi is None:
+        return "RSI不明", "⚪️", 0
+    if price <= ma75 and rsi < 40 and price<=bb_lower1:
+        return "バーゲン（強い押し目）", "🔴", 3
+    elif (price <= ma75 and price < bb_lower1) or (rsi < 30 and price < bb_lower1):
+        return "そこそこ押し目", "🟠", 2
+    elif price < ma25 * 0.97 and rsi < 37.5 and price<=bb_lower1:
+        return "軽い押し目", "🟡", 1
+    else:
+        return "シグナルなし", "🟢", 0
+
+# 🧭 UI表示
+# 🏁 最初のティッカーから市場状態を取得（日本語対応付き）
+market_state_jp = "不明"  # デフォルト値
+
+if ticker_list:
+    first_ticker = yf.Ticker(ticker_list[0])
+    market_state = first_ticker.info.get("marketState", "UNKNOWN")
+
+    # 英語→日本語変換辞書
+    state_translation = {
+        "REGULAR": "通常取引中",
+        "PRE": "プレマーケット",
+        "POST": "アフターマーケット",
+        "CLOSED": "市場は閉場中",
+        "UNKNOWN": "不明"
+    }
+
+    # 対応する日本語に変換
+    market_state_jp = state_translation.get(market_state, "不明")
+
+st.title("📈 押し目買いシグナルDB")
+st.write(f"🕒 現在の市場状態：**{market_state_jp}**")
+
+
+# 🔁 メインループ
+for code in selected_tickers:
+    try:
+        ticker = yf.Ticker(code)
+        info = ticker.info
+
+        # ⛳ 日本語名対応
+        name_raw = info.get("shortName", "")
+        name = name_map.get(name_raw.upper(), name_raw)
+        industry = info.get("industry", "業種不明")
+        div_yield = info.get("dividendYield", None)
+        per = info.get("trailingPE", None)
+        price = info.get("regularMarketPrice", None)
+
+        div_text = f"{div_yield:.2f}%" if div_yield else "—"
+        per_text = f"{per:.2f}" if per else "—"
+
+        # 🕒 市場状態によって価格を選択
+        market_state = info.get("marketState", "UNKNOWN")
+        market_price = info.get("regularMarketPrice", None)
+        close_price = info.get("previousClose", None)
+
+        # ✅ 条件により価格選択
+        if market_price is not None and market_price != close_price:
+            price = market_price
+            price_label = "現在価格"
+        elif close_price is not None:
+            price = close_price
+            price_label = "終値"
+        else:
+            price = None
+            price_label = "価格未取得"
+            
+        df = yf.download(code, period="120d", interval="1d")
+        if df.empty or pd.isna(price):
+            st.warning(f"{code}: 株価データが取得できませんでした。")
+            continue
+
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = ['_'.join(col).strip() for col in df.columns]
+
+        close_col = next((col for col in df.columns if "Close" in col), None)
+        if not close_col:
+            st.warning(f"{code}: 'Close'列が見つかりません。列一覧: {df.columns.tolist()}")
+            continue
+        #移動平均の計算
+        df["25MA"] = df[close_col].rolling(25).mean()
+        df["75MA"] = df[close_col].rolling(75).mean()
+        # ✅ 20日ボリンジャーバンド（±1σ, ±2σ）の計算
+        df["20MA"] = df[close_col].rolling(window=20).mean()
+        df["20STD"] = df[close_col].rolling(window=20).std()
+        df["BB_+1σ"] = df["20MA"] + df["20STD"]
+        df["BB_+2σ"] = df["20MA"] + 2 * df["20STD"]
+        df["BB_-1σ"] = df["20MA"] - df["20STD"]
+        df["BB_-2σ"] = df["20MA"] - 2 * df["20STD"]
+        
+        delta = df[close_col].diff()
+        gain = delta.clip(lower=0)
+        loss = -delta.clip(upper=0)
+        avg_gain = gain.rolling(14).mean()
+        avg_loss = loss.rolling(14).mean()
+        rs = avg_gain / avg_loss
+        df["RSI"] = 100 - (100 / (1 + rs))
+
+        df_valid = df.dropna()
+        if df_valid.empty:
+            st.warning(f"{code}: 有効なテクニカル指標がありません。")
+            continue
+
+        last = df_valid.iloc[-1]
+        close = float(last[close_col])
+        ma25 = float(last["25MA"])
+        ma75 = float(last["75MA"])
+        rsi = float(last["RSI"])
+
+        signal_text, signal_icon, signal_strength = judge_signal(close, ma25, ma75, rsi, last["BB_-1σ"])
+
+        # ✅ 表示部分（重複なし）
+        st.markdown(f"---\n### 💡 {code} - {name}")
+        st.markdown(f"**🏭 業種**: {industry}")
+        st.markdown(f"**💰 配当利回り**: {div_text}｜**📈 PER**: {per_text}")
+        st.markdown(f"""📊<strong>{price_label}</strong>: <span style='color:blue;font-weight:bold'>{close:.2f}</span>｜25MA: {ma25:.2f}｜75MA: {ma75:.2f}｜RSI: {rsi:.1f}""",
+    unsafe_allow_html=True)
+        unsafe_allow_html=True
+        bb_signal_text, bb_icon, bb_strength = judge_bb_signal(close, last["BB_+1σ"], last["BB_+2σ"],last["BB_-1σ"], last["BB_-2σ"])
+        st.markdown(f"**📏 BB判定(20日)**: {bb_icon} {bb_signal_text}")
+        st.markdown(f"### {signal_icon} {signal_text}")
+        st.progress(signal_strength / 3)
+
+    except Exception as e:
+        st.error(f"{code}: 処理中にエラーが発生しました（{e}）")
