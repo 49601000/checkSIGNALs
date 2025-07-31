@@ -139,7 +139,8 @@ print(get_market_status("NASDAQ", "REGULAR", custom_labels))
 # 市場情報取得
 first_ticker = yf.Ticker(ticker)
 exchange_name = get_exchange_name(ticker)
-market_state_jp = get_market_status(exchange_name, state_text)
+state_text = "REGULAR"  # または "HOLIDAY" など
+market_state_jp = get_market_status(exchange_name, state_text, custom_labels)
 st.write(f"🕒 現在の市場状態：**{market_state_jp}**")
 
 
