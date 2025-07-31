@@ -106,10 +106,9 @@ def get_market_status(exchange: str, state: str) -> str:
         "東証":   ("東証",   time(9,0),   time(15,30))
     }
     label, open_time, close_time = status_map.get(exchange, ("不明", None, None))
-
- if not open_time or not close_time:
+    
+    if not open_time or not close_time:
         return f"{label}の市場状態: 不明"
-
     is_open = (
         (open_time < close_time and open_time <= now_jst < close_time) or
         (open_time > close_time and (now_jst >= open_time or now_jst < close_time))
