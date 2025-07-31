@@ -2,6 +2,8 @@ import streamlit as st
 import yfinance as yf
 import pandas as pd
 import math
+from datetime import datetime, time
+import pytz
 
 st.set_page_config(page_title="✅任意銘柄の買いシグナルをチェック", page_icon="📊")
 st.title("🔍買いシグナルチェッカー")
@@ -16,40 +18,21 @@ def convert_ticker(ticker):
     return ticker + ".T"
 
 ticker = convert_ticker(user_input)
-ticker_list = [ticker] if ticker else []
+if not ticker:
+    st.warning("ティッカーを入力してください。")
+    st.stop()
 
+ticker_list = [ticker]
 
-# 🏷️ 英語→日本語 銘柄名マップ
+# 🏷️ 英語→日本語 銘柄名マップ（略）
 name_map = {
     "TOYOTA MOTOR CORP": "トヨタ自動車",
     "MITSUBISHI UFJ FINANCIAL GROUP": "三菱UFJフィナンシャル・グループ",
     "SONY GROUP CORP": "ソニーグループ",
-    "KDDI CORP": "KDDI",
-    "NTT INC": "NTT",
-    "SUMITOMO CHEMICAL COMPANY":"住友化学",
-    "TOKYU FUDOSAN HOLDINGS CORPORAT":"東急不動産",
-    "WATTS CO LTD":"ワッツ",
-    "TOKYO METRO CO LTD":"東京メトロ",
-    "SOFTBANK CORP.":"ソフトバンク",
-    "HAZAMA ANDO CORP":"安藤ハザマ",
-    "INPEX CORPORATION":"インペックス",
-    "MITSUBISHI HC CAPITAL INC":"三菱HCキャピタル",
-    "KYUSHU ELECTRIC POWER CO INC":"九州電力",
-    "KIKKOMAN CORP":"キッコーマン",
-    "MATSUI SECURITIES CO":"松井証券",
-    "ASTELLAS PHARMA":"アステラス製薬",
-    "SANSHA ELECTRIC MANUFACTURING":"三社電機製作所",
-    "NIPPON GEAR CO LTD":"日ギア工業",
-    "ONAMBA CO LTD":"オーナンバ",
-    "MORITO CO LTD":"モリト",
-    "MITSUBISHI CHEMICAL GROUP CORP":"三菱化学グループ",
-    "NIPPON SIGNAL CO":"日信号",
-    "CREATE MEDIC CO":"クリエート",
-    "JAPAN FOUNDATION ENGINEERING CO":"日基礎",
     # 必要に応じて追加
 }
 
-# 🎯 ボリンジャーバンド判定関数
+# 🎯 判定関数
 def judge_bb_signal(price, bb_upper1, bb_upper2, bb_lower1, bb_lower2):
     if price >= bb_upper2:
         return "非常に割高（+2σ以上）", "🔥", 3
@@ -62,7 +45,6 @@ def judge_bb_signal(price, bb_upper1, bb_upper2, bb_lower1, bb_lower2):
     else:
         return "平均圏（±1σ内）", "⚪️", 1
 
-# 🎯 押し目＆RSIによるシグナル判定
 def judge_signal(price, ma25, ma75, rsi, bb_lower1):
     if rsi is None:
         return "RSI不明", "⚪️", 0
@@ -80,7 +62,7 @@ def get_exchange_name(ticker: str) -> str:
     if ticker.endswith(".T") or ticker.isdigit():
         return "東証"
     info = yf.Ticker(ticker).info
-    exchange = info.get("exchange", "").upper()
+    exchange = info.get("exchange", "UNKNOWN").upper()
     if exchange == "NASDAQ":
         return "NASDAQ"
     elif exchange == "NYSE":
@@ -88,7 +70,6 @@ def get_exchange_name(ticker: str) -> str:
     else:
         return "その他"
 
-# ⏰ 日付をまたぐ時間帯にも対応した営業判定関数
 def is_market_open(now, open_time, close_time):
     if open_time < close_time:
         return open_time <= now <= close_time
@@ -96,9 +77,6 @@ def is_market_open(now, open_time, close_time):
         return now >= open_time or now <= close_time
 
 # 🧭 市場状態の表示テキスト生成
-from datetime import datetime, time
-import pytz
-
 def get_market_status(exchange: str, state: str) -> str:
     now_jst = datetime.now(pytz.timezone("Asia/Tokyo")).time()
     status_map = {
@@ -128,10 +106,7 @@ first_ticker = yf.Ticker(ticker)
 exchange_name = get_exchange_name(ticker)
 market_state = first_ticker.info.get("marketState", "UNKNOWN")
 market_state_jp = get_market_status(exchange_name, market_state)
-
-# Streamlit表示
 st.write(f"🕒 現在の市場状態：**{market_state_jp}**")
-
 
 # 🔁 メインロジック（単一ティッカー対応）
 for code in ticker_list:
@@ -139,7 +114,6 @@ for code in ticker_list:
         ticker_obj = yf.Ticker(code)
         info = ticker_obj.info
 
-        # ⛳ 日本語名対応
         name_raw = info.get("shortName", "")
         name = name_map.get(name_raw.upper(), name_raw)
         industry = info.get("industry", "業種不明")
@@ -150,20 +124,12 @@ for code in ticker_list:
         div_text = f"{div_yield:.2f}%" if div_yield else "—"
         per_text = f"{per:.2f}" if per else "—"
 
-        # 🕒 市場状態によって価格を選択
+        # 価格選択
         market_state = info.get("marketState", "UNKNOWN")
         market_price = info.get("regularMarketPrice", None)
         close_price = info.get("previousClose", None)
-
-        if market_price is not None and market_price != close_price:
-            price = market_price
-            price_label = "現在価格"
-        elif close_price is not None:
-            price = close_price
-            price_label = "終値"
-        else:
-            price = None
-            price_label = "価格未取得"
+        price = market_price if market_price and market_price != close_price else close_price
+        price_label = "現在価格" if market_price and market_price != close_price else "終値"
 
         df = yf.download(code, period="120d", interval="1d")
         if df.empty or pd.isna(price):
@@ -208,6 +174,7 @@ for code in ticker_list:
         rsi = float(last["RSI"])
 
         signal_text, signal_icon, signal_strength = judge_signal(close, ma25, ma75, rsi, last["BB_-1σ"])
+        bb_signal_text, bb_icon, bb_strength = judge_bb_signal(close, last["BB_+1σ"], last["BB_+2σ"], last["BB_-1σ"],
 
       # ✅ 表示部分（重複なし）
         st.markdown(f"---\n### 💡 {code} - {name}")
