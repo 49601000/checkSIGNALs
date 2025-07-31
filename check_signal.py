@@ -121,21 +121,13 @@ def get_market_status(exchange: str, state: str) -> str:
         status_text = "休場中"
 
     return f"{label}の市場状態: {status_text}"
-
-    state_translation = {
-        "REGULAR": "通常取引中",
-        "PRE": "プレマーケット",
-        "POST": "アフターマーケット",
-        "CLOSED": "閉場中",
-        "UNKNOWN": "不明"
     }
     return f"{label} {state_translation.get(state, '不明')}"
 
 # 市場情報取得
 first_ticker = yf.Ticker(ticker)
 exchange_name = get_exchange_name(ticker)
-market_state = first_ticker.info.get("marketState", "UNKNOWN")
-market_state_jp = get_market_status(exchange_name, market_state)
+market_state_jp = get_market_status(exchange_name, state_text)
 st.write(f"🕒 現在の市場状態：**{market_state_jp}**")
 
 # 🔁 メインロジック（単一ティッカー対応）
