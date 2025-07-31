@@ -75,7 +75,24 @@ def judge_signal(price, ma25, ma75, rsi, bb_lower1):
     else:
         return "シグナルなし", "🟢", 0
 
-# 🧭 市場状態
+# 🧭ティッカーから市場を特定
+def get_exchange_name(ticker: str) -> str:
+    if ticker.endswith(".T") or ticker.isdigit():
+        return "東証"
+    elif "." not in ticker:
+        return "NYSE"
+    else:
+        # AAPL、MSFT など米国銘柄（NASDAQの場合もあるのでyfから情報取得して判定）
+        info = yf.Ticker(ticker).info
+        exchange = info.get("exchange", "").upper()
+        if exchange == "NASDAQ":
+            return "NASDAQ"
+        elif exchange == "NYSE":
+            return "NYSE"
+        else:
+            return "その他"
+
+# 🧭市場状態
 market_state_jp = "不明"
 if ticker_list:
     first_ticker = yf.Ticker(ticker_list[0])
@@ -87,7 +104,9 @@ if ticker_list:
         "CLOSED": "市場は閉場中",
         "UNKNOWN": "不明"
     }
-    market_state_jp = state_translation.get(market_state, "不明")
+    exchange_name = get_exchange_name(ticker)
+    st.write(f"🕒 現在の市場状態：**{exchange_name} {market_state_jp}**")
+
 
 st.write(f"🕒 現在の市場状態：**{market_state_jp}**")
 
