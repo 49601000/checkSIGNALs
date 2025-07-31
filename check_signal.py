@@ -112,13 +112,6 @@ def get_market_status(exchange: str, state: str, status_text: dict = None) -> st
 
     is_open = is_market_open(now_jst, open_time, close_time)
 
-    # デフォルトの状態テキストを定義
-    default_status = {
-        "OPEN": "取引中",
-        "CLOSED": "取引終了",
-        "HOLIDAY": "休場中"
-    }
-
     # 引数で指定されたステータステキストがあれば上書き
     status_labels = status_text if status_text else default_status
 
@@ -129,9 +122,9 @@ def get_market_status(exchange: str, state: str, status_text: dict = None) -> st
 
     return f"{label}の市場状態: {status}"
 custom_labels = {
-    "OPEN": "稼働中",
-    "CLOSED": "停止中",
-    "HOLIDAY": "祝日休業"
+        "OPEN": "取引中",
+        "CLOSED": "取引終了",
+        "HOLIDAY": "休場中"
 }
 
 print(get_market_status("NASDAQ", "REGULAR", custom_labels))
