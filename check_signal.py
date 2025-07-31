@@ -178,3 +178,5 @@ for code in ticker_list:
         st.markdown(f"### {signal_icon} {signal_text}")
         st.progress(signal_strength / 3)
 
+    except Exception as e:
+        st.error(f"{code}: 処理中にエラーが発生しました（{e}）")
