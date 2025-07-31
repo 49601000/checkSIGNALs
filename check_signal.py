@@ -61,8 +61,7 @@ def judge_signal(price, ma25, ma75, rsi, bb_lower1):
 def get_exchange_name(ticker: str) -> str:
     if ticker.endswith(".T") or ticker.isdigit():
         return "東証"
-
-       try:
+    try:
         info = yf.Ticker(ticker).info
         exchange = info.get("exchange", "").upper()
 
