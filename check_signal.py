@@ -214,7 +214,7 @@ for code in ticker_list:
         color = "red" if close > close_price else "green"
 
         st.markdown(
-            f"<span style='color:{color}; font-weight:bold;'>📊 {price_label}: {close:.2f}｜25MA: {ma25:.2f}｜75MA: {ma75:.2f}｜RSI: {rsi:.1f}</span>",
+            f"📊 {price_label}: <span style='color:{color}; font-weight:bold;'>{close:.2f}｜25MA: {ma25:.2f}｜75MA: {ma75:.2f}｜RSI: {rsi:.1f}</span>",
             unsafe_allow_html=True
 )
 
