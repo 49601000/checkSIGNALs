@@ -87,6 +87,9 @@ def get_exchange_name(ticker: str) -> str:
 
     except Exception as e:
         return "不明"
+import pprint
+pprint.pprint(yf.Ticker("AAPL").info)
+
         
 def is_market_open(now, open_time, close_time):
     if open_time < close_time:
