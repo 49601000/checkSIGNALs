@@ -98,6 +98,7 @@ def is_market_open(now, open_time, close_time):
 
 # 🧭 市場状態の表示テキスト生成
 def get_market_status(exchange: str, state: str) -> str:
+    exchange = normalize_exchange(exchange)  # ← ここで正規化
     now_jst = datetime.now(pytz.timezone("Asia/Tokyo")).time()
     status_map = {
         "NASDAQ": ("NASDAQ", time(22,30), time(5,0)),
