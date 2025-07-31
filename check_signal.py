@@ -108,7 +108,7 @@ def get_market_status(exchange: str, state: str, status_text: dict = None) -> st
 
     label, open_time, close_time = status_map.get(exchange, ("不明", None, None))
     if not open_time or not close_time:
-        return f"{label}の市場状態: 不明"
+        return f"{label}: 不明"
 
     is_open = is_market_open(now_jst, open_time, close_time)
 
@@ -120,7 +120,7 @@ def get_market_status(exchange: str, state: str, status_text: dict = None) -> st
     else:
         status = status_labels["HOLIDAY"]
 
-    return f"{label}の市場状態: {status}"
+    return f"{label}: {status}"
 custom_labels = {
         "OPEN": "取引中",
         "CLOSED": "取引終了",
