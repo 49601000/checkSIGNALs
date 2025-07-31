@@ -132,7 +132,7 @@ def get_market_status(exchange: str, state: str) -> str:
 
     return f"{label} {state_translation.get(state, '不明')}"
 
-    # 市場情報取得
+# 市場情報取得
 first_ticker = yf.Ticker(ticker)
 exchange_name = get_exchange_name(ticker)
 market_state = first_ticker.info.get("marketState", "UNKNOWN")
