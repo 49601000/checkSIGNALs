@@ -32,6 +32,22 @@ name_map = {
     # 必要に応じて追加
 }
 
+# 🏷️ 市場の略称の統一化
+def normalize_exchange(exchange_code: str) -> str:
+    mapping = {
+        "NMS": "NASDAQ",
+        "NAS": "NASDAQ",
+        "NASDAQ": "NASDAQ",
+        "NYQ": "NYSE",
+        "NYA": "NYSE",
+        "NYSE": "NYSE",
+        "TSE": "東証",
+        "JPX": "東証",
+        "東証": "東証"
+    }
+    return mapping.get(exchange_code.upper(), "不明")
+
+
 # 🎯 判定関数
 def judge_bb_signal(price, bb_upper1, bb_upper2, bb_lower1, bb_lower2):
     if price >= bb_upper2:
