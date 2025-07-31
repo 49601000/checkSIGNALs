@@ -172,9 +172,15 @@ for code in ticker_list:
         ma25 = float(last["25MA"])
         ma75 = float(last["75MA"])
         rsi = float(last["RSI"])
+        
+        bb_signal_text, bb_icon, bb_strength = judge_bb_signal(
+            close,
+            last["BB_+1σ"],
+            last["BB_+2σ"],
+            last["BB_-1σ"],
+            last["BB_-2σ"]
+        )
 
-        signal_text, signal_icon, signal_strength = judge_signal(close, ma25, ma75, rsi, last["BB_-1σ"])
-        bb_signal_text, bb_icon, bb_strength = judge_bb_signal(close, last["BB_+1σ"], last["BB_+2σ"], last["BB_-1σ"],
 
       # ✅ 表示部分（重複なし）
         st.markdown(f"---\n### 💡 {code} - {name}")
