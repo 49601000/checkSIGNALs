@@ -168,9 +168,13 @@ for code in ticker_list:
 
         signal_text, signal_icon, signal_strength = judge_signal(close, ma25, ma75, rsi, last["BB_-1σ"])
 
+      # ✅ 表示部分（重複なし）
         st.markdown(f"---\n### 💡 {code} - {name}")
         st.markdown(f"**🏭 業種**: {industry}")
         st.markdown(f"**💰 配当利回り**: {div_text}｜**📈 PER**: {per_text}")
-        st.markdown(f"""📊<strong>{price_label}</strong>: <span style='color:blue;font-weight:bold'>{close:.2f}</span>｜25MA: {ma25:.2f}｜75MA: {ma75:.2f}｜RSI: {rsi:.1f}""",
-            unsafe_allow_html=True)
-        bb_signal_text, bb_icon, bb_strength = judge_bb_signal(close)
+        st.write(f"📊 終値: {close:.2f}｜25MA: {ma25:.2f}｜75MA: {ma75:.2f}｜RSI: {rsi:.1f}")
+        bb_signal_text, bb_icon, bb_strength = judge_bb_signal(close, last["BB_+1σ"], last["BB_+2σ"],last["BB_-1σ"], last["BB_-2σ"])
+        st.markdown(f"**📏 BB判定(20日)**: {bb_icon} {bb_signal_text}")
+        st.markdown(f"### {signal_icon} {signal_text}")
+        st.progress(signal_strength / 3)
+
