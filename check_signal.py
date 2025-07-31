@@ -107,9 +107,6 @@ if ticker_list:
     exchange_name = get_exchange_name(ticker)
     st.write(f"🕒 現在の市場状態：**{exchange_name} {market_state_jp}**")
 
-
-st.write(f"🕒 現在の市場状態：**{market_state_jp}**")
-
 # 🔁 メインロジック（単一ティッカー対応）
 for code in ticker_list:
     try:
