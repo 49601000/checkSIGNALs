@@ -61,15 +61,33 @@ def judge_signal(price, ma25, ma75, rsi, bb_lower1):
 def get_exchange_name(ticker: str) -> str:
     if ticker.endswith(".T") or ticker.isdigit():
         return "東証"
-    info = yf.Ticker(ticker).info
-    exchange = info.get("exchange", "UNKNOWN").upper()
-    if exchange == "NASDAQ":
-        return "NASDAQ"
-    elif exchange == "NYSE":
-        return "NYSE"
-    else:
-        return "その他"
 
+    try:
+        info = yf.Ticker(ticker).info
+        # より確実なフィールドをチェック
+        exchange = (
+            info.get("exchange") or
+            info.get("market") or
+            info.get("fullExchangeName") or
+            info.get("regularMarketExchange")
+        )
+
+        if not exchange:
+            return "不明"
+
+        exchange = exchange.upper()
+
+        # 略称や別表記にも対応
+        if "NASDAQ" in exchange or exchange in ["NMS", "NAS"]:
+            return "NASDAQ"
+        elif "NYSE" in exchange or exchange in ["NYQ", "NYA"]:
+            return "NYSE"
+        else:
+            return "その他"
+
+    except Exception as e:
+        return "不明"
+        
 def is_market_open(now, open_time, close_time):
     if open_time < close_time:
         return open_time <= now <= close_time
