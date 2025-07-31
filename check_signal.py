@@ -97,28 +97,37 @@ def is_market_open(now, open_time, close_time):
         return now >= open_time or now <= close_time
 
 # 🧭 市場状態の表示テキスト生成
-def get_market_status(exchange: str, state: str) -> str:
-    exchange = normalize_exchange(exchange)  # ← ここで正規化
+def get_market_status(exchange: str, state: str, status_text: dict = None) -> str:
+    exchange = normalize_exchange(exchange)
     now_jst = datetime.now(pytz.timezone("Asia/Tokyo")).time()
     status_map = {
         "NASDAQ": ("NASDAQ", time(22,30), time(5,0)),
         "NYSE":   ("NYSE",   time(22,30), time(5,0)),
         "東証":   ("東証",   time(9,0),   time(15,30))
     }
+
     label, open_time, close_time = status_map.get(exchange, ("不明", None, None))
-    
     if not open_time or not close_time:
         return f"{label}の市場状態: 不明"
-    is_open = (
-        (open_time < close_time and open_time <= now_jst < close_time) or
-        (open_time > close_time and (now_jst >= open_time or now_jst < close_time))
-    )
+
+    is_open = is_market_open(now_jst, open_time, close_time)
+
+    # デフォルトの状態テキストを定義
+    default_status = {
+        "OPEN": "取引中",
+        "CLOSED": "取引終了",
+        "HOLIDAY": "休場中"
+    }
+
+    # 引数で指定されたステータステキストがあれば上書き
+    status_labels = status_text if status_text else default_status
 
     if state == "REGULAR":
-        status_text = "取引中" if is_open else "取引終了"
+        status = status_labels["OPEN"] if is_open else status_labels["CLOSED"]
     else:
-        status_text = "休場中"
-    return f"{label}の市場状態: {status_text}"
+        status = status_labels["HOLIDAY"]
+
+    return f"{label}の市場状態: {status}"
 
 # 市場情報取得
 first_ticker = yf.Ticker(ticker)
