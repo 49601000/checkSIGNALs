@@ -93,26 +93,35 @@ def get_exchange_name(ticker: str) -> str:
 from datetime import datetime, time
 import pytz
 
+# 取引所判定用関数（事前に定義しておく）
+def get_exchange_name(ticker: str) -> str:
+    if ticker.endswith(".T") or ticker.isdigit():
+        return "東証"
+    info = yf.Ticker(ticker).info
+    exchange = info.get("exchange", "").upper()
+    if exchange == "NASDAQ":
+        return "NASDAQ"
+    elif exchange == "NYSE":
+        return "NYSE"
+    else:
+        return "その他"
+
+# 市場状態判定関数（あなたのコードを元に整理済み）
 def get_market_status(exchange: str, state: str) -> str:
     now_jst = datetime.now(pytz.timezone("Asia/Tokyo"))
-    
-    # 各市場の営業日と時間帯
     status_map = {
         "NASDAQ": ("NASDAQ", time(22,30), time(5,0)),
         "NYSE":   ("NYSE",   time(22,30), time(5,0)),
         "東証":   ("東証",   time(9,0),   time(15,0))
     }
-
     label, open_time, close_time = status_map.get(exchange, ("不明", None, None))
-    
+
     if state == "CLOSED" and open_time and close_time:
-        # JST基準で判定
         if open_time <= now_jst.time() <= close_time:
             return f"{label} 営業時間内（取得不可）"
         else:
             return f"{label} 閉場中"
-    
-    # 通常通りの状態変換
+
     state_translation = {
         "REGULAR": "通常取引中",
         "PRE": "プレマーケット",
@@ -123,9 +132,14 @@ def get_market_status(exchange: str, state: str) -> str:
 
     return f"{label} {state_translation.get(state, '不明')}"
 
-    exchange_name = get_exchange_name(ticker)
-    st.write(f"🕒 現在の市場状態：**{exchange_name} {market_state_jp}**")
+    # 市場情報取得
+first_ticker = yf.Ticker(ticker)
+exchange_name = get_exchange_name(ticker)
+market_state = first_ticker.info.get("marketState", "UNKNOWN")
+market_state_jp = get_market_status(exchange_name, market_state)
 
+# Streamlit表示
+st.write(f"🕒 現在の市場状態：**{market_state_jp}**")
 # 🔁 メインロジック（単一ティッカー対応）
 for code in ticker_list:
     try:
