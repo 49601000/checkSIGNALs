@@ -128,12 +128,21 @@ def get_market_status(exchange: str, state: str, status_text: dict = None) -> st
         status = status_labels["HOLIDAY"]
 
     return f"{label}の市場状態: {status}"
+custom_labels = {
+    "OPEN": "稼働中",
+    "CLOSED": "停止中",
+    "HOLIDAY": "祝日休業"
+}
+
+print(get_market_status("NASDAQ", "REGULAR", custom_labels))
 
 # 市場情報取得
 first_ticker = yf.Ticker(ticker)
 exchange_name = get_exchange_name(ticker)
 market_state_jp = get_market_status(exchange_name, state_text)
 st.write(f"🕒 現在の市場状態：**{market_state_jp}**")
+
+
 
 # 🔁 メインロジック（単一ティッカー対応）
 for code in ticker_list:
