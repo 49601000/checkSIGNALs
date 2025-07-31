@@ -103,15 +103,24 @@ def get_market_status(exchange: str, state: str) -> str:
     status_map = {
         "NASDAQ": ("NASDAQ", time(22,30), time(5,0)),
         "NYSE":   ("NYSE",   time(22,30), time(5,0)),
-        "東証":   ("東証",   time(9,0),   time(15,0))
+        "東証":   ("東証",   time(9,0),   time(15,30))
     }
     label, open_time, close_time = status_map.get(exchange, ("不明", None, None))
 
-    if state == "CLOSED" and open_time and close_time:
-        if is_market_open(now_jst, open_time, close_time):
-            return f"{label} 営業時間内（marketState=取得不可）"
-        else:
-            return f"{label} 閉場中"
+ if not open_time or not close_time:
+        return f"{label}の市場状態: 不明"
+
+    is_open = (
+        (open_time < close_time and open_time <= now_jst < close_time) or
+        (open_time > close_time and (now_jst >= open_time or now_jst < close_time))
+    )
+
+    if state == "REGULAR":
+        status_text = "取引中" if is_open else "取引終了"
+    else:
+        status_text = "休場中"
+
+    return f"{label}の市場状態: {status_text}"
 
     state_translation = {
         "REGULAR": "通常取引中",
