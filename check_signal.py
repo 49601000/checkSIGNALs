@@ -211,7 +211,7 @@ for code in ticker_list:
         st.markdown(f"**🏭 業種**: {industry}")
         st.markdown(f"**💰 配当利回り**: {div_text}｜**📈 PER**: {per_text}")
         # 色の判定（高い→赤、安い→緑）
-        color = "red" if close > prev_close else "green"
+        color = "red" if close > close_price else "green"
 
         st.markdown(
             f"<span style='color:{color}; font-weight:bold;'>📊 {price_label}: {close:.2f}｜25MA: {ma25:.2f}｜75MA: {ma75:.2f}｜RSI: {rsi:.1f}</span>",
