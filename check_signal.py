@@ -3,22 +3,22 @@ import yfinance as yf
 import pandas as pd
 import math
 
-
 st.set_page_config(page_title="✅任意銘柄の買いシグナルをチェック", page_icon="📊")
 st.title("✅買いシグナルチェッカー")
 
-# 📊 TICKER取得
-# ユーザーがティッカーを入力
-ticker = st.text_input("ティッカーシンボルを入力してください（例: AAPL, VYM, MSFTなど）", value="AAPL")
+# 🟦 ユーザーがティッカーを入力
+user_input = st.text_input("ティッカーシンボルを入力してください（例: AAPL, 7203, MSFT, 8306.T など）", value="AAPL")
 
 def convert_ticker(ticker):
     ticker = ticker.strip().upper()
-    # 既に.T, .TWO, .KS, .HKなどが付いている場合や、英字始まりならそのまま
     if ticker.endswith('.T') or not ticker.isdigit():
         return ticker
-    # 数字だけなら東証銘柄として.T付与
     return ticker + ".T"
-  
+
+ticker = convert_ticker(user_input)
+ticker_list = [ticker] if ticker else []
+
+
 # 🏷️ 英語→日本語 銘柄名マップ
 name_map = {
     "TOYOTA MOTOR CORP": "トヨタ自動車",
@@ -49,7 +49,7 @@ name_map = {
     # 必要に応じて追加
 }
 
-# 🎯 ボリンジャーバンド判定関数の定義
+# 🎯 ボリンジャーバンド判定関数
 def judge_bb_signal(price, bb_upper1, bb_upper2, bb_lower1, bb_lower2):
     if price >= bb_upper2:
         return "非常に割高（+2σ以上）", "🔥", 3
@@ -63,27 +63,23 @@ def judge_bb_signal(price, bb_upper1, bb_upper2, bb_lower1, bb_lower2):
         return "平均圏（±1σ内）", "⚪️", 1
 
 # 🎯 押し目＆RSIによるシグナル判定
-def judge_signal(price, ma25, ma75, rsi,bb_lower1):
+def judge_signal(price, ma25, ma75, rsi, bb_lower1):
     if rsi is None:
         return "RSI不明", "⚪️", 0
-    if price <= ma75 and rsi < 40 and price<=bb_lower1:
+    if price <= ma75 and rsi < 40 and price <= bb_lower1:
         return "バーゲン（強い押し目）", "🔴", 3
     elif (price <= ma75 and price < bb_lower1) or (rsi < 30 and price < bb_lower1):
         return "そこそこ押し目", "🟠", 2
-    elif price < ma25 * 0.97 and rsi < 37.5 and price<=bb_lower1:
+    elif price < ma25 * 0.97 and rsi < 37.5 and price <= bb_lower1:
         return "軽い押し目", "🟡", 1
     else:
         return "シグナルなし", "🟢", 0
 
-# 🧭 UI表示
-# 🏁 最初のティッカーから市場状態を取得（日本語対応付き）
-market_state_jp = "不明"  # デフォルト値
-
+# 🧭 市場状態
+market_state_jp = "不明"
 if ticker_list:
     first_ticker = yf.Ticker(ticker_list[0])
     market_state = first_ticker.info.get("marketState", "UNKNOWN")
-
-    # 英語→日本語変換辞書
     state_translation = {
         "REGULAR": "通常取引中",
         "PRE": "プレマーケット",
@@ -91,19 +87,16 @@ if ticker_list:
         "CLOSED": "市場は閉場中",
         "UNKNOWN": "不明"
     }
-
-    # 対応する日本語に変換
     market_state_jp = state_translation.get(market_state, "不明")
 
 st.title("📈 押し目買いシグナルDB")
 st.write(f"🕒 現在の市場状態：**{market_state_jp}**")
 
-
-# 🔁 メインループ
-for code in selected_tickers:
+# 🔁 メインロジック（単一ティッカー対応）
+for code in ticker_list:
     try:
-        ticker = yf.Ticker(code)
-        info = ticker.info
+        ticker_obj = yf.Ticker(code)
+        info = ticker_obj.info
 
         # ⛳ 日本語名対応
         name_raw = info.get("shortName", "")
@@ -121,7 +114,6 @@ for code in selected_tickers:
         market_price = info.get("regularMarketPrice", None)
         close_price = info.get("previousClose", None)
 
-        # ✅ 条件により価格選択
         if market_price is not None and market_price != close_price:
             price = market_price
             price_label = "現在価格"
@@ -131,7 +123,7 @@ for code in selected_tickers:
         else:
             price = None
             price_label = "価格未取得"
-            
+
         df = yf.download(code, period="120d", interval="1d")
         if df.empty or pd.isna(price):
             st.warning(f"{code}: 株価データが取得できませんでした。")
@@ -144,22 +136,22 @@ for code in selected_tickers:
         if not close_col:
             st.warning(f"{code}: 'Close'列が見つかりません。列一覧: {df.columns.tolist()}")
             continue
-        #移動平均の計算
+
+        # 指標計算
         df["25MA"] = df[close_col].rolling(25).mean()
         df["75MA"] = df[close_col].rolling(75).mean()
-        # ✅ 20日ボリンジャーバンド（±1σ, ±2σ）の計算
         df["20MA"] = df[close_col].rolling(window=20).mean()
         df["20STD"] = df[close_col].rolling(window=20).std()
         df["BB_+1σ"] = df["20MA"] + df["20STD"]
         df["BB_+2σ"] = df["20MA"] + 2 * df["20STD"]
         df["BB_-1σ"] = df["20MA"] - df["20STD"]
         df["BB_-2σ"] = df["20MA"] - 2 * df["20STD"]
-        
+
         delta = df[close_col].diff()
         gain = delta.clip(lower=0)
         loss = -delta.clip(upper=0)
         avg_gain = gain.rolling(14).mean()
-        avg_loss = loss.rolling(14).mean()
+        avg_loss = loss.rolling(14).mean().replace(0, 1e-10)
         rs = avg_gain / avg_loss
         df["RSI"] = 100 - (100 / (1 + rs))
 
@@ -176,17 +168,10 @@ for code in selected_tickers:
 
         signal_text, signal_icon, signal_strength = judge_signal(close, ma25, ma75, rsi, last["BB_-1σ"])
 
-        # ✅ 表示部分（重複なし）
         st.markdown(f"---\n### 💡 {code} - {name}")
         st.markdown(f"**🏭 業種**: {industry}")
         st.markdown(f"**💰 配当利回り**: {div_text}｜**📈 PER**: {per_text}")
         st.markdown(f"""📊<strong>{price_label}</strong>: <span style='color:blue;font-weight:bold'>{close:.2f}</span>｜25MA: {ma25:.2f}｜75MA: {ma75:.2f}｜RSI: {rsi:.1f}""",
-    unsafe_allow_html=True)
-        unsafe_allow_html=True
-        bb_signal_text, bb_icon, bb_strength = judge_bb_signal(close, last["BB_+1σ"], last["BB_+2σ"],last["BB_-1σ"], last["BB_-2σ"])
-        st.markdown(f"**📏 BB判定(20日)**: {bb_icon} {bb_signal_text}")
-        st.markdown(f"### {signal_icon} {signal_text}")
-        st.progress(signal_strength / 3)
-
-    except Exception as e:
-        st.error(f"{code}: 処理中にエラーが発生しました（{e}）")
+            unsafe_allow_html=True)
+        bb_signal_text, bb_icon, bb_strength = judge_bb_signal(close
+
