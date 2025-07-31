@@ -7,7 +7,7 @@ st.set_page_config(page_title="✅任意銘柄の買いシグナルをチェッ�
 st.title("✅買いシグナルチェッカー")
 
 # 🟦 ユーザーがティッカーを入力
-user_input = st.text_input("ティッカーシンボルを入力してください（例: AAPL, 7203, MSFT, 8306.T など）", value="AAPL")
+user_input = st.text_input("ティッカーシンボルを入力してください（例: AAPL, 7203, MSFT, 8306.T など）", value="")
 
 def convert_ticker(ticker):
     ticker = ticker.strip().upper()
@@ -89,7 +89,6 @@ if ticker_list:
     }
     market_state_jp = state_translation.get(market_state, "不明")
 
-st.title("📈 押し目買いシグナルDB")
 st.write(f"🕒 現在の市場状態：**{market_state_jp}**")
 
 # 🔁 メインロジック（単一ティッカー対応）
