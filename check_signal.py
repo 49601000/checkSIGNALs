@@ -251,7 +251,6 @@ market_state_jp = get_market_status(exchange_name, state_text, custom_labels)
 st.write(f"🕒 現在の市場状態：**{market_state_jp}**")
 
 
-
 # 🔁 メインロジック（単一ティッカー対応）
 for code in ticker_list:
     try:
@@ -378,15 +377,16 @@ for code in ticker_list:
         elif buy_range_contrarian:
             buy_range = buy_range_contrarian
             buy_range_type = "逆張り"
-        
-        
-        # 🎯 逆張りレンジの表示用データを計算
-        last = df_valid.iloc[-1]
-        bb_lower1 = params["bb_lower1"]
-        ma25 = params["ma25"]
-        center_price = (ma25 + bb_lower1) / 2
-        upper_bound = center_price * 1.08
-        lower_bound = center_price * 0.97
+            # 🎯 逆張りレンジの表示用データを計算
+            last = df_valid.iloc[-1]
+            bb_lower1 = params["bb_lower1"]
+            ma25 = params["ma25"]
+            center_price = (ma25 + bb_lower1) / 2
+            upper_bound = center_price * 1.08
+            lower_bound = center_price * 0.97
+        else:
+            center_price = upper_bound = lower_bound = None
+
             
             
         # ✅ 表示部分（重複なし）
