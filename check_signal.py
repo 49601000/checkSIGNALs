@@ -352,9 +352,6 @@ for code in ticker_list:
         # 🎯 順張りスコア（割高度）
         highprice_score = is_high_price_zone(close, ma25, ma50, last["BB_+1σ"], rsi, per, pbr, high_52w)
         
-        # 🎯 順張り裁量レンジ（条件を満たす場合のみ）
-        buy_range_trend = calc_discretionary_buy_range(df_valid, params["ma25"], params["ma50"], params["ma75"], params["bb_lower1"], params["highprice_score"])
-
         # 📊 テクニカル指標をまとめる
         params = {
             "price": close,
@@ -376,6 +373,10 @@ for code in ticker_list:
         bb_lower1 = params["bb_lower1"]
         bb_lower2 = params["bb_lower2"]
         bb_upper1 = params["bb_upper1"]
+        
+        # 🎯 順張り裁量レンジ（条件を満たす場合のみ）
+        buy_range_trend = calc_discretionary_buy_range(df_valid, params["ma25"], params["ma50"], params["ma75"], params["bb_lower1"], params["highprice_score"])
+
 
 
 
