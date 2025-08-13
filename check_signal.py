@@ -113,7 +113,6 @@ def is_low_price_zone(price, ma25, ma50, bb_lower1, bb_lower2, rsi, per, pbr, lo
     if price <= low_52w * 1.05:
         lowprice_score += 15
     return lowprice_score         # 割安圏スコア
-    #return lowprice_score >= 60  # 割安圏スコア
 
 
 # 🎯 押し目＆RSIによるシグナル判定
@@ -395,10 +394,6 @@ for code in ticker_list:
         score_text = f"{lowprice_score}点"
         buy_range_contrarian = calc_discretionary_buy_range_contrarian(df_valid, params)
 
-        # 判定ラベル
-        trend_judge = "裁量買いOK" if buy_range_trend else "裁量買いNG"
-        contrarian_judge = "裁量買いOK" if buy_range_contrarian else "裁量買いNG"
-
         # ✅ テーブルの表示判定ロジック（順張り or not)
         is_mid_uptrend = ma25 > ma50 and ma25 > ma75
 
@@ -438,7 +433,22 @@ for code in ticker_list:
             contrarian_lower = buy_range_contrarian["lower_price"]
         else:
             contrarian_center = contrarian_upper = contrarian_lower = None
-
+            
+        # ✅ 逆張り条件の達成度に応じたコメント生成
+        contrarian_conditions = [
+            ma75 > ma50 > ma25 or is_flat_ma(ma25, ma50, ma75, tolerance=0.03),  # 中期トレンド
+            slope_ok,                                                             # 短期傾向
+            lowprice_score >= 60                                                  # 割安スコア
+        ]
+        contrarian_ok_count = sum(contrarian_conditions)
+        if contrarian_ok_count == 3: 
+            contrarian_comment = "買い候補として非常に魅力的です。"
+        elif contrarian_ok_count == 2: 
+            contrarian_comment = "買い検討の余地があります。"
+        elif contrarian_ok_count == 1:
+            contrarian_comment = "慎重に検討すべき状況です。"
+        else:
+            contrarian_comment = "現時点では見送りが妥当です。"
             
         # ✅ 表示用整形
         trend_center_text = safe_format(trend_center)
@@ -566,9 +576,8 @@ for code in ticker_list:
                 <tr><td>中心価格</td><td>25MAとBB−1σの平均</td><td>{center_price_text}</td></tr>
                 <tr><td>上側許容幅</td><td>中心価格×1.08</td><td>{upper_bound_text}</td></tr>
                 <tr><td>下側許容幅</td><td>中心価格×0.97</td><td>{lower_bound_text}</td></tr>
-                <tr><td>判定</td><td>順張り裁量評価</td><td><strong>{contrarian_judge}</strong></td></tr>
+                <tr><td>判定</td><td>逆張り裁量評価</td><td><strong>{contrarian_comment}</strong></td></tr>
             </table>""", unsafe_allow_html=True)
-
 
     except Exception as e:
         st.error(f"{code}: 処理中にエラーが発生しました（{e}）")
