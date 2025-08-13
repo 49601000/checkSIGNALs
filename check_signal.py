@@ -345,6 +345,9 @@ for code in ticker_list:
         ma50 = float(last["50MA"])
         ma75 = float(last["75MA"])
         rsi = float(last["RSI"])
+        highprice_score = is_high_price_zone(close, ma25, ma50, last["BB_+1σ"], rsi, per, pbr, high_52w)
+        buy_range_trend = calc_discretionary_buy_range(df_valid, ma25, ma50, ma75, last["BB_-1σ"], highprice_score)
+
 
         # 📊 テクニカル指標をまとめる
         params = {
