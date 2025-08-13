@@ -64,7 +64,7 @@ def judge_bb_signal(price, bb_upper1, bb_upper2, bb_lower1, bb_lower2):
 # 🎯<順張り> 押し目＆RSIによる高値圏シグナル判定
 def is_high_price_zone(price, ma25, ma50, bb_upper1, rsi, per, pbr, high_52w):
     if None in [price, ma25, ma50, bb_upper1, rsi, per, pbr, high_52w]:
-        return highprice_score # データ不足で判定不可
+        return 0 # データ不足で判定不可
     highprice_score = 0
     #株価が25日および50日移動平均よりも＋10%超
     if price > ma25 * 1.10 and price > ma50 * 1.10:
@@ -89,7 +89,7 @@ def is_high_price_zone(price, ma25, ma50, bb_upper1, rsi, per, pbr, high_52w):
 # 🎯<逆張り> 押し目＆割安圏シグナル判定
 def is_low_price_zone(price, ma25, ma50, bb_lower1, bb_lower2, rsi, per, pbr, low_52w):
     if None in [price, ma25, ma50, bb_lower1, bb_lower2, rsi, per, pbr, low_52w]:
-        return lowprice_score  # データ不足で判定不可
+        return 0  # データ不足で判定不可
     lowprice_score = 0
     # 株価が25MAおよび50MAより−10%以上
     if price < ma25 * 0.90 and price < ma50 * 0.90:
@@ -432,7 +432,7 @@ for code in ticker_list:
         #順張りレンジ
         if buy_range_trend:
             buy_range_type = "順張り"
-            print(f"🎯 {buy_range_type}裁量買いレンジ: {buy_range_trend[0]} ～ {buy_range_trend[1]}")
+            print(f"🎯 {buy_range_type}裁量買いレンジ: {buy_range_trend['lower_price']} ～ {buy_range_trend['upper_price']}")
         else:
             print("❌ 裁量買いレンジなし（条件未達）")
 
@@ -451,7 +451,8 @@ for code in ticker_list:
 
         # last が None でないことを確認し、キーがあるかも確認
         if "BB_-1σ" in last and last["BB_-1σ"] is not None:
-             bb_adjusted = f"{last['BB_-1σ']:.2f}"
+            bb_adjusted = last["BB_-1σ"] if "BB_-1σ" in last and last["BB_-1σ"] is not None else None
+            bb_adjusted_text = safe_format(bb_adjusted)
         else:
             bb_adjusted = "—"
 
