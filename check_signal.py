@@ -436,8 +436,10 @@ for code in ticker_list:
         if buy_range_trend:
             buy_range_type = "順張り"
             print(f"🎯 {buy_range_type}裁量買いレンジ: {buy_range_trend['lower_price']} ～ {buy_range_trend['upper_price']}")
+            trend_judge = "裁量買いOK"
         else:
             print("❌ 裁量買いレンジなし（条件未達）")
+            trend_judge = "裁量買いNG"
 
 
         # 中心価格：25MAとBB−1σの平均
@@ -499,7 +501,7 @@ for code in ticker_list:
                 <tr><td>上側許容幅</td><td>中心価格×1.03</td><td>{upper_bound_text2}</td></tr>
                 <tr><td>下側許容幅</td><td>中心価格×0.95 または BB−1σの高い方</td><td>{lower_bound_text2}</td></tr>
                 <tr><td>BB調整下限</td><td>BB−1σ</td><td>{bb_adjusted_text}</td></tr>
-                <tr><td>出力</td><td>裁量買いレンジ</td><td><strong>{trend_range_text}</strong></td></tr>
+                <tr><td>裁量買い判定</td><td>{trend_judge}</td><td><strong>{trend_range_text}</strong></td></tr>
             </table>""", unsafe_allow_html=True)
         
         else:
@@ -520,7 +522,7 @@ for code in ticker_list:
                 <tr><td>中心価格</td><td>25MAとBB−1σの平均</td><td>{center_price_text}</td></tr>
                 <tr><td>上側許容幅</td><td>中心価格×1.08</td><td>{upper_bound_text}</td></tr>
                 <tr><td>下側許容幅</td><td>中心価格×0.97</td><td>{lower_bound_text}</td></tr>
-                <tr><td>出力</td><td>裁量買いレンジ</td><td><strong>{contrarian_range_text}</strong></td></tr>
+                <tr><td>裁量買い判定</td><td>裁量買いレンジ</td><td><strong>{contrarian_range_text}</strong></td></tr>
             </table>""", unsafe_allow_html=True)
 
     except Exception as e:
