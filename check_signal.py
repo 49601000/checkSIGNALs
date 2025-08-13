@@ -353,31 +353,31 @@ for code in ticker_list:
         }
         
         # 📊 テクニカル指標をまとめる
-bb_lower1 = params["bb_lower1"]
-bb_lower2 = params["bb_lower2"]
+        bb_lower1 = params["bb_lower1"]
+        bb_lower2 = params["bb_lower2"]
 
-# 判定ロジック
-lowprice_score = is_low_price_zone(price, ma25, ma50, bb_lower1, bb_lower2, rsi, per, pbr, low_52w)
-score_text = f"{lowprice_score}点" if lowprice_score is not None else "—"
+        # 判定ロジック
+        lowprice_score = is_low_price_zone(price, ma25, ma50, bb_lower1, bb_lower2, rsi, per, pbr, low_52w)
+        score_text = f"{lowprice_score}点" if lowprice_score is not None else "—"
 
-# 裁量レンジ判定
-buy_range_contrarian = calc_discretionary_buy_range_contrarian(df_valid, params)
+        # 裁量レンジ判定
+        buy_range_contrarian = calc_discretionary_buy_range_contrarian(df_valid, params)
 
-# 優先順位：順張り → 逆張り
-if buy_range_trend:
-    buy_range = buy_range_trend
-    buy_range_type = "順張り"
-    center_price = (ma25 + ma50) / 2
-    upper_bound = center_price * 1.03
-    lower_bound = max(center_price * 0.95, bb_lower1)
-elif buy_range_contrarian:
-    buy_range = (buy_range_contrarian["lower_price"], buy_range_contrarian["upper_price"])
-    buy_range_type = "逆張り"
-    center_price = buy_range_contrarian["center_price"]
-    upper_bound = buy_range_contrarian["upper_price"]
-    lower_bound = buy_range_contrarian["lower_price"]
-else:
-    center_price = upper_bound = lower_bound = None
+        # 優先順位：順張り → 逆張り
+        if buy_range_trend:
+            buy_range = buy_range_trend
+            buy_range_type = "順張り"
+            center_price = (ma25 + ma50) / 2
+            upper_bound = center_price * 1.03
+            lower_bound = max(center_price * 0.95, bb_lower1)
+        elif buy_range_contrarian:
+            buy_range = (buy_range_contrarian["lower_price"], buy_range_contrarian["upper_price"])
+            buy_range_type = "逆張り"
+            center_price = buy_range_contrarian["center_price"]
+            upper_bound = buy_range_contrarian["upper_price"]
+            lower_bound = buy_range_contrarian["lower_price"]
+        else:
+            center_price = upper_bound = lower_bound = None
 
             
             
