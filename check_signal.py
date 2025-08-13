@@ -151,7 +151,7 @@ def is_flat_ma(ma25, ma50, ma75, tolerance=0.03):
     return (ma_max - ma_min) / ma_max <= tolerance
 
 # 🎯 売られすぎスコア連動型：逆張り裁量枠購入可能レンジ
-def calc_discretionary_buy_range_contrarian(df, ma25, ma50, ma75, bb_lower1, params):
+def calc_discretionary_buy_range_contrarian(df, params):
     ma25 = params["ma25"]
     ma50 = params["ma50"]
     ma75 = params["ma75"]
