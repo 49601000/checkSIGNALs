@@ -436,10 +436,20 @@ for code in ticker_list:
             print("❌ 裁量買いレンジなし（条件未達）")
 
 
-        # 安全に値を取り出す
-        center_price = f"{(ma25 + ma50)/2:.2f}" if ma25 and ma50 else "—"
-        lower_bound = f"{buy_range_trend[0]:.2f}" if buy_range_trend else "—"
-        upper_bound = f"{buy_range_trend[1]:.2f}" if buy_range_trend else "—"
+        # 中心価格：25MAとBB−1σの平均
+        if isinstance(ma25, (int, float)) and isinstance(bb_lower1, (int, float)):
+            center_price_val = (ma25 + bb_lower1) / 2
+        else:
+            center_price_val = None
+
+        # 許容幅の計算
+        upper_bound_val = center_price_val * 1.08 if center_price_val else None
+        lower_bound_val = center_price_val * 0.97 if center_price_val else None
+
+        # 表示用整形
+        center_price_text = safe_format(center_price_val)
+        upper_bound_text = safe_format(upper_bound_val)
+        lower_bound_text = safe_format(lower_bound_val)
 
         # last が None でないことを確認し、キーがあるかも確認
         if isinstance(last, dict) and "BB_-1σ" in last and last["BB_-1σ"] is not None:
