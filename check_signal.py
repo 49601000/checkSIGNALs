@@ -337,8 +337,8 @@ for code in ticker_list:
         buy_range_trend = calc_discretionary_buy_range(
             df_valid, params["ma25"], params["ma50"], params["ma75"], params["bb_lower1"])
 
-       # 逆張り判定
-       buy_range_contrarian = calc_discretionary_buy_range_contrarian(
+       # 順張り判定
+        buy_range_contrarian = calc_discretionary_buy_range_contrarian(
             df_valid, params["ma25"], params["ma50"], params["ma75"],
             params["bb_lower1"], params["bb_lower2"], params["rsi"], params["per"], params["pbr"], params["low_52w"])
 
