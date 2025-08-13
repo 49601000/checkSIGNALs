@@ -438,21 +438,29 @@ for code in ticker_list:
             bb_adjusted = "—"
 
 
-        st.markdown(f"""
-        <div style="margin-top:2em; font-size:16px; font-weight:bold;">🧮 <順張り>裁量買いレンジのロジック</div>
+        # 表示用の安全な数値変換（事前に定義済みと仮定）
+        center_price_text = safe_format(center_price)
+        upper_bound_text = safe_format(upper_bound)
+        lower_bound_text = safe_format(lower_bound)
+        bb_adjusted_text = safe_format(bb_adjusted)
+        range_text = f"{lower_bound_text} ～ {upper_bound_text}"
 
+        # 順張りロジック表示
+        st.markdown(f"""
+        <div style="margin-top:2em; font-size:16px; font-weight:bold;">📈 <順張り>裁量買いレンジのロジック</div>
         <table>
-            <tr><th align="left">項目</th><th align="left">内容</th></tr>
-            <tr><td>中期トレンド</td><td>75MA &gt; 50MA &gt; 25MA</td></tr>
-            <tr><td>短期傾向</td><td>25MAの傾きが過去5日で ±0.3%以内（横ばい〜緩やかな上昇）</td></tr>
-            <tr><td>中心価格</td><td>{center_price}</td></tr>
-            <tr><td>上側許容幅</td><td>{upper_bound}</td></tr>
-            <tr><td>下側許容幅</td><td>{lower_bound}</td></tr>
-            <tr><td>BB調整下限</td><td>{bb_adjusted} または 中心価格×0.95 の高い方</td></tr>
-            <tr><td>出力</td><td><strong>{lower_bound} ～ {upper_bound}</strong></td></tr>
+            <tr><th align="left">項目</th><th align="left">内容</th><th align="left">判定</th></tr>
+            <tr><td>中期トレンド</td><td>75MA &gt; 50MA &gt; 25MA</td><td>{trend_mark}</td></tr>
+            <tr><td>短期傾向</td><td>25MAの傾きが過去5日で ±0.3%以内（横ばい〜緩やかな上昇）</td><td>{slope_mark}</td></tr>
+            <tr><td>中心価格</td><td>25MAと50MAの平均</td><td>{center_price_text}</td></tr>
+            <tr><td>上側許容幅</td><td>中心価格×1.03</td><td>{upper_bound_text}</td></tr>
+            <tr><td>下側許容幅</td><td>中心価格×0.95 または BB−1σの高い方</td><td>{lower_bound_text}</td></tr>
+             <tr><td>BB調整下限</td><td>BB−1σ</td><td>{bb_adjusted_text}</td></tr>
+            <tr><td>出力</td><td>裁量買いレンジ</td><td><strong>{range_text}</strong></td></tr>
         </table>""", unsafe_allow_html=True)
         
     
+         # 逆張りロジック表示
         is_downtrend = ma75 > ma50 > ma25
         is_flattrend = is_flat_ma(ma25, ma50, ma75, tolerance=0.03)
         trend_ok = is_downtrend or is_flattrend
