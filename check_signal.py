@@ -474,7 +474,7 @@ for code in ticker_list:
         upper_bound_text = safe_format(upper_bound_val)
         lower_bound_text = safe_format(lower_bound_val)
         upper_bound_text2 = safe_format(upper_bound_val2)
-        lower_bound_text2 = safe_format(lower_bound_val2)
+        lower_bound_text2 = safe_format(max(bb_lower1, center_price_val * 1.05))
         bb_adjusted_text = safe_format(bb_adjusted)
         range_text = f"{lower_bound_text} ～ {upper_bound_text}"
         
