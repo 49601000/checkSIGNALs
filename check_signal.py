@@ -402,6 +402,20 @@ for code in ticker_list:
             <tr><td>BB調整下限</td><td>{bb_adjusted} または 中心価格×0.95 の高い方</td></tr>
             <tr><td>出力</td><td><strong>{lower_bound} ～ {upper_bound}</strong></td></tr>
         </table>""", unsafe_allow_html=True)
-         
+        
+        center_price = f"{(ma25 + bb_lower1)/2:.2f}"
+        upper_bound = f"{float(center_price) * 1.08:.2f}"
+        lower_bound = f"{float(center_price) * 0.97:.2f}"
+        st.markdown(f"""
+        <table>
+            <tr><th align="left">項目</th><th align="left">内容</th></tr>
+            <tr><td>中期トレンド</td><td>75MA ≧ 50MA ≧ 25MA（下降または横ばい）</td></tr>
+            <tr><td>短期傾向</td><td>25MAの傾きが過去5日でマイナス（下落傾向）</td></tr>
+            <tr><td>割安圏判定</td><td>売られすぎスコアが60点以上（RSI・PER・PBR・BB・52週安値など）</td></tr>
+            <tr><td>中心価格</td><td>{center_price}（25MAとBB−1σの平均）</td></tr>
+            <tr><td>上側許容幅</td><td>{upper_bound}（中心価格×1.08）</td></tr>
+            <tr><td>下側許容幅</td><td>{lower_bound}（中心価格×0.97）</td></tr>
+            <tr><td>出力</td><td><strong>{lower_bound} ～ {upper_bound}</strong></td></tr>
+        </table>""", unsafe_allow_html=True)
     except Exception as e:
         st.error(f"{code}: 処理中にエラーが発生しました（{e}）")
