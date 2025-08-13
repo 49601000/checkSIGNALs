@@ -137,7 +137,7 @@ def calc_discretionary_buy_range(df, ma25, ma50, ma75, bb_lower, highprice_score
     is_mid_uptrend = ma75 < ma50 < ma25
     # ② 短期傾向（25MAの傾き）
     ma25_slope = (df['25MA'].iloc[-1] - df['25MA'].iloc[-5]) / df['25MA'].iloc[-5] * 100
-    is_flat_uptrend = abs(ma25_slope) <= 0.3 and ma25_slope >= 0
+    is_flat_or_gentle_up = abs(ma25_slope) <= 0.3 and ma25_slope >= 0
     # ③ 割高スコアが60点以下（押し目）
     is_pullback = highprice_score <= 60
     # 条件をすべて満たすか判定
@@ -500,7 +500,6 @@ for code in ticker_list:
         slope_mark = "○" if is_flat_or_gentle_up else "×"
 
         # 2. 高値圏スコア判定（←ここに入れる！）
-        highprice_score = is_high_price_zone(price, ma25, ma50, bb_upper1, rsi, per, pbr, high_52w)
         high_score_text = f"{highprice_score}点"
         high_score_ok = highprice_score >= 60
         high_score_mark = "○" if high_score_ok else "×"
