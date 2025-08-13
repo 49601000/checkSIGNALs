@@ -64,7 +64,7 @@ def judge_bb_signal(price, bb_upper1, bb_upper2, bb_lower1, bb_lower2):
 # 🎯<順張り> 押し目＆RSIによる高値圏シグナル判定
 def is_high_price_zone(price, ma25, ma50, bb_upper1, rsi, per, pbr, high_52w):
     if None in [price, ma25, ma50, bb_upper1, rsi, per, pbr, high_52w]:
-        return False  # データ不足で判定不可
+        return highprice_score # データ不足で判定不可
     highprice_score = 0
     #株価が25日および50日移動平均よりも＋10%超
     if price > ma25 * 1.10 and price > ma50 * 1.10:
@@ -89,7 +89,7 @@ def is_high_price_zone(price, ma25, ma50, bb_upper1, rsi, per, pbr, high_52w):
 # 🎯<逆張り> 押し目＆割安圏シグナル判定
 def is_low_price_zone(price, ma25, ma50, bb_lower1, bb_lower2, rsi, per, pbr, low_52w):
     if None in [price, ma25, ma50, bb_lower1, bb_lower2, rsi, per, pbr, low_52w]:
-        return False  # データ不足で判定不可
+        return lowprice_score  # データ不足で判定不可
     lowprice_score = 0
     # 株価が25MAおよび50MAより−10%以上
     if price < ma25 * 0.90 and price < ma50 * 0.90:
@@ -283,7 +283,7 @@ for code in ticker_list:
 
         div_text = f"{dividend_yield:.2f}%" if dividend_yield else "—"
         per_text = f"{per:.2f}" if per else "—"
-        pbr_text = f"{pbr:2f}" if pbr else "—"
+        pbr_text = f"{pbr:.2f}" if pbr else "—"
         
         # 価格選択
         market_state = info.get("marketState", "UNKNOWN")
@@ -369,7 +369,7 @@ for code in ticker_list:
 
         # 判定ロジック
         lowprice_score = is_low_price_zone(price, ma25, ma50, bb_lower1, bb_lower2, rsi, per, pbr, low_52w)
-        score_text = f"{lowprice_score}点" if lowprice_score is not None else "—"
+        score_text = f"{lowprice_score}点"
 
         # 逆張り判定
         buy_range_contrarian = calc_discretionary_buy_range_contrarian(df_valid, params)
@@ -413,7 +413,7 @@ for code in ticker_list:
         # ✅ 表示部分（重複なし）
         st.markdown(f"---\n### 💡 {code} - {name}")
         st.markdown(f"**🏭 業種**: {industry}")
-        st.markdown(f"**💰 配当利回り**: {div_text}｜**📐 PER**: {per_text}｜**🧮 PBR**: {per_text}")
+        st.markdown(f"**💰 配当利回り**: {div_text}｜**📐 PER**: {per_text}｜**🧮 PBR**: {pbr_text}")
         # 色の判定（高い→赤、安い→緑、変わらず→黒）
         if close > close_price:
             color = "red"
@@ -431,6 +431,7 @@ for code in ticker_list:
 
         #順張りレンジ
         if buy_range_trend:
+            buy_range_type = "順張り"
             print(f"🎯 {buy_range_type}裁量買いレンジ: {buy_range_trend[0]} ～ {buy_range_trend[1]}")
         else:
             print("❌ 裁量買いレンジなし（条件未達）")
@@ -449,7 +450,7 @@ for code in ticker_list:
         lower_bound_val2 = center_price_val * 0.95 if center_price_val else None
 
         # last が None でないことを確認し、キーがあるかも確認
-        if isinstance(last, dict) and "BB_-1σ" in last and last["BB_-1σ"] is not None:
+        if "BB_-1σ" in last and last["BB_-1σ"] is not None:
              bb_adjusted = f"{last['BB_-1σ']:.2f}"
         else:
             bb_adjusted = "—"
@@ -465,8 +466,8 @@ for code in ticker_list:
 
         # 2. 高値圏スコア判定（←ここに入れる！）
         highprice_score = is_high_price_zone(price, ma25, ma50, bb_upper1, rsi, per, pbr, high_52w)
-        high_score_text = f"{highprice_score}点" if isinstance(highprice_score, (int, float)) else "—"
-        high_score_ok = highprice_score >= 60 if isinstance(highprice_score, (int, float)) else False
+        high_score_text = f"{highprice_score}点"
+        high_score_ok = highprice_score >= 60 if isinstance(highprice_score, (int, float)) return 0
         high_score_mark = "○" if high_score_ok else "×"
 
         # 3. 表示用の数値変換
