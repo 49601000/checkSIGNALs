@@ -268,7 +268,7 @@ for code in ticker_list:
 )
 
         bb_signal_text, bb_icon, bb_strength = judge_bb_signal(close, last["BB_+1σ"], last["BB_+2σ"],last["BB_-1σ"], last["BB_-2σ"])
-        st.markdown(f"**📊 RSI**: {rsi:.1f}｜**📏 BB判定(20日)**: {bb_icon} {bb_signal_text}")
+        st.markdown(f"**📊 RSI**: {rsi:.1f}｜**📏 BB判定(20日)**: {bb_signal_text}")
         st.markdown(f"### {signal_icon} {signal_text}")
         st.progress(signal_strength / 3)
 
