@@ -341,7 +341,7 @@ for code in ticker_list:
        # 逆張り判定
         buy_range_contrarian = calc_discretionary_buy_range_contrarian(
             df_valid, params["ma25"], params["ma50"], params["ma75"], params["bb_lower1"], params["bb_lower2"], 
-            params["rsi"], price["price"], params["per"], params["pbr"], params["dividend_yield"], params["low_52w"])
+            params["rsi"], params["price"], params["per"], params["pbr"], params["dividend_yield"], params["low_52w"])
 
         # 優先順位：順張り → 逆張り
         if buy_range_trend:
