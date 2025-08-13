@@ -323,15 +323,34 @@ for code in ticker_list:
             "bb_upper1": last["BB_+1σ"],
             "per": per,
             "pbr": pbr,
+            "dividend_yield":dividend_yield,    
             "high_52w": high_52w
-        }
-        # 📊 シグナル判定
-        signal_text, signal_icon, signal_strength = judge_signal(**params)
-        # 🎯 裁量買いレンジの算出（トレンドが安定している場合のみ）
-        bb_lower1 = params["bb_lower1"]
-        buy_range = calc_discretionary_buy_range(df_valid, ma25, ma50, ma75, bb_lower1)
-        
+            "Low_52w": low_52w
 
+        }
+        # 📊 シグナル判定(高値圏)
+        signal_text, signal_icon, signal_strength = judge_signal(**params)
+        # 🎯 裁量買いレンジの算出（順張り or 逆張り）
+        buy_range = None
+        buy_range_type = None
+        # 順張り判定
+        buy_range_trend = calc_discretionary_buy_range(
+            df_valid, params["ma25"], params["ma50"], params["ma75"], params["bb_lower1"])
+
+       # 逆張り判定
+       buy_range_contrarian = calc_discretionary_buy_range_contrarian(
+            df_valid, params["ma25"], params["ma50"], params["ma75"],
+            params["bb_lower1"], params["bb_lower2"], params["rsi"], params["per"], params["pbr"], params["low_52w"])
+
+        # 優先順位：順張り → 逆張り
+        if buy_range_trend:
+            buy_range = buy_range_trend
+            buy_range_type = "順張り"
+        elif buy_range_contrarian:
+            buy_range = buy_range_contrarian
+            buy_range_type = "逆張り"
+
+      
         # ✅ 表示部分（重複なし）
         st.markdown(f"---\n### 💡 {code} - {name}")
         st.markdown(f"**🏭 業種**: {industry}")
@@ -353,9 +372,9 @@ for code in ticker_list:
 
         #順張りレンジ
         if buy_range:
-            st.markdown(f"**🎯<順張り>裁量買いレンジ**: **{buy_range[0]}** ～ **{buy_range[1]}**")
+            print(f"🎯 {buy_range_type}裁量買いレンジ: {buy_range[0]} ～ {buy_range[1]}")
         else:
-            st.markdown("📉 <順張り>トレンド条件未達のため、裁量買いレンジは表示されません。")
+            print("❌ 裁量買いレンジなし（条件未達）")
 
 
         # 安全に値を取り出す
