@@ -352,49 +352,32 @@ for code in ticker_list:
             "low_52w": low_52w
         }
         
-        # 📊 シグナル判定(高値圏)
-        signal_text, signal_icon, signal_strength = judge_signal(**params)
-        # 🎯 裁量買いレンジの算出（順張り or 逆張り）
-        buy_range = None
-        buy_range_type = None
-        # 順張り判定
-        buy_range_trend = calc_discretionary_buy_range(
-            df_valid, params["ma25"], params["ma50"], params["ma75"], params["bb_lower1"])
-        # 逆張り判定
-        buy_range_contrarian = calc_discretionary_buy_range_contrarian(df_valid, params)
-        # ✅ 判定ロジック
-        is_downtrend = ma75 > ma50 > ma25
-        is_flattrend = is_flat_ma(ma25, ma50, ma75, tolerance=0.03) 
-        trend_ok = is_downtrend or is_flattrend
-        trend_mark = "○" if trend_ok else "×"
-        
-        ma25_slope = (df['25MA'].iloc[-1] - df['25MA'].iloc[-5]) / df['25MA'].iloc[-5] * 100
-        slope_ok = ma25_slope < 0
-        slope_mark = "○" if slope_ok else "×"
-        
-        lowprice_score = is_low_price_zone(price, ma25, ma50, bb_lower1, bb_lower2, rsi, per, pbr, low_52w)
-        score_text = f"{lowprice_score}点" if lowprice_score is not None else "—"
-       
-        center_price = (ma25 + bb_lower1) / 2
-        upper_bound = center_price * 1.08
-        lower_bound = center_price * 0.97
+        # 📊 テクニカル指標をまとめる
+bb_lower1 = params["bb_lower1"]
+bb_lower2 = params["bb_lower2"]
 
-        # 優先順位：順張り → 逆張り
-        if buy_range_trend:
-            buy_range = buy_range_trend
-            buy_range_type = "順張り"
-        elif buy_range_contrarian:
-            buy_range = buy_range_contrarian
-            buy_range_type = "逆張り"
-            # 🎯 逆張りレンジの表示用データを計算
-            last = df_valid.iloc[-1]
-            bb_lower1 = params["bb_lower1"]
-            ma25 = params["ma25"]
-            center_price = (ma25 + bb_lower1) / 2
-            upper_bound = center_price * 1.08
-            lower_bound = center_price * 0.97
-        else:
-            center_price = upper_bound = lower_bound = None
+# 判定ロジック
+lowprice_score = is_low_price_zone(price, ma25, ma50, bb_lower1, bb_lower2, rsi, per, pbr, low_52w)
+score_text = f"{lowprice_score}点" if lowprice_score is not None else "—"
+
+# 裁量レンジ判定
+buy_range_contrarian = calc_discretionary_buy_range_contrarian(df_valid, params)
+
+# 優先順位：順張り → 逆張り
+if buy_range_trend:
+    buy_range = buy_range_trend
+    buy_range_type = "順張り"
+    center_price = (ma25 + ma50) / 2
+    upper_bound = center_price * 1.03
+    lower_bound = max(center_price * 0.95, bb_lower1)
+elif buy_range_contrarian:
+    buy_range = (buy_range_contrarian["lower_price"], buy_range_contrarian["upper_price"])
+    buy_range_type = "逆張り"
+    center_price = buy_range_contrarian["center_price"]
+    upper_bound = buy_range_contrarian["upper_price"]
+    lower_bound = buy_range_contrarian["lower_price"]
+else:
+    center_price = upper_bound = lower_bound = None
 
             
             
