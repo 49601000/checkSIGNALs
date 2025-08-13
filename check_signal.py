@@ -262,8 +262,6 @@ custom_labels = {
 
 print(get_market_status("NASDAQ", "REGULAR", custom_labels))
 
-# 🎯 順張りスコア（割高度）
-highprice_score = is_high_price_zone(close, ma25, ma50, last["BB_+1σ"], rsi, per, pbr, high_52w)
 
 # 市場情報取得
 first_ticker = yf.Ticker(ticker)
@@ -342,13 +340,19 @@ for code in ticker_list:
             st.warning(f"{code}: 有効なテクニカル指標がありません。")
             continue
 
+        # 価格と指標の抽出
         last = df_valid.iloc[-1]
         close = float(last[close_col])
         ma25 = float(last["25MA"])
         ma50 = float(last["50MA"])
         ma75 = float(last["75MA"])
         rsi = float(last["RSI"])
-        
+        bb_upper1 = float(last["BB_+1σ"])
+        bb_lower1 = float(last["BB_-1σ"])
+        bb_lower2 = float(last["BB_-2σ"])
+
+        # 🎯 順張りスコア（割高度）
+        highprice_score = is_high_price_zone(close, ma25, ma50, last["BB_+1σ"], rsi, per, pbr, high_52w)
         
         # 📊 テクニカル指標をまとめる
         params = {
@@ -368,35 +372,34 @@ for code in ticker_list:
             "highprice_score":highprice_score,
         }
         
-        # 📊 テクニカル指標をまとめる
-        bb_lower1 = params["bb_lower1"]
-        bb_lower2 = params["bb_lower2"]
-        bb_upper1 = params["bb_upper1"]
         
         # 🎯 シグナル判定（押し目 or 高値圏など）
         signal_text, signal_icon, signal_strength = judge_signal(**params)
         
 
         # 🎯 順張り裁量レンジ（条件を満たす場合のみ）
-        buy_range_trend = calc_discretionary_buy_range(df_valid, params["ma25"], params["ma50"], params["ma75"], params["bb_lower1"], params["highprice_score"])
-
-
-
-
-        # 判定ロジック
+        buy_range_trend = calc_discretionary_buy_range(
+            df_valid,
+            ma25, ma50, ma75,
+            bb_lower1,
+            highprice_score
+        )
+        # 🎯 逆張りスコアとレンジ判定
         lowprice_score = is_low_price_zone(price, ma25, ma50, bb_lower1, bb_lower2, rsi, per, pbr, low_52w)
         score_text = f"{lowprice_score}点"
-
-        # 逆張り判定
         buy_range_contrarian = calc_discretionary_buy_range_contrarian(df_valid, params)
-        
+
+        # 判定ラベル
+        trend_judge = "裁量買いOK" if buy_range_trend else "裁量買いNG"
+        contrarian_judge = "裁量買いOK" if buy_range_contrarian else "裁量買いNG"
+
         # ✅ テーブルの表示判定ロジック（順張り or not)
         is_mid_uptrend = ma25 > ma50 and ma25 > ma75
 
         # 安全な数値整形関数    
         def safe_format(value, digits=2):
-            return f"{value:.{digits}f}" if isinstance(value, (int, float)) else "—"
-        
+            return f"{value:.{digits}f}" if isinstance(value, (int, float)) and not pd.isna(value) else "—"
+
         # 順張りレンジ
         if buy_range_trend:
             trend_range = (buy_range_trend["lower_price"], buy_range_trend["upper_price"])
@@ -476,18 +479,17 @@ for code in ticker_list:
         upper_bound_val2 = center_price_val * 1.05 if center_price_val else None
         lower_bound_val2 = center_price_val * 0.95 if center_price_val else None
 
-        # last が None でないことを確認し、キーがあるかも確認
-        if "BB_-1σ" in last and last["BB_-1σ"] is not None:
-            bb_adjusted = last["BB_-1σ"] if "BB_-1σ" in last and last["BB_-1σ"] is not None else None
-            bb_adjusted_text = safe_format(bb_adjusted)
-        else:
-            bb_adjusted = "—"
+        # last が None でないことを確認し、キーがあるかも確認        
+        bb_adjusted = last.get("BB_-1σ", None)
+        bb_adjusted_text = safe_format(bb_adjusted)
+
+        ma25_slope = (df["25MA"].iloc[-1] - df["25MA"].iloc[-5]) / df["25MA"].iloc[-5] * 100
+        slope_ok = ma25_slope < 0  # 逆張り用
+
 
 
         # 1. 順張りロジックの判定（このブロック）
         is_uptrend = ma75 < ma50 < ma25
-        ma25_slope = (df["25MA"].iloc[-1] - df["25MA"].iloc[-5]) / df["25MA"].iloc[-5] * 100
-        is_flat_or_gentle_up = abs(ma25_slope) <= 0.3 and ma25_slope >= 0
         trend_ok = is_uptrend and is_flat_or_gentle_up
         trend_mark = "○" if is_uptrend else "×"
         slope_mark = "○" if is_flat_or_gentle_up else "×"
