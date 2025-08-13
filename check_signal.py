@@ -306,8 +306,7 @@ for code in ticker_list:
         else:
             bb_adjusted = "—"
 
-        st.markdown(f"""
-        #### 🧮 裁量買いレンジのロジック
+        st.markdown("\n\n" + f""" ##### 🧮 裁量買いレンジのロジック
         <table>
             <tr><th align="left">項目</th><th align="left">内容</th></tr>
             <tr><td>中期トレンド</td><td>75MA > 50MA > 25MA</td></tr>
