@@ -84,7 +84,7 @@ def is_high_price_zone(price, ma25, ma50, bb_upper1, rsi, per, pbr, high_52w):
     #株価52週高値圏の95％以上       
     if price >= high_52w * 0.95:
         highprice_score += 15
-    return highprice_score >= 60  # 高値圏シグナル
+    return highprice_score   # 割高圏スコア
 
 # 🎯<逆張り> 押し目＆割安圏シグナル判定
 def is_low_price_zone(price, ma25, ma50, bb_lower1, bb_lower2, rsi, per, pbr, low_52w):
@@ -112,8 +112,8 @@ def is_low_price_zone(price, ma25, ma50, bb_lower1, bb_lower2, rsi, per, pbr, lo
     # 株価が52週安値圏の105%以上（底値圏）
     if price <= low_52w * 1.05:
         lowprice_score += 15
-    return lowprice_score 
-    #return lowprice_score >= 60  # 割安圏シグナル
+    return lowprice_score 　　　　# 割安圏スコア
+    #return lowprice_score >= 60  # 割安圏スコア
 
 
 # 🎯 押し目＆RSIによるシグナル判定
@@ -135,7 +135,7 @@ def judge_signal(price, ma25, ma50, ma75, bb_lower1, bb_upper1, bb_lower2, rsi, 
 def calc_discretionary_buy_range(df, ma25, ma50, ma75, bb_lower):
     # トレンド条件：MA75 > MA50 > MA25 かつ MA25の傾きが±0.3%以内
     ma25_slope = (df['25MA'].iloc[-1] - df['25MA'].iloc[-5]) / df['25MA'].iloc[-5] * 100
-    if not (ma75 > ma50 > ma25 and abs(ma25_slope) <= 0.3):
+    if not (ma75 < ma50 < ma25 and abs(ma25_slope) <= 0.3 and ma25_slope >= 0):
         return None  # 条件を満たさない場合
     # 中心価格
     center_price = (ma25 + ma50) / 2
@@ -438,14 +438,28 @@ for code in ticker_list:
             bb_adjusted = "—"
 
 
-        # 表示用の安全な数値変換（事前に定義済みと仮定）
+        # 1. 順張りロジックの判定（このブロック）
+        is_uptrend = ma75 < ma50 < ma25
+        ma25_slope = (df["25MA"].iloc[-1] - df["25MA"].iloc[-5]) / df["25MA"].iloc[-5] * 100
+        is_flat_or_gentle_up = abs(ma25_slope) <= 0.3 and ma25_slope >= 0
+        trend_ok = is_uptrend and is_flat_or_gentle_up
+        trend_mark = "○" if is_uptrend else "×"
+        slope_mark = "○" if is_flat_or_gentle_up else "×"
+
+        # 2. 高値圏スコア判定（←ここに入れる！）
+        highprice_score = is_high_price_zone(price, ma25, ma50, bb_upper1, rsi, per, pbr, high_52w)
+        high_score_text = f"{highprice_score}点" if isinstance(highprice_score, (int, float)) else "—"
+        high_score_ok = highprice_score >= 60 if isinstance(highprice_score, (int, float)) else False
+        high_score_mark = "○" if high_score_ok else "×"
+
+        # 3. 表示用の数値変換
         center_price_text = safe_format(center_price)
         upper_bound_text = safe_format(upper_bound)
         lower_bound_text = safe_format(lower_bound)
         bb_adjusted_text = safe_format(bb_adjusted)
         range_text = f"{lower_bound_text} ～ {upper_bound_text}"
-
-        # 順張りロジック表示
+        
+        # 4. 順張りテーブルの表示
         st.markdown(f"""
         <div style="margin-top:2em; font-size:16px; font-weight:bold;">📈 <順張り>裁量買いレンジのロジック</div>
         <table>
