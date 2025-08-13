@@ -325,7 +325,7 @@ for code in ticker_list:
             "pbr": pbr,
             "dividend_yield":dividend_yield,    
             "high_52w": high_52w
-            "Low_52w": low_52w
+            "low_52w": low_52w
 
         }
         # 📊 シグナル判定(高値圏)
