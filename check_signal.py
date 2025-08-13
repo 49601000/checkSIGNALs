@@ -116,7 +116,7 @@ def is_low_price_zone(price, ma25, ma50, bb_lower1, bb_lower2, rsi, per, pbr, lo
 
 
 # 🎯 押し目＆RSIによるシグナル判定
-def judge_signal(price, ma25, ma50, ma75, bb_lower1, bb_upper1, rsi, per, pbr, dividend_yield, high_52w,low_52w):
+def judge_signal(price, ma25, ma50, ma75, bb_lower1, bb_upper1, bb_lower2, rsi, per, pbr, dividend_yield, high_52w,low_52w):
     if rsi is None:
         return "RSI不明", "⚪️", 0
     if price <= ma75 and rsi < 40 and price<=bb_lower1:
