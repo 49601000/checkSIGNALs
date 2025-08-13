@@ -137,7 +137,7 @@ def calc_discretionary_buy_range(df, ma25, ma50, ma75, bb_lower, highprice_score
     is_mid_uptrend = ma75 < ma50 < ma25
     # ② 短期傾向（25MAの傾き）
     ma25_slope = (df['25MA'].iloc[-1] - df['25MA'].iloc[-5]) / df['25MA'].iloc[-5] * 100
-    is_flat_or_gentle_up = abs(ma25_slope) <= 0.3 and ma25_slope >= 0
+    
     # ③ 割高スコアが60点以下（押し目）
     is_pullback = highprice_score <= 60
     # 条件をすべて満たすか判定
@@ -331,9 +331,10 @@ for code in ticker_list:
         avg_loss = loss.rolling(14).mean().replace(0, 1e-10)
         rs = avg_gain / avg_loss
         df["RSI"] = 100 - (100 / (1 + rs))
-        ma25_slope = (df['25MA'].iloc[-1] - df['25MA'].iloc[-5]) / df['25MA'].iloc[-5] * 100
-        slope_ok = ma25_slope < 0
-        
+        ma25_slope = (df["25MA"].iloc[-1] - df["25MA"].iloc[-5]) / df["25MA"].iloc[-5] * 100
+        slope_ok = ma25_slope < 0  # 逆張り用
+        is_flat_or_gentle_up = abs(ma25_slope) <= 0.3 and ma25_slope >= 0  # 順張り用
+
         
         df_valid = df.dropna()
         if df_valid.empty:
