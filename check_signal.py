@@ -374,7 +374,7 @@ for code in ticker_list:
         # 逆張り判定
         buy_range_contrarian = calc_discretionary_buy_range_contrarian(df_valid, params)
         
-        # ✅ 判定ロジック（ここに入れる！）
+        # ✅ テーブルの表示判定ロジック（順張り or not)
         is_mid_uptrend = ma25 > ma50 and ma25 > ma75
 
         # 安全な数値整形関数    
