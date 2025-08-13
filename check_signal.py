@@ -382,13 +382,13 @@ for code in ticker_list:
             center_price = buy_range_trend["center_price"]
             upper_bound = buy_range_trend["upper_price"]
             lower_bound = buy_range_trend["lower_price"]
-       elif buy_range_contrarian:
+        elif buy_range_contrarian:
             buy_range = (buy_range_contrarian["lower_price"], buy_range_contrarian["upper_price"])
             buy_range_type = "逆張り"
             center_price = buy_range_contrarian["center_price"]
             upper_bound = buy_range_contrarian["upper_price"]
             lower_bound = buy_range_contrarian["lower_price"]
-         else:
+        else:
             buy_range = None
             buy_range_type = None
             center_price = upper_bound = lower_bound = None
