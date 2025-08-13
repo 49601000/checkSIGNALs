@@ -468,7 +468,7 @@ for code in ticker_list:
             <tr><th align="left">項目</th><th align="left">内容</th><th align="left">判定</th></tr>
             <tr><td>中期トレンド</td><td>75MA &gt; 50MA &gt; 25MA</td><td>{trend_mark}</td></tr>
             <tr><td>短期傾向</td><td>25MAの傾きが過去5日で ±0.3%以内（横ばい〜緩やかな上昇）</td><td>{slope_mark}</td></tr>
-            <tr><td>順張り押し目判定</td><td>売られすぎスコアが60点以下で「割安」と判定（RSI・PER・PBR・BB・52週安値などを加点評価／スコアが高いほど割高傾向）</td><td>{high_score_text}</td></tr>
+            <tr><td>順張り押し目判定</td><td>ブルスコアが60点以下で「押し目」と判定（ブルスコアは RSI・PER・PBR・BB・52週高値などを加点評価／スコアが高いほど割高傾向）</td><td>{high_score_text}</td></tr>
             <tr><td>中心価格</td><td>25MAと50MAの平均</td><td>{center_price_text}</td></tr>
             <tr><td>上側許容幅</td><td>中心価格×1.03</td><td>{upper_bound_text}</td></tr>
             <tr><td>下側許容幅</td><td>中心価格×0.95 または BB−1σの高い方</td><td>{lower_bound_text}</td></tr>
@@ -491,7 +491,7 @@ for code in ticker_list:
             <tr><th align="left">項目</th><th align="left">内容</th><th align="left">判定</th></tr>
             <tr><td>中期トレンド</td><td>75MA(±3%) ≧ 50MA(±3%) ≧ 25MA(±3%)（下降または横ばい）</td><td>{trend_mark}</td></tr>
             <tr><td>短期傾向</td><td>25MAの傾きが過去5日でマイナス（下落傾向）</td><td>{slope_mark}</td></tr>
-            <tr><td>割安圏判定</td><td>売られすぎスコアが60点以上で「割安」と判定（RSI・PER・PBR・BB・52週安値などを加点評価／スコアが高いほど割安傾向）</td><td>{score_text}</td></tr>
+            <tr><td>割安圏判定</td><td>ベアスコアが60点以上で「割安」と判定（RSI・PER・PBR・BB・52週安値などを加点評価／スコアが高いほど割安傾向）</td><td>{score_text}</td></tr>
             <tr><td>中心価格</td><td>25MAとBB−1σの平均</td><td>{center_price_text}</td></tr>
             <tr><td>上側許容幅</td><td>中心価格×1.08</td><td>{upper_bound_text}</td></tr>
             <tr><td>下側許容幅</td><td>中心価格×0.97</td><td>{lower_bound_text}</td></tr>
