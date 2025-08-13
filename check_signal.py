@@ -355,6 +355,23 @@ for code in ticker_list:
         buy_range_contrarian = calc_discretionary_buy_range_contrarian(
             df_valid, params["ma25"], params["ma50"], params["ma75"], params["bb_lower1"], params["bb_lower2"], 
             params["rsi"], params["price"], params["per"], params["pbr"], params["dividend_yield"], params["low_52w"])
+    
+       # ✅ 判定ロジック（←ここにオプティカルさんのコードを置く）
+       is_downtrend = ma75 > ma50 > ma25
+       is_flattrend = is_flat_ma(ma25, ma50, ma75, tolerance=0.03)
+       trend_ok = is_downtrend or is_flattrend
+       trend_mark = "○" if trend_ok else "×"
+       
+       ma25_slope = (df['25MA'].iloc[-1] - df['25MA'].iloc[-5]) / df['25MA'].iloc[-5] * 100
+       slope_ok = ma25_slope < 0
+       slope_mark = "○" if slope_ok else "×"
+       
+       lowprice_score = get_low_price_score(price, ma25, ma50, bb_lower1, bb_lower2, rsi, per, pbr, low_52w)
+       score_text = f"{lowprice_score}点" if lowprice_score is not None else "—"
+       
+       center_price = (ma25 + bb_lower1) / 2
+       upper_bound = center_price * 1.08
+       lower_bound = center_price * 0.97
 
         # 優先順位：順張り → 逆張り
         if buy_range_trend:
@@ -372,8 +389,7 @@ for code in ticker_list:
             upper_bound = center_price * 1.08
             lower_bound = center_price * 0.97
 
-
-      
+             
         # ✅ 表示部分（重複なし）
         st.markdown(f"---\n### 💡 {code} - {name}")
         st.markdown(f"**🏭 業種**: {industry}")
@@ -429,14 +445,14 @@ for code in ticker_list:
         st.markdown(f"""
         <div style="margin-top:2em; font-size:16px; font-weight:bold;">🧮 <逆張り>裁量買いレンジのロジック</div>
         <table>
-            <tr><th align="left">項目</th><th align="left">内容</th></tr>
-            <tr><td>中期トレンド</td><td>75MA(±3%) ≧ 50MA(±3%) ≧ 25MA(±3%)（下降または横ばい）</td></tr>
-            <tr><td>短期傾向</td><td>25MAの傾きが過去5日でマイナス（下落傾向）</td></tr>
-            <tr><td>割安圏判定</td><td>売られすぎスコアが60点以上（RSI・PER・PBR・BB・52週安値など）</td></tr>
-            <tr><td>中心価格</td><td>{center_price}（25MAとBB−1σの平均）</td></tr>
-            <tr><td>上側許容幅</td><td>{upper_bound}（中心価格×1.08）</td></tr>
-            <tr><td>下側許容幅</td><td>{lower_bound}（中心価格×0.97）</td></tr>
-            <tr><td>出力</td><td><strong>{lower_bound} ～ {upper_bound}</strong></td></tr>
+            <tr><th align="left">項目</th><th align="left">内容</th><th align="left">判定</th></tr>
+            <tr><td>中期トレンド</td><td>75MA(±3%) ≧ 50MA(±3%) ≧ 25MA(±3%)（下降または横ばい）</td><td>{trend_mark}</td></tr>
+            <tr><td>短期傾向</td><td>25MAの傾きが過去5日でマイナス（下落傾向）</td><td>{slope_mark}</td></tr>
+            <tr><td>割安圏判定</td><td>売られすぎスコアが60点以上（RSI・PER・PBR・BB・52週安値など）</td><td>{score_text}</td></tr>
+            <tr><td>中心価格</td><td>25MAとBB−1σの平均</td><td>{center_price:.2f}</td></tr>
+            <tr><td>上側許容幅</td><td>中心価格×1.08</td><td>{upper_bound:.2f}</td></tr>
+            <tr><td>下側許容幅</td><td>中心価格×0.97</td><td>{lower_bound:.2f}</td></tr>
+            <tr><td>出力</td><td>裁量買いレンジ</td><td><strong>{lower_bound:.2f} ～ {upper_bound:.2f}</strong></td></tr>
         </table>""", unsafe_allow_html=True)
 
     except Exception as e:
