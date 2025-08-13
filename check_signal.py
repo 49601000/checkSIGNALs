@@ -379,15 +379,7 @@ for code in ticker_list:
             buy_range = buy_range_contrarian
             buy_range_type = "逆張り"
             
-            # 🎯 逆張りレンジの表示用データを計算
-            last = df_valid.iloc[-1]
-            bb_lower1 = float(last["BB_-1σ"])
-            ma25 = float(last["25MA"])
-            center_price = (ma25 + bb_lower1) / 2
-            upper_bound = center_price * 1.08
-            lower_bound = center_price * 0.97
-
-             
+            
         # ✅ 表示部分（重複なし）
         st.markdown(f"---\n### 💡 {code} - {name}")
         st.markdown(f"**🏭 業種**: {industry}")
@@ -425,6 +417,14 @@ for code in ticker_list:
         else:
             bb_adjusted = "—"
 
+        # 🎯 逆張りレンジの表示用データを計算
+        last = df_valid.iloc[-1]
+        bb_lower1 = float(last["BB_-1σ"])
+        ma25 = float(last["25MA"])
+        center_price = (ma25 + bb_lower1) / 2
+        upper_bound = center_price * 1.08
+        lower_bound = center_price * 0.97
+        
         st.markdown(f"""
         <div style="margin-top:2em; font-size:16px; font-weight:bold;">🧮 <順張り>裁量買いレンジのロジック</div>
 
