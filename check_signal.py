@@ -144,7 +144,7 @@ def calc_discretionary_buy_range(df, ma25, ma50, ma75, bb_lower):
     return round(lower_price, 2), round(upper_price, 2)
 
 # 🎯 売られすぎスコア連動型：逆張り裁量枠購入可能レンジ
-def calc_discretionary_buy_range_contrarian(df, ma25, ma50, ma75, bb_lower1, bb_lower2, rsi, price, per, pbr, div_yield, low_52w):
+def calc_discretionary_buy_range_contrarian(df, ma25, ma50, ma75, bb_lower1, bb_lower2, rsi, price, per, pbr, dividend_yield, low_52w):
     # トレンド条件：下降または横ばい
     if not (ma75 >= ma50 >= ma25):
         return None
@@ -164,7 +164,7 @@ def calc_discretionary_buy_range_contrarian(df, ma25, ma50, ma75, bb_lower1, bb_
     fundamentals = ""
     if pbr is not None and pbr < 1.0:
         fundamentals += "PBR割安 "
-    if div_yield is not None and div_yield > 3.0:
+    if dividend_yield is not None and dividend_yield > 3.0:
         fundamentals += "高配当 "
 
     return {
@@ -248,7 +248,7 @@ for code in ticker_list:
         name_raw = info.get("shortName", "")
         name = name_map.get(name_raw.upper(), name_raw)
         industry = info.get("industry", "業種不明")
-        div_yield = info.get("dividendYield", None)
+        dividend_yield = info.get("dividendYield", None)
         per = info.get("trailingPE", None)
         pbr = info.get("priceToBook",None)
         price = info.get("regularMarketPrice", None)
@@ -256,7 +256,7 @@ for code in ticker_list:
         low_52w = info.get("fiftyTwoWeekLow", None)
 
 
-        div_text = f"{div_yield:.2f}%" if div_yield else "—"
+        div_text = f"{dividend_yield:.2f}%" if dividend_yield else "—"
         per_text = f"{per:.2f}" if per else "—"
         pbr_text = f"{pbr:2f}" if pbr else "—"
         
@@ -323,11 +323,11 @@ for code in ticker_list:
             "bb_upper1": last["BB_+1σ"],
             "per": per,
             "pbr": pbr,
-            "div_yield":div_yield,    
+            "dividend_yield":dividend_yield,    
             "high_52w": high_52w,
             "low_52w": low_52w
-
         }
+        
         # 📊 シグナル判定(高値圏)
         signal_text, signal_icon, signal_strength = judge_signal(**params)
         # 🎯 裁量買いレンジの算出（順張り or 逆張り）
@@ -337,7 +337,7 @@ for code in ticker_list:
         buy_range_trend = calc_discretionary_buy_range(
             df_valid, params["ma25"], params["ma50"], params["ma75"], params["bb_lower1"])
 
-       # 順張り判定
+       # 逆張り判定
         buy_range_contrarian = calc_discretionary_buy_range_contrarian(
             df_valid, params["ma25"], params["ma50"], params["ma75"],
             params["bb_lower1"], params["bb_lower2"], params["rsi"], params["per"], params["pbr"], params["low_52w"])
