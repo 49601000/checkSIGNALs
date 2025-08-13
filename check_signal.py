@@ -374,6 +374,9 @@ for code in ticker_list:
         # 逆張り判定
         buy_range_contrarian = calc_discretionary_buy_range_contrarian(df_valid, params)
         
+        # ✅ 判定ロジック（ここに入れる！）
+        is_mid_uptrend = ma25 > ma50 and ma25 > ma75
+
         # 安全な数値整形関数    
         def safe_format(value, digits=2):
             return f"{value:.{digits}f}" if isinstance(value, (int, float)) else "—"
@@ -483,6 +486,7 @@ for code in ticker_list:
         bb_adjusted_text = safe_format(bb_adjusted)
         range_text = f"{lower_bound_text} ～ {upper_bound_text}"
         
+if is_mid_uptrend:
         # 4. 順張りテーブルの表示
         st.markdown(f"""
         <div style="margin-top:2em; font-size:16px; font-weight:bold;">📈 <順張り>裁量買いレンジのロジック</div>
@@ -498,14 +502,13 @@ for code in ticker_list:
             <tr><td>出力</td><td>裁量買いレンジ</td><td><strong>{trend_range_text}</strong></td></tr>
         </table>""", unsafe_allow_html=True)
         
-    
+else:
          # 逆張りロジック表示
         is_downtrend = ma75 > ma50 > ma25
         is_flattrend = is_flat_ma(ma25, ma50, ma75, tolerance=0.03)
         trend_ok = is_downtrend or is_flattrend
         trend_mark = "○" if trend_ok else "×"
         slope_mark = "○" if slope_ok else "×"
-
 
         st.markdown(f"""
         <div style="margin-top:2em; font-size:16px; font-weight:bold;">🧮 <逆張り>裁量買いレンジのロジック</div>
