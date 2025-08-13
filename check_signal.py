@@ -372,7 +372,12 @@ for code in ticker_list:
             "highprice_score":highprice_score,
         }
         
-        
+        # ✅ シグナル判定用の引数だけ抽出
+        params_signal = {k: params[k] for k in [
+            "price", "ma25", "ma50", "ma75", "bb_lower1", "bb_upper1", "bb_lower2",
+            "rsi", "per", "pbr", "dividend_yield", "high_52w", "low_52w"
+        ]}
+
         # 🎯 シグナル判定（押し目 or 高値圏など）
         signal_text, signal_icon, signal_strength = judge_signal(**params)
         
