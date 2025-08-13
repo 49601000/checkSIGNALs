@@ -131,12 +131,18 @@ def judge_signal(price, ma25, ma50, ma75, bb_lower1, bb_upper1, bb_lower2, rsi, 
     else:
         return "シグナルなし", "🟢", 0
 
-#🎯 順張り裁量枠購入可能レンジの作成
-def calc_discretionary_buy_range(df, ma25, ma50, ma75, bb_lower):
-    # トレンド条件：MA75 > MA50 > MA25 かつ MA25の傾きが±0.3%以内
+#🎯 順張り裁量枠購入可能条件の作成
+def calc_discretionary_buy_range(df, ma25, ma50, ma75, bb_lower, highprice_score):
+    # ① 中期トレンド判定
+    is_mid_uptrend = ma75 < ma50 < ma25
+    # ② 短期傾向（25MAの傾き）
     ma25_slope = (df['25MA'].iloc[-1] - df['25MA'].iloc[-5]) / df['25MA'].iloc[-5] * 100
-    if not (ma75 < ma50 < ma25 and abs(ma25_slope) <= 0.3 and ma25_slope >= 0):
-        return None  # 条件を満たさない場合
+    is_flat_uptrend = abs(ma25_slope) <= 0.3 and ma25_slope >= 0
+    # ③ 割高スコアが60点以下（押し目）
+    is_pullback = highprice_score <= 60
+    # 条件をすべて満たすか判定
+    if not (is_mid_uptrend and is_flat_uptrend and is_pullback):
+        return None
     # 中心価格
     center_price = (ma25 + ma50) / 2
     # 上限・下限計算
