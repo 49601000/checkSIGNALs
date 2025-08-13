@@ -360,6 +360,8 @@ for code in ticker_list:
         # 📊 テクニカル指標をまとめる
         bb_lower1 = params["bb_lower1"]
         bb_lower2 = params["bb_lower2"]
+        bb_upper1 = params["bb_upper1"]
+
         #順張り判定
         buy_range_trend = calc_discretionary_buy_range(df_valid, params["ma25"], params["ma50"], params["ma75"], params["bb_lower1"])
         signal_text, signal_icon, signal_strength = judge_signal(**params)
