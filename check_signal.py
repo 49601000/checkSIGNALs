@@ -481,7 +481,7 @@ for code in ticker_list:
             <tr><td>上側許容幅</td><td>中心価格×1.03</td><td>{upper_bound_text}</td></tr>
             <tr><td>下側許容幅</td><td>中心価格×0.95 または BB−1σの高い方</td><td>{lower_bound_text}</td></tr>
             <tr><td>BB調整下限</td><td>BB−1σ</td><td>{bb_adjusted_text}</td></tr>
-            <tr><td>出力</td><td>裁量買いレンジ</td><td><strong>{trend_range_text}}</strong></td></tr>
+            <tr><td>出力</td><td>裁量買いレンジ</td><td><strong>{trend_range_text}</strong></td></tr>
         </table>""", unsafe_allow_html=True)
         
     
