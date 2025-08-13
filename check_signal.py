@@ -320,6 +320,7 @@ for code in ticker_list:
             "ma75": ma75,
             "rsi": rsi,
             "bb_lower1": last["BB_-1σ"],
+            "bb_lower2": last["BB_-2σ"],
             "bb_upper1": last["BB_+1σ"],
             "per": per,
             "pbr": pbr,
