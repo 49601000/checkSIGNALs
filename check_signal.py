@@ -380,7 +380,7 @@ for code in ticker_list:
         ]}
 
         # 🎯 シグナル判定（押し目 or 高値圏など）
-        signal_text, signal_icon, signal_strength = judge_signal(**params)
+        signal_text, signal_icon, signal_strength = judge_signal(**params_signal)
         
 
         # 🎯 順張り裁量レンジ（条件を満たす場合のみ）
