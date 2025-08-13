@@ -430,7 +430,7 @@ for code in ticker_list:
         <div style="margin-top:2em; font-size:16px; font-weight:bold;">🧮 <逆張り>裁量買いレンジのロジック</div>
         <table>
             <tr><th align="left">項目</th><th align="left">内容</th></tr>
-            <tr><td>中期トレンド</td><td>75MA ≧ 50MA ≧ 25MA（下降または横ばい）</td></tr>
+            <tr><td>中期トレンド</td><td>75MA(±3%) ≧ 50MA(±3%) ≧ 25MA(±3%)（下降または横ばい）</td></tr>
             <tr><td>短期傾向</td><td>25MAの傾きが過去5日でマイナス（下落傾向）</td></tr>
             <tr><td>割安圏判定</td><td>売られすぎスコアが60点以上（RSI・PER・PBR・BB・52週安値など）</td></tr>
             <tr><td>中心価格</td><td>{center_price}（25MAとBB−1σの平均）</td></tr>
