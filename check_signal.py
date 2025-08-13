@@ -48,7 +48,7 @@ def normalize_exchange(exchange_code: str) -> str:
     return mapping.get(exchange_code.upper(), "不明")
 
 
-# 🎯 判定関数
+# 🎯 ボリンジャーバンド判定関数の定義
 def judge_bb_signal(price, bb_upper1, bb_upper2, bb_lower1, bb_lower2):
     if price >= bb_upper2:
         return "非常に割高（+2σ以上）", "🔥", 3
@@ -61,15 +61,43 @@ def judge_bb_signal(price, bb_upper1, bb_upper2, bb_lower1, bb_lower2):
     else:
         return "平均圏（±1σ内）", "⚪️", 1
 
-def judge_signal(price, ma25, ma75, rsi, bb_lower1):
+# 🎯 押し目＆RSIによる高値圏シグナル判定
+def is_high_price_zone(price, ma25, ma50, bb_upper1, rsi, per, pbr, high_52w):
+    if None in [price, ma25, ma50, bb_upper1, rsi, per, pbr, high_52w]:
+        return False  # データ不足で判定不可
+    highprice_score = 0
+    #株価が25日および50日移動平均よりも＋10%超
+    if price > ma25 * 1.10 and price > ma50 * 1.10:
+        highprice_score += 20
+    #株価がボリンジャーバンド1δ以上
+    if price > bb_upper1:
+        highprice_score += 20
+    #RSI（14日）が70以上
+    if rsi >= 70:
+        highprice_score += 15
+    #PERが20以上
+    if per and per >= 20:
+        highprice_score += 15
+    #PBRが2.0以上
+    if pbr and pbr >= 2.0:
+        highprice_score += 15
+    #株価52週高値圏の95％以上       
+    if price >= high_52w * 0.95:
+        highprice_score += 15
+    return highprice_score >= 60  # 高値圏シグナル
+
+# 🎯 押し目＆RSIによるシグナル判定
+def judge_signal(price, ma25, ma50, ma75, bb_lower1, bb_upper1, rsi, per, pbr, high_52w):
     if rsi is None:
         return "RSI不明", "⚪️", 0
-    if price <= ma75 and rsi < 40 and price <= bb_lower1:
+    if price <= ma75 and rsi < 40 and price<=bb_lower1:
         return "バーゲン（強い押し目）", "🔴", 3
     elif (price <= ma75 and price < bb_lower1) or (rsi < 30 and price < bb_lower1):
         return "そこそこ押し目", "🟠", 2
-    elif price < ma25 * 0.97 and rsi < 37.5 and price <= bb_lower1:
+    elif price < ma25 * 0.97 and rsi < 37.5 and price<=bb_lower1:
         return "軽い押し目", "🟡", 1
+    elif is_high_price_zone(price, ma25, ma50, bb_upper1, rsi, per, pbr, high_52w):
+        return "高値圏（要注意！）", "🔥", 0
     else:
         return "シグナルなし", "🟢", 0
 
@@ -149,11 +177,14 @@ for code in ticker_list:
         industry = info.get("industry", "業種不明")
         div_yield = info.get("dividendYield", None)
         per = info.get("trailingPE", None)
+        pbr = info.get("priceToBook",None)
         price = info.get("regularMarketPrice", None)
+        high_52w = info.get("fiftyTwoWeekHigh", None)
 
         div_text = f"{div_yield:.2f}%" if div_yield else "—"
         per_text = f"{per:.2f}" if per else "—"
-
+        pbr_text = f"{pbr:2f}" if pbr else "—"
+        
         # 価格選択
         market_state = info.get("marketState", "UNKNOWN")
         market_price = info.get("regularMarketPrice", None)
@@ -177,6 +208,7 @@ for code in ticker_list:
 
         # 指標計算
         df["25MA"] = df[close_col].rolling(25).mean()
+        df["50MA"] = df[close_col].rolling(50).mean()
         df["75MA"] = df[close_col].rolling(75).mean()
         df["20MA"] = df[close_col].rolling(window=20).mean()
         df["20STD"] = df[close_col].rolling(window=20).std()
@@ -201,10 +233,23 @@ for code in ticker_list:
         last = df_valid.iloc[-1]
         close = float(last[close_col])
         ma25 = float(last["25MA"])
+        ma50 = float(last["50MA"])
         ma75 = float(last["75MA"])
         rsi = float(last["RSI"])
 
-        signal_text, signal_icon, signal_strength = judge_signal(close, ma25, ma75, rsi, last["BB_-1σ"])
+        params = {
+            "price": close,
+            "ma25": ma25,
+            "ma50": ma50,
+            "ma75": ma75,
+            "rsi": rsi,
+            "bb_lower1": last["BB_-1σ"],
+            "bb_upper1": last["BB_+1σ"],
+            "per": per,
+            "pbr": pbr,
+            "high_52w": high_52w
+        }
+        signal_text, signal_icon, signal_strength = judge_signal(**params)
 
         # ✅ 表示部分（重複なし）
         st.markdown(f"---\n### 💡 {code} - {name}")
