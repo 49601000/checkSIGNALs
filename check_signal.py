@@ -467,7 +467,7 @@ for code in ticker_list:
         # 2. 高値圏スコア判定（←ここに入れる！）
         highprice_score = is_high_price_zone(price, ma25, ma50, bb_upper1, rsi, per, pbr, high_52w)
         high_score_text = f"{highprice_score}点"
-        high_score_ok = highprice_score >= 60 if isinstance(highprice_score, (int, float)) return 0
+        high_score_ok = highprice_score >= 60
         high_score_mark = "○" if high_score_ok else "×"
 
         # 3. 表示用の数値変換
