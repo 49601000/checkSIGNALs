@@ -345,9 +345,15 @@ for code in ticker_list:
         ma50 = float(last["50MA"])
         ma75 = float(last["75MA"])
         rsi = float(last["RSI"])
+        
+        # 🎯 シグナル判定（押し目 or 高値圏など）
+        signal_text, signal_icon, signal_strength = judge_signal(**params)
+        
+        # 🎯 順張りスコア（割高度）
         highprice_score = is_high_price_zone(close, ma25, ma50, last["BB_+1σ"], rsi, per, pbr, high_52w)
+        
+        # 🎯 順張り裁量レンジ（条件を満たす場合のみ）
         buy_range_trend = calc_discretionary_buy_range(df_valid, ma25, ma50, ma75, last["BB_-1σ"], highprice_score)
-
 
         # 📊 テクニカル指標をまとめる
         params = {
@@ -371,9 +377,6 @@ for code in ticker_list:
         bb_lower2 = params["bb_lower2"]
         bb_upper1 = params["bb_upper1"]
 
-        #順張り判定
-        buy_range_trend = calc_discretionary_buy_range(df_valid, params["ma25"], params["ma50"], params["ma75"], params["bb_lower1"])
-        signal_text, signal_icon, signal_strength = judge_signal(**params)
 
 
         # 判定ロジック
