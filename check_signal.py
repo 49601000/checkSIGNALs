@@ -143,23 +143,36 @@ def calc_discretionary_buy_range(df, ma25, ma50, ma75, bb_lower):
     lower_price = max(center_price * 0.95, bb_lower)
     return round(lower_price, 2), round(upper_price, 2)
 
+# 横ばい判定関数（±3%以内）
+def is_flat_ma(ma25, ma50, ma75, tolerance=0.03):
+    ma_values = [ma25, ma50, ma75]
+    ma_max = max(ma_values)
+    ma_min = min(ma_values)
+    return (ma_max - ma_min) / ma_max <= tolerance
+
 # 🎯 売られすぎスコア連動型：逆張り裁量枠購入可能レンジ
 def calc_discretionary_buy_range_contrarian(df, ma25, ma50, ma75, bb_lower1, bb_lower2, rsi, price, per, pbr, dividend_yield, low_52w):
-    # トレンド条件：下降または横ばい
-    if not (ma75 >= ma50 >= ma25):
+    # トレンド条件：下降または横ばい（±3%以内）
+    is_downtrend = ma75 > ma50 > ma25
+    is_flattrend = is_flat_ma(ma25, ma50, ma75, tolerance=0.03)
+    if not (is_downtrend or is_flattrend):
         return None
-    # 25MAの傾きがマイナス
+
+    # 25MAの傾きがマイナス（短期は下落傾向）
     ma25_slope = (df['25MA'].iloc[-1] - df['25MA'].iloc[-5]) / df['25MA'].iloc[-5] * 100
     if ma25_slope >= 0:
         return None
-    # 売られすぎスコア判定
+
+    # 売られすぎスコア判定（割安圏）
     if not is_low_price_zone(price, ma25, ma50, bb_lower1, bb_lower2, rsi, per, pbr, low_52w):
         return None
+
     # 中心価格：25MAとBB−1σの平均
     center_price = (ma25 + bb_lower1) / 2
     upper_price = center_price * 1.08
     lower_price = center_price * 0.97
 
+    return round(lower_price, 2), round(upper_price, 2)
     # ファンダメンタル補正
     fundamentals = ""
     if pbr is not None and pbr < 1.0:
