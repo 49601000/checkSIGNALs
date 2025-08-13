@@ -440,6 +440,11 @@ for code in ticker_list:
         </table>""", unsafe_allow_html=True)
         
     
+        is_downtrend = ma75 > ma50 > ma25
+        is_flattrend = is_flat_ma(ma25, ma50, ma75, tolerance=0.03)
+        trend_ok = is_downtrend or is_flattrend
+        trend_mark = "○" if trend_ok else "×"
+
         st.markdown(f"""
         <div style="margin-top:2em; font-size:16px; font-weight:bold;">🧮 <逆張り>裁量買いレンジのロジック</div>
         <table>
