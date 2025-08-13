@@ -164,7 +164,7 @@ def calc_discretionary_buy_range_contrarian(df, ma25, ma50, ma75, bb_lower1, bb_
     fundamentals = ""
     if pbr is not None and pbr < 1.0:
         fundamentals += "PBR割安 "
-    if dividend_yield is not None and dividend_yield > 3.0:
+    if div_yield is not None and div_yield > 3.0:
         fundamentals += "高配当 "
 
     return {
