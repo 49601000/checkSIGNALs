@@ -437,7 +437,7 @@ for code in ticker_list:
 
 
         # 中心価格：25MAとBB−1σの平均
-        if isinstance(ma25, (int, float)) and isinstance(bb_lower1, (int, float)):
+        if isinstance(ma25, (int, float)) and isinstance(bb_lower1, (int, float)): 
             center_price_val = (ma25 + bb_lower1) / 2
         else:
             center_price_val = None
@@ -445,11 +445,6 @@ for code in ticker_list:
         # 許容幅の計算
         upper_bound_val = center_price_val * 1.08 if center_price_val else None
         lower_bound_val = center_price_val * 0.97 if center_price_val else None
-
-        # 表示用整形
-        center_price_text = safe_format(center_price_val)
-        upper_bound_text = safe_format(upper_bound_val)
-        lower_bound_text = safe_format(lower_bound_val)
 
         # last が None でないことを確認し、キーがあるかも確認
         if isinstance(last, dict) and "BB_-1σ" in last and last["BB_-1σ"] is not None:
@@ -473,9 +468,9 @@ for code in ticker_list:
         high_score_mark = "○" if high_score_ok else "×"
 
         # 3. 表示用の数値変換
-        center_price_text = safe_format(center_price)
-        upper_bound_text = safe_format(upper_bound)
-        lower_bound_text = safe_format(lower_bound)
+        center_price_text = safe_format(center_price_val)
+        upper_bound_text = safe_format(upper_bound_val)
+        lower_bound_text = safe_format(lower_bound_val)
         bb_adjusted_text = safe_format(bb_adjusted)
         range_text = f"{lower_bound_text} ～ {upper_bound_text}"
         
