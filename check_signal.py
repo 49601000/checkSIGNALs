@@ -250,6 +250,7 @@ for code in ticker_list:
         ma75 = float(last["75MA"])
         rsi = float(last["RSI"])
 
+        # 📊 テクニカル指標をまとめる
         params = {
             "price": close,
             "ma25": ma25,
@@ -262,9 +263,12 @@ for code in ticker_list:
             "pbr": pbr,
             "high_52w": high_52w
         }
+        # 📊 シグナル判定
         signal_text, signal_icon, signal_strength = judge_signal(**params)
+        # 🎯 裁量買いレンジの算出（トレンドが安定している場合のみ）
+        bb_lower1 = params["bb_lower1"]
         buy_range = calc_discretionary_buy_range(df_valid, ma25, ma50, ma75, bb_lower1)
-
+        
 
         # ✅ 表示部分（重複なし）
         st.markdown(f"---\n### 💡 {code} - {name}")
