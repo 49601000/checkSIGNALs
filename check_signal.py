@@ -262,6 +262,9 @@ custom_labels = {
 
 print(get_market_status("NASDAQ", "REGULAR", custom_labels))
 
+# 🎯 順張りスコア（割高度）
+highprice_score = is_high_price_zone(close, ma25, ma50, last["BB_+1σ"], rsi, per, pbr, high_52w)
+
 # 市場情報取得
 first_ticker = yf.Ticker(ticker)
 exchange_name = get_exchange_name(ticker)
@@ -373,8 +376,6 @@ for code in ticker_list:
         # 🎯 シグナル判定（押し目 or 高値圏など）
         signal_text, signal_icon, signal_strength = judge_signal(**params)
         
-        # 🎯 順張りスコア（割高度）
-        highprice_score = is_high_price_zone(close, ma25, ma50, last["BB_+1σ"], rsi, per, pbr, high_52w)
 
         # 🎯 順張り裁量レンジ（条件を満たす場合のみ）
         buy_range_trend = calc_discretionary_buy_range(df_valid, params["ma25"], params["ma50"], params["ma75"], params["bb_lower1"], params["highprice_score"])
