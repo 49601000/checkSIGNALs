@@ -528,7 +528,7 @@ for code in ticker_list:
         if is_mid_uptrend:
             # 4. 順張りテーブルの表示
             st.markdown(f"""
-            <div style="margin-top:2em; font-size:16px; font-weight:bold;">📈 <順張り>裁量買いレンジのロジック</div>
+            <div style="margin-top:4em; font-size:24px; font-weight:bold;">📈 <順張り>裁量買いの検討</div>
             <table>
                 <tr><th align="left">項目</th><th align="left">内容</th><th align="left">判定</th></tr>
                 <tr><td>中期トレンド</td><td>75MA &gt; 50MA &gt; 25MA</td><td>{trend_mark}</td></tr>
@@ -550,7 +550,7 @@ for code in ticker_list:
             slope_mark = "○" if slope_ok else "×"
     
             st.markdown(f"""
-            <div style="margin-top:2em; font-size:16px; font-weight:bold;">🧮 <逆張り>裁量買いレンジのロジック</div>
+            <div style="margin-top:4em; font-size:24px; font-weight:bold;">🧮 <逆張り>裁量買いの検討</div>
             <table>
                 <tr><th align="left">項目</th><th align="left">内容</th><th align="left">判定</th></tr>
                 <tr><td>中期トレンド</td><td>75MA(±3%) ≧ 50MA(±3%) ≧ 25MA(±3%)（下降または横ばい）</td><td>{trend_mark}</td></tr>
