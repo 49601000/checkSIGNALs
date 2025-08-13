@@ -101,6 +101,19 @@ def judge_signal(price, ma25, ma50, ma75, bb_lower1, bb_upper1, rsi, per, pbr, h
     else:
         return "シグナルなし", "🟢", 0
 
+#🎯 裁量枠購入可能レンジの作成
+def calc_discretionary_buy_range(df, ma25, ma50, ma75, bb_lower):
+    # トレンド条件：MA75 > MA50 > MA25 かつ MA25の傾きが±0.3%以内
+    ma25_slope = (df['25MA'].iloc[-1] - df['25MA'].iloc[-5]) / df['25MA'].iloc[-5] * 100
+    if not (ma75 > ma50 > ma25 and abs(ma25_slope) <= 0.3):
+        return None  # 条件を満たさない場合
+    # 中心価格
+    center_price = (ma25 + ma50) / 2
+    # 上限・下限計算
+    upper_price = center_price * 1.03
+    lower_price = max(center_price * 0.95, bb_lower)
+    return round(lower_price, 2), round(upper_price, 2)
+
 # 🧭 ティッカーから取引所を判別
 def get_exchange_name(ticker: str) -> str:
     if ticker.endswith(".T") or ticker.isdigit():
@@ -250,6 +263,8 @@ for code in ticker_list:
             "high_52w": high_52w
         }
         signal_text, signal_icon, signal_strength = judge_signal(**params)
+        buy_range = calc_discretionary_buy_range(df_valid, ma25, ma50, ma75, bb_lower1)
+
 
         # ✅ 表示部分（重複なし）
         st.markdown(f"---\n### 💡 {code} - {name}")
@@ -271,6 +286,9 @@ for code in ticker_list:
         st.markdown(f"**📊 RSI**: {rsi:.1f}｜**📏 BB判定(20日)**: {bb_signal_text}")
         st.markdown(f"### {signal_icon} {signal_text}")
         st.progress(signal_strength / 3)
+        
+        st.markdown(f"**🎯 裁量買いレンジ**: {buy_range[0]} ～ {buy_range[1]}")
 
+        
     except Exception as e:
         st.error(f"{code}: 処理中にエラーが発生しました（{e}）")
