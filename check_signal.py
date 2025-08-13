@@ -144,7 +144,7 @@ def calc_discretionary_buy_range(df, ma25, ma50, ma75, bb_lower):
     return round(lower_price, 2), round(upper_price, 2)
 
 # 🎯 売られすぎスコア連動型：逆張り裁量枠購入可能レンジ
-def calc_discretionary_buy_range_contrarian(df, ma25, ma50, ma75, bb_lower1, bb_lower2, rsi, price, per, pbr, dividend_yield, low_52w):
+def calc_discretionary_buy_range_contrarian(df, ma25, ma50, ma75, bb_lower1, bb_lower2, rsi, price, per, pbr, div_yield, low_52w):
     # トレンド条件：下降または横ばい
     if not (ma75 >= ma50 >= ma25):
         return None
