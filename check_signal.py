@@ -151,7 +151,19 @@ def is_flat_ma(ma25, ma50, ma75, tolerance=0.03):
     return (ma_max - ma_min) / ma_max <= tolerance
 
 # 🎯 売られすぎスコア連動型：逆張り裁量枠購入可能レンジ
-def calc_discretionary_buy_range_contrarian(df, ma25, ma50, ma75, bb_lower1, bb_lower2, rsi, price, per, pbr, dividend_yield, low_52w):
+def calc_discretionary_buy_range_contrarian(df, ma25, ma50, ma75, bb_lower1, params):
+    ma25 = params["ma25"]
+    ma50 = params["ma50"]
+    ma75 = params["ma75"]
+    bb_lower1 = params["bb_lower1"]
+    bb_lower2 = params["bb_lower2"]
+    rsi = params["rsi"]
+    price = params["price"]
+    per = params["per"]
+    pbr = params["pbr"]
+    dividend_yield = params["dividend_yield"]
+    low_52w = params["low_52w"]
+
     # トレンド条件：下降または横ばい（±3%以内）
     is_downtrend = ma75 > ma50 > ma25
     is_flattrend = is_flat_ma(ma25, ma50, ma75, tolerance=0.03)
@@ -162,11 +174,9 @@ def calc_discretionary_buy_range_contrarian(df, ma25, ma50, ma75, bb_lower1, bb_
     ma25_slope = (df['25MA'].iloc[-1] - df['25MA'].iloc[-5]) / df['25MA'].iloc[-5] * 100
     if ma25_slope >= 0:
         return None
-
     # 売られすぎスコア判定（割安圏）
     if not is_low_price_zone(price, ma25, ma50, bb_lower1, bb_lower2, rsi, per, pbr, low_52w):
         return None
-
     # 中心価格：25MAとBB−1σの平均
     center_price = (ma25 + bb_lower1) / 2
     upper_price = center_price * 1.08
@@ -350,9 +360,7 @@ for code in ticker_list:
         buy_range_trend = calc_discretionary_buy_range(
             df_valid, params["ma25"], params["ma50"], params["ma75"], params["bb_lower1"])
         # 逆張り判定
-        buy_range_contrarian = calc_discretionary_buy_range_contrarian(
-           df_valid, params["ma25"], params["ma50"], params["ma75"], params["bb_lower1"], params["bb_lower2"], 
-           params["rsi"], params["price"], params["per"], params["pbr"], params["dividend_yield"], params["low_52w"])
+        buy_range_contrarian = calc_discretionary_buy_range_contrarian(df_valid, params)
         # ✅ 判定ロジック
         is_downtrend = ma75 > ma50 > ma25
         is_flattrend = is_flat_ma(ma25, ma50, ma75, tolerance=0.03) 
