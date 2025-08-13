@@ -502,7 +502,7 @@ for code in ticker_list:
                 <tr><td>出力</td><td>裁量買いレンジ</td><td><strong>{trend_range_text}</strong></td></tr>
             </table>""", unsafe_allow_html=True)
         
-         else:
+        else:
              # 逆張りロジック表示
             is_downtrend = ma75 > ma50 > ma25
             is_flattrend = is_flat_ma(ma25, ma50, ma75, tolerance=0.03)
