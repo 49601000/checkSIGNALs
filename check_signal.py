@@ -414,6 +414,21 @@ for code in ticker_list:
             trend_lower = buy_range_trend["lower_price"]
         else:
             trend_center = trend_upper = trend_lower = None
+        # ✅ 順張り条件の達成度に応じたコメント生成
+        trend_conditions = [
+            ma75 < ma50 < ma25,               # 中期トレンド
+            is_flat_or_gentle_up,            # 短期傾向
+            highprice_score <= 60            # 割高スコア（押し目）
+        ]
+        trend_ok_count = sum(trend_conditions)
+        if trend_ok_count == 3:
+            trend_comment = "買い候補として非常に魅力的です。"
+        elif trend_ok_count == 2:
+            trend_comment = "買い検討の余地があります。"
+        elif trend_ok_count == 1:
+            trend_comment = "慎重に検討すべき状況です。"
+        else:
+            trend_comment = "現時点では見送りが妥当です。"
 
         # 逆張りレンジ
         if buy_range_contrarian:
@@ -530,7 +545,7 @@ for code in ticker_list:
                 <tr><td>上側許容幅</td><td>中心価格×1.03</td><td>{upper_bound_text2}</td></tr>
                 <tr><td>下側許容幅</td><td>中心価格×0.95 または BB−1σの高い方</td><td>{lower_bound_text2}</td></tr>
                 <tr><td>BB調整下限</td><td>BB−1σ</td><td>{bb_adjusted_text}</td></tr>
-                <tr><td>判定</td><td>上記の組み合わせによる判定</td><td><strong>{trend_judge}</strong></td></tr>
+                <tr><td>判定</td><td>順張り裁量評価</td><td><strong>{trend_comment}</strong></td></tr>
             </table>""", unsafe_allow_html=True)
         
         else:
@@ -551,8 +566,9 @@ for code in ticker_list:
                 <tr><td>中心価格</td><td>25MAとBB−1σの平均</td><td>{center_price_text}</td></tr>
                 <tr><td>上側許容幅</td><td>中心価格×1.08</td><td>{upper_bound_text}</td></tr>
                 <tr><td>下側許容幅</td><td>中心価格×0.97</td><td>{lower_bound_text}</td></tr>
-                <tr><td>判定</td><td>上記の組み合わせによる判定</td><td><strong>{contrarian_judge}</strong></td></tr>
+                <tr><td>判定</td><td>順張り裁量評価</td><td><strong>{contrarian_judge}</strong></td></tr>
             </table>""", unsafe_allow_html=True)
+
 
     except Exception as e:
         st.error(f"{code}: 処理中にエラーが発生しました（{e}）")
