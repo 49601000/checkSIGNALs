@@ -522,7 +522,7 @@ for code in ticker_list:
                 <tr><td>中心価格</td><td>25MAとBB−1σの平均</td><td>{center_price_text}</td></tr>
                 <tr><td>上側許容幅</td><td>中心価格×1.08</td><td>{upper_bound_text}</td></tr>
                 <tr><td>下側許容幅</td><td>中心価格×0.97</td><td>{lower_bound_text}</td></tr>
-                <tr><td>判定</td><td>{contrarian_judge}</td><td><strong>{contrarian_range_text}</strong></td></tr>
+                <tr><td>判定</td><td>上記の組み合わせによる判定</td><td><strong>{contrarian_judge}</strong></td></tr>
             </table>""", unsafe_allow_html=True)
 
     except Exception as e:
