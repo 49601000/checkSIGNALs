@@ -350,6 +350,14 @@ for code in ticker_list:
         elif buy_range_contrarian:
             buy_range = buy_range_contrarian
             buy_range_type = "逆張り"
+            # 🎯 逆張りレンジの表示用データを計算
+    　　　　　　　　last = df_valid.iloc[-1]
+    　　　　　　　　bb_lower1 = float(last["BB_-1σ"])
+  　　　　　　　　  ma25 = float(last["25MA"])
+　　　　　　　　    center_price = (ma25 + bb_lower1) / 2
+ 　　　　　　　　   upper_bound = center_price * 1.08
+　　　　　　　　    lower_bound = center_price * 0.97
+
 
       
         # ✅ 表示部分（重複なし）
@@ -403,10 +411,7 @@ for code in ticker_list:
             <tr><td>出力</td><td><strong>{lower_bound} ～ {upper_bound}</strong></td></tr>
         </table>""", unsafe_allow_html=True)
         
-        center_price = f"{(ma25 + bb_lower1)/2:.2f}"
-        upper_bound = f"{float(center_price) * 1.08:.2f}"
-        lower_bound = f"{float(center_price) * 0.97:.2f}"
-
+    
         st.markdown(f"""
         <div style="margin-top:2em; font-size:16px; font-weight:bold;">🧮 <逆張り>裁量買いレンジのロジック</div>
         <table>
