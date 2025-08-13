@@ -128,7 +128,7 @@ def judge_signal(price, ma25, ma50, ma75, bb_lower1, bb_upper1, bb_lower2, rsi, 
     elif is_high_price_zone(price, ma25, ma50, bb_upper1, rsi, per, pbr, high_52w)>= 60:
         return "高値圏（要注意！）", "🔥", 0
     else:
-        return "シグナルなし", "🟢", 0
+        return "押し目シグナルなし", "🟢", 0
 
 #🎯 順張り裁量枠購入可能条件の作成
 def calc_discretionary_buy_range(df, ma25, ma50, ma75, bb_lower, highprice_score):
