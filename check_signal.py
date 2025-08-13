@@ -112,7 +112,7 @@ def is_low_price_zone(price, ma25, ma50, bb_lower1, bb_lower2, rsi, per, pbr, lo
     # 株価が52週安値圏の105%以上（底値圏）
     if price <= low_52w * 1.05:
         lowprice_score += 15
-    return lowprice_score 　　　　# 割安圏スコア
+    return lowprice_score         # 割安圏スコア
     #return lowprice_score >= 60  # 割安圏スコア
 
 
