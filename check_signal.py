@@ -366,7 +366,8 @@ for code in ticker_list:
             "pbr": pbr,
             "dividend_yield":dividend_yield,    
             "high_52w": high_52w,
-            "low_52w": low_52w
+            "low_52w": low_52w,
+            "highprice_score":highprice_score,
         }
         
         # 📊 テクニカル指標をまとめる
