@@ -390,7 +390,6 @@ for code in ticker_list:
         else:
             trend_center = trend_upper = trend_lower = None
 
-
         # 逆張りレンジ
         if buy_range_contrarian:
             contrarian_range = (buy_range_contrarian["lower_price"], buy_range_contrarian["upper_price"])
@@ -432,7 +431,7 @@ for code in ticker_list:
         st.markdown(f"### {signal_icon} {signal_text}")
         st.progress(signal_strength / 3)
 
-        #順張りレンジ
+        #順張り裁量判定
         if buy_range_trend:
             buy_range_type = "順張り"
             print(f"🎯 {buy_range_type}裁量買いレンジ: {buy_range_trend['lower_price']} ～ {buy_range_trend['upper_price']}")
@@ -440,7 +439,14 @@ for code in ticker_list:
         else:
             print("❌ 裁量買いレンジなし（条件未達）")
             trend_judge = "裁量買いNG"
-
+        # 逆張り裁量判定
+        if buy_range_contrarian:
+            buy_range_type = "逆張り"
+            print(f"🎯 {buy_range_type}裁量買いレンジ: {buy_range_contrarian['lower_price']} ～ {buy_range_contrarian['upper_price']}")
+            contrarian_judge = "裁量買いOK"
+        else:
+            print("❌ 裁量買いレンジなし（条件未達）")
+            contrarian_judge = "裁量買いNG"
 
         # 中心価格：25MAとBB−1σの平均
         if isinstance(ma25, (int, float)) and isinstance(bb_lower1, (int, float)): 
