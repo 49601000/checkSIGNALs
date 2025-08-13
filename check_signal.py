@@ -141,7 +141,7 @@ def calc_discretionary_buy_range(df, ma25, ma50, ma75, bb_lower, highprice_score
     # ③ 割高スコアが60点以下（押し目）
     is_pullback = highprice_score <= 60
     # 条件をすべて満たすか判定
-    if not (is_mid_uptrend and is_flat_uptrend and is_pullback):
+    if not (is_mid_uptrend and is_flat_or_gentle_up and is_pullback):
         return None
     # 中心価格
     center_price = (ma25 + ma50) / 2
