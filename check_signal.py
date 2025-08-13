@@ -306,20 +306,19 @@ for code in ticker_list:
         else:
             bb_adjusted = "—"
 
-        st.markdown("""<div style="margin-top:2em; font-size:16px; font-weight:bold;">
-        🧮 裁量買いレンジのロジック</div> """, unsafe_allow_html=True)
+        st.markdown(f"""
+        <div style="margin-top:2em; font-size:16px; font-weight:bold;">🧮 裁量買いレンジのロジック</div>
 
         <table>
             <tr><th align="left">項目</th><th align="left">内容</th></tr>
-            <tr><td>中期トレンド</td><td>75MA > 50MA > 25MA</td></tr>
+            <tr><td>中期トレンド</td><td>75MA &gt; 50MA &gt; 25MA</td></tr>
             <tr><td>短期傾向</td><td>25MAの傾きが過去5日で ±0.3%以内（横ばい〜緩やかな上昇）</td></tr>
             <tr><td>中心価格</td><td>{center_price}</td></tr>
             <tr><td>上側許容幅</td><td>{upper_bound}</td></tr>
             <tr><td>下側許容幅</td><td>{lower_bound}</td></tr>
             <tr><td>BB調整下限</td><td>{bb_adjusted} または 中心価格×0.95 の高い方</td></tr>
             <tr><td>出力</td><td><strong>{lower_bound} ～ {upper_bound}</strong></td></tr>
-        </table>
-        """, unsafe_allow_html=True)
+        </table>""", unsafe_allow_html=True)
          
     except Exception as e:
         st.error(f"{code}: 処理中にエラーが発生しました（{e}）")
