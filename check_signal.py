@@ -323,6 +323,9 @@ for code in ticker_list:
         avg_loss = loss.rolling(14).mean().replace(0, 1e-10)
         rs = avg_gain / avg_loss
         df["RSI"] = 100 - (100 / (1 + rs))
+        ma25_slope = (df['25MA'].iloc[-1] - df['25MA'].iloc[-5]) / df['25MA'].iloc[-5] * 100
+        slope_ok = ma25_slope < 0
+        
         
         df_valid = df.dropna()
         if df_valid.empty:
@@ -444,6 +447,8 @@ for code in ticker_list:
         is_flattrend = is_flat_ma(ma25, ma50, ma75, tolerance=0.03)
         trend_ok = is_downtrend or is_flattrend
         trend_mark = "○" if trend_ok else "×"
+        slope_mark = "○" if slope_ok else "×"
+
 
         st.markdown(f"""
         <div style="margin-top:2em; font-size:16px; font-weight:bold;">🧮 <逆張り>裁量買いレンジのロジック</div>
