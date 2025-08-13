@@ -141,7 +141,8 @@ def calc_discretionary_buy_range(df, ma25, ma50, ma75, bb_lower):
     # 上限・下限計算
     upper_price = center_price * 1.03
     lower_price = max(center_price * 0.95, bb_lower)
-    return round(lower_price, 2), round(upper_price, 2)
+    return {"lower_price": round(lower_price, 2),"upper_price": round(upper_price, 2),"center_price": round(center_price, 2)}
+
 
 # 横ばい判定関数（±3%以内）
 def is_flat_ma(ma25, ma50, ma75, tolerance=0.03):
@@ -355,6 +356,7 @@ for code in ticker_list:
         # 📊 テクニカル指標をまとめる
         bb_lower1 = params["bb_lower1"]
         bb_lower2 = params["bb_lower2"]
+        #順張り判定
         buy_range_trend = calc_discretionary_buy_range(df_valid, params["ma25"], params["ma50"], params["ma75"], params["bb_lower1"])
         signal_text, signal_icon, signal_strength = judge_signal(**params)
 
@@ -363,16 +365,16 @@ for code in ticker_list:
         lowprice_score = is_low_price_zone(price, ma25, ma50, bb_lower1, bb_lower2, rsi, per, pbr, low_52w)
         score_text = f"{lowprice_score}点" if lowprice_score is not None else "—"
 
-        # 裁量レンジ判定
+        # 逆張り判定
         buy_range_contrarian = calc_discretionary_buy_range_contrarian(df_valid, params)
 
         # 優先順位：順張り → 逆張り
         if buy_range_trend:
-            buy_range = buy_range_trend
+            buy_range = (buy_range_trend["lower_price"], buy_range_trend["upper_price"])
             buy_range_type = "順張り"
-            center_price = (ma25 + ma50) / 2
-            upper_bound = center_price * 1.03
-            lower_bound = max(center_price * 0.95, bb_lower1)
+            center_price = buy_range_trend["center_price"]
+            upper_bound = buy_range_trend["upper_price"]
+            lower_bound = buy_range_trend["lower_price"]
         elif buy_range_contrarian:
             buy_range = (buy_range_contrarian["lower_price"], buy_range_contrarian["upper_price"])
             buy_range_type = "逆張り"
