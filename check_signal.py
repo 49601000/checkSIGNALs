@@ -293,18 +293,32 @@ for code in ticker_list:
             st.markdown(f"**🎯 裁量買いレンジ**: **{buy_range[0]}** ～ **{buy_range[1]}**")
         else:
             st.markdown("📉 トレンド条件未達のため、裁量買いレンジは表示されません。")
-            
-        st.markdown(f"""#### 🧮 裁量買いレンジのロジック
+
+
+        # 安全に値を取り出す
+        center_price = f"{(ma25 + ma50)/2:.2f}" if ma25 and ma50 else "—"
+        lower_bound = f"{buy_range[0]:.2f}" if buy_range else "—"
+        upper_bound = f"{buy_range[1]:.2f}" if buy_range else "—"
+
+        # last が None でないことを確認し、キーがあるかも確認
+        if isinstance(last, dict) and "BB_-1σ" in last and last["BB_-1σ"] is not None:
+             bb_adjusted = f"{last['BB_-1σ']:.2f}"
+        else:
+            bb_adjusted = "—"
+
+        st.markdown(f"""
+        #### 🧮 裁量買いレンジのロジック
         <table>
-                <tr><th align="left">項目</th><th align="left">内容</th></tr
-                <tr><td>中期トレンド</td><td>75MA > 50MA > 25MA</td></tr>
-                <tr><td>短期傾向</td><td>25MAの傾きが過去5日で ±0.3%以内（横ばい〜緩やかな上昇）</td></tr>
-                <tr><td>中心価格</td><td>{(ma25 + ma50)/2:.2f}</td></tr>
-                <tr><td>上側許容幅</td><td>{buy_range[1]:.2f}</td></tr>
-                <tr><td>下側許容幅</td><td>{buy_range[0]:.2f}</td></tr>
-                <tr><td>BB調整下限</td><td>{last["BB_-1σ"]:.2f} または 中心価格×0.95 の高い方</td></tr>
-                <tr><td>出力</td><td><strong>{buy_range[0]} ～ {buy_range[1]}</strong></td></tr>    </table>""", unsafe_allow_html=True)
-            
-        
+            <tr><th align="left">項目</th><th align="left">内容</th></tr>
+            <tr><td>中期トレンド</td><td>75MA > 50MA > 25MA</td></tr>
+            <tr><td>短期傾向</td><td>25MAの傾きが過去5日で ±0.3%以内（横ばい〜緩やかな上昇）</td></tr>
+            <tr><td>中心価格</td><td>{center_price}</td></tr>
+            <tr><td>上側許容幅</td><td>{upper_bound}</td></tr>
+            <tr><td>下側許容幅</td><td>{lower_bound}</td></tr>
+            <tr><td>BB調整下限</td><td>{bb_adjusted} または 中心価格×0.95 の高い方</td></tr>
+            <tr><td>出力</td><td><strong>{lower_bound} ～ {upper_bound}</strong></td></tr>
+        </table>
+        """, unsafe_allow_html=True)
+         
     except Exception as e:
         st.error(f"{code}: 処理中にエラーが発生しました（{e}）")
