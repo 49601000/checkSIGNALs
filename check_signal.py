@@ -291,8 +291,10 @@ for code in ticker_list:
         st.markdown(f"### {signal_icon} {signal_text}")
         st.progress(signal_strength / 3)
         
-        st.markdown(f"**🎯 裁量買いレンジ**: {buy_range[0]} ～ {buy_range[1]}")
-
+        if buy_range:
+            st.markdown(f"**🎯 裁量買いレンジ**: **{buy_range[0]}** ～ **{buy_range[1]}**")
+        else:
+            st.markdown("📉 トレンド条件未達のため、裁量買いレンジは表示されません。")
         
     except Exception as e:
         st.error(f"{code}: 処理中にエラーが発生しました（{e}）")
