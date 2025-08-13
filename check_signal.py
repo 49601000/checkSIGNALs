@@ -364,7 +364,7 @@ for code in ticker_list:
         slope_ok = ma25_slope < 0
         slope_mark = "○" if slope_ok else "×"
         
-        lowprice_score = get_low_price_score(price, ma25, ma50, bb_lower1, bb_lower2, rsi, per, pbr, low_52w)
+        lowprice_score = g is_low_price_zone(price, ma25, ma50, bb_lower1, bb_lower2, rsi, per, pbr, low_52w)
         score_text = f"{lowprice_score}点" if lowprice_score is not None else "—"
        
         center_price = (ma25 + bb_lower1) / 2
