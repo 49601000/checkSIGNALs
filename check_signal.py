@@ -126,7 +126,7 @@ def judge_signal(price, ma25, ma50, ma75, bb_lower1, bb_upper1, bb_lower2, rsi, 
         return "そこそこ押し目", "🟠", 2
     elif price < ma25 * 0.97 and rsi < 37.5 and price<=bb_lower1:
         return "軽い押し目", "🟡", 1
-    elif is_high_price_zone(price, ma25, ma50, bb_upper1, rsi, per, pbr, high_52w):
+    elif is_high_price_zone(price, ma25, ma50, bb_upper1, rsi, per, pbr, high_52w)>= 60:
         return "高値圏（要注意！）", "🔥", 0
     else:
         return "シグナルなし", "🟢", 0
@@ -476,7 +476,10 @@ for code in ticker_list:
         upper_bound_text = safe_format(upper_bound_val)
         lower_bound_text = safe_format(lower_bound_val)
         upper_bound_text2 = safe_format(upper_bound_val2)
-        lower_bound_text2 = safe_format(max(bb_lower1,  lower_bound_val2))
+        if lower_bound_val2 is not None:
+            lower_bound_text2 = safe_format(max(bb_lower1, lower_bound_val2))
+        else:
+            lower_bound_text2 = safe_format(bb_lower1)
         bb_adjusted_text = safe_format(bb_adjusted)
         range_text = f"{lower_bound_text} ～ {upper_bound_text}"
         
