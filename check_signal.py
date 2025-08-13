@@ -350,13 +350,14 @@ for code in ticker_list:
         elif buy_range_contrarian:
             buy_range = buy_range_contrarian
             buy_range_type = "逆張り"
+            
             # 🎯 逆張りレンジの表示用データを計算
-    　　　　　　　　last = df_valid.iloc[-1]
-    　　　　　　　　bb_lower1 = float(last["BB_-1σ"])
-  　　　　　　　　  ma25 = float(last["25MA"])
-　　　　　　　　    center_price = (ma25 + bb_lower1) / 2
- 　　　　　　　　   upper_bound = center_price * 1.08
-　　　　　　　　    lower_bound = center_price * 0.97
+    　　　　last = df_valid.iloc[-1]
+    　　　　bb_lower1 = float(last["BB_-1σ"])
+  　　　　　ma25 = float(last["25MA"])
+　　　　　　center_price = (ma25 + bb_lower1) / 2
+ 　　　　　 upper_bound = center_price * 1.08
+　　　　　　lower_bound = center_price * 0.97
 
 
       
