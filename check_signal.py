@@ -355,6 +355,7 @@ for code in ticker_list:
         # 📊 テクニカル指標をまとめる
         bb_lower1 = params["bb_lower1"]
         bb_lower2 = params["bb_lower2"]
+        buy_range_trend = calc_discretionary_buy_range(df_valid, params["ma25"], params["ma50"], params["ma75"], params["bb_lower1"])
 
         # 判定ロジック
         lowprice_score = is_low_price_zone(price, ma25, ma50, bb_lower1, bb_lower2, rsi, per, pbr, low_52w)
