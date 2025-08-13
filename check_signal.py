@@ -373,29 +373,43 @@ for code in ticker_list:
 
         # 逆張り判定
         buy_range_contrarian = calc_discretionary_buy_range_contrarian(df_valid, params)
-    
+        
+        # 安全な数値整形関数    
         def safe_format(value, digits=2):
             return f"{value:.{digits}f}" if isinstance(value, (int, float)) else "—"
         
-        # 優先順位：順張り → 逆張り
-    
-            buy_range = (buy_range_trend["lower_price"], buy_range_trend["upper_price"])
-            buy_range_type = "順張り"
-            center_price = buy_range_trend["center_price"]
-            upper_bound = buy_range_trend["upper_price"]
-            lower_bound = buy_range_trend["lower_price"]
-            buy_range = (buy_range_contrarian["lower_price"], buy_range_contrarian["upper_price"])
-            buy_range_type = "逆張り"
-            center_price = buy_range_contrarian["center_price"]
-            upper_bound = buy_range_contrarian["upper_price"]
-            lower_bound = buy_range_contrarian["lower_price"]
+        # 順張りレンジ
+        if buy_range_trend:
+            trend_range = (buy_range_trend["lower_price"], buy_range_trend["upper_price"])
+            trend_center = buy_range_trend["center_price"]
+            trend_upper = buy_range_trend["upper_price"]
+            trend_lower = buy_range_trend["lower_price"]
+        else:
+            trend_center = trend_upper = trend_lower = None
+
+
+        # 逆張りレンジ
+        if buy_range_contrarian:
+            contrarian_range = (buy_range_contrarian["lower_price"], buy_range_contrarian["upper_price"])
+            contrarian_center = buy_range_contrarian["center_price"]
+            contrarian_upper = buy_range_contrarian["upper_price"]
+            contrarian_lower = buy_range_contrarian["lower_price"]
+        else:
+            contrarian_center = contrarian_upper = contrarian_lower = None
+
             
-        # ✅ 表示用の安全な変数（分岐の後にまとめて定義）
-        center_price_text = safe_format(center_price)
-        upper_bound_text = safe_format(upper_bound)
-        lower_bound_text = safe_format(lower_bound)
-        range_text = f"{lower_bound_text} ～ {upper_bound_text}"
-    
+        # ✅ 表示用整形
+        trend_center_text = safe_format(trend_center)
+        trend_upper_text = safe_format(trend_upper)
+        trend_lower_text = safe_format(trend_lower)
+        trend_range_text = f"{trend_lower_text} ～ {trend_upper_text}" if trend_center else "—"
+
+        contrarian_center_text = safe_format(contrarian_center)
+        contrarian_upper_text = safe_format(contrarian_upper)
+        contrarian_lower_text = safe_format(contrarian_lower)
+        contrarian_range_text = f"{contrarian_lower_text} ～ {contrarian_upper_text}" if contrarian_center else "—"
+
+   
         # ✅ 表示部分（重複なし）
         st.markdown(f"---\n### 💡 {code} - {name}")
         st.markdown(f"**🏭 業種**: {industry}")
@@ -466,8 +480,8 @@ for code in ticker_list:
             <tr><td>中心価格</td><td>25MAと50MAの平均</td><td>{center_price_text}</td></tr>
             <tr><td>上側許容幅</td><td>中心価格×1.03</td><td>{upper_bound_text}</td></tr>
             <tr><td>下側許容幅</td><td>中心価格×0.95 または BB−1σの高い方</td><td>{lower_bound_text}</td></tr>
-             <tr><td>BB調整下限</td><td>BB−1σ</td><td>{bb_adjusted_text}</td></tr>
-            <tr><td>出力</td><td>裁量買いレンジ</td><td><strong>{range_text}</strong></td></tr>
+            <tr><td>BB調整下限</td><td>BB−1σ</td><td>{bb_adjusted_text}</td></tr>
+            <tr><td>出力</td><td>裁量買いレンジ</td><td><strong>{trend_range_text}}</strong></td></tr>
         </table>""", unsafe_allow_html=True)
         
     
@@ -489,7 +503,7 @@ for code in ticker_list:
             <tr><td>中心価格</td><td>25MAとBB−1σの平均</td><td>{center_price_text}</td></tr>
             <tr><td>上側許容幅</td><td>中心価格×1.08</td><td>{upper_bound_text}</td></tr>
             <tr><td>下側許容幅</td><td>中心価格×0.97</td><td>{lower_bound_text}</td></tr>
-            <tr><td>出力</td><td>裁量買いレンジ</td><td><strong>{range_text}</strong></td></tr>
+            <tr><td>出力</td><td>裁量買いレンジ</td><td><strong>{contrarian_range_text}</strong></td></tr>
         </table>""", unsafe_allow_html=True)
 
     except Exception as e:
