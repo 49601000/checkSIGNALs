@@ -323,7 +323,7 @@ for code in ticker_list:
             "bb_upper1": last["BB_+1σ"],
             "per": per,
             "pbr": pbr,
-            "dividend_yield":dividend_yield,    
+            "div_yield":div_yield,    
             "high_52w": high_52w,
             "low_52w": low_52w
 
