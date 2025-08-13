@@ -174,15 +174,16 @@ def calc_discretionary_buy_range_contrarian(df, params):
     ma25_slope = (df['25MA'].iloc[-1] - df['25MA'].iloc[-5]) / df['25MA'].iloc[-5] * 100
     if ma25_slope >= 0:
         return None
+
     # 売られすぎスコア判定（割安圏）
     if not is_low_price_zone(price, ma25, ma50, bb_lower1, bb_lower2, rsi, per, pbr, low_52w):
         return None
+
     # 中心価格：25MAとBB−1σの平均
     center_price = (ma25 + bb_lower1) / 2
     upper_price = center_price * 1.08
     lower_price = center_price * 0.97
 
-    return round(lower_price, 2), round(upper_price, 2)
     # ファンダメンタル補正
     fundamentals = ""
     if pbr is not None and pbr < 1.0:
