@@ -288,11 +288,24 @@ for code in ticker_list:
         st.markdown(f"**📊 RSI**: {rsi:.1f}｜**📏 BB判定(20日)**: {bb_signal_text}")
         st.markdown(f"### {signal_icon} {signal_text}")
         st.progress(signal_strength / 3)
-        
+
         if buy_range:
             st.markdown(f"**🎯 裁量買いレンジ**: **{buy_range[0]}** ～ **{buy_range[1]}**")
         else:
             st.markdown("📉 トレンド条件未達のため、裁量買いレンジは表示されません。")
+    　　　if buy_range:
+
+        st.markdown(f"""#### 🧮 裁量買いレンジのロジック
+        <table>
+                <tr><th align="left">項目</th><th align="left">内容</th></tr
+                <tr><td>中期トレンド</td><td>75MA > 50MA > 25MA</td></tr>
+                <tr><td>短期傾向</td><td>25MAの傾きが過去5日で ±0.3%以内（横ばい〜緩やかな上昇）</td></tr>
+                <tr><td>中心価格</td><td>{(ma25 + ma50)/2:.2f}</td></tr>
+                <tr><td>上側許容幅</td><td>{buy_range[1]:.2f}</td></tr>
+                <tr><td>下側許容幅</td><td>{buy_range[0]:.2f}</td></tr>
+                <tr><td>BB調整下限</td><td>{last["BB_-1σ"]:.2f} または 中心価格×0.95 の高い方</td></tr>
+                <tr><td>出力</td><td><strong>{buy_range[0]} ～ {buy_range[1]}</strong></td></tr>    </table>""", unsafe_allow_html=True)
+            
         
     except Exception as e:
         st.error(f"{code}: 処理中にエラーが発生しました（{e}）")
