@@ -430,16 +430,16 @@ for code in ticker_list:
         st.progress(signal_strength / 3)
 
         #順張りレンジ
-        if buy_range:
-            print(f"🎯 {buy_range_type}裁量買いレンジ: {buy_range[0]} ～ {buy_range[1]}")
+        if buy_range_trend:
+            print(f"🎯 {buy_range_type}裁量買いレンジ: {buy_range_trend[0]} ～ {buy_range_trend[1]}")
         else:
             print("❌ 裁量買いレンジなし（条件未達）")
 
 
         # 安全に値を取り出す
         center_price = f"{(ma25 + ma50)/2:.2f}" if ma25 and ma50 else "—"
-        lower_bound = f"{buy_range[0]:.2f}" if buy_range else "—"
-        upper_bound = f"{buy_range[1]:.2f}" if buy_range else "—"
+        lower_bound = f"{buy_range_trend[0]:.2f}" if buy_range_trend else "—"
+        upper_bound = f"{buy_range_trend[1]:.2f}" if buy_range_trend else "—"
 
         # last が None でないことを確認し、キーがあるかも確認
         if isinstance(last, dict) and "BB_-1σ" in last and last["BB_-1σ"] is not None:
