@@ -370,26 +370,35 @@ for code in ticker_list:
 
         # 逆張り判定
         buy_range_contrarian = calc_discretionary_buy_range_contrarian(df_valid, params)
-
+    
+        def safe_format(value, digits=2):
+            return f"{value:.{digits}f}" if isinstance(value, (int, float)) else "—"
+        
         # 優先順位：順張り → 逆張り
+    
         if buy_range_trend:
             buy_range = (buy_range_trend["lower_price"], buy_range_trend["upper_price"])
             buy_range_type = "順張り"
             center_price = buy_range_trend["center_price"]
             upper_bound = buy_range_trend["upper_price"]
             lower_bound = buy_range_trend["lower_price"]
-        elif buy_range_contrarian:
+       elif buy_range_contrarian:
             buy_range = (buy_range_contrarian["lower_price"], buy_range_contrarian["upper_price"])
             buy_range_type = "逆張り"
             center_price = buy_range_contrarian["center_price"]
             upper_bound = buy_range_contrarian["upper_price"]
             lower_bound = buy_range_contrarian["lower_price"]
-        else:
+         else:
             buy_range = None
             buy_range_type = None
             center_price = upper_bound = lower_bound = None
             
-            
+        # ✅ 表示用の安全な変数（分岐の後にまとめて定義）
+        center_price_text = safe_format(center_price)
+        upper_bound_text = safe_format(upper_bound)
+        lower_bound_text = safe_format(lower_bound)
+        range_text = f"{lower_bound_text} ～ {upper_bound_text}"
+    
         # ✅ 表示部分（重複なし）
         st.markdown(f"---\n### 💡 {code} - {name}")
         st.markdown(f"**🏭 業種**: {industry}")
