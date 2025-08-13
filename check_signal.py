@@ -445,6 +445,8 @@ for code in ticker_list:
         # 許容幅の計算
         upper_bound_val = center_price_val * 1.08 if center_price_val else None
         lower_bound_val = center_price_val * 0.97 if center_price_val else None
+        upper_bound_val2 = center_price_val * 1.05 if center_price_val else None
+        lower_bound_val2 = center_price_val * 0.95 if center_price_val else None
 
         # last が None でないことを確認し、キーがあるかも確認
         if isinstance(last, dict) and "BB_-1σ" in last and last["BB_-1σ"] is not None:
@@ -471,6 +473,8 @@ for code in ticker_list:
         center_price_text = safe_format(center_price_val)
         upper_bound_text = safe_format(upper_bound_val)
         lower_bound_text = safe_format(lower_bound_val)
+        upper_bound_text2 = safe_format(upper_bound_val2)
+        lower_bound_text2 = safe_format(lower_bound_val2)
         bb_adjusted_text = safe_format(bb_adjusted)
         range_text = f"{lower_bound_text} ～ {upper_bound_text}"
         
@@ -483,8 +487,8 @@ for code in ticker_list:
             <tr><td>短期傾向</td><td>25MAの傾きが過去5日で ±0.3%以内（横ばい〜緩やかな上昇）</td><td>{slope_mark}</td></tr>
             <tr><td>順張り押し目判定</td><td>ブルスコアが60点以下で「押し目」と判定（ブルスコアは RSI・PER・PBR・BB・52週高値などを加点評価／スコアが高いほど割高傾向）</td><td>{high_score_text}</td></tr>
             <tr><td>中心価格</td><td>25MAと50MAの平均</td><td>{center_price_text}</td></tr>
-            <tr><td>上側許容幅</td><td>中心価格×1.03</td><td>{upper_bound_text}</td></tr>
-            <tr><td>下側許容幅</td><td>中心価格×0.95 または BB−1σの高い方</td><td>{lower_bound_text}</td></tr>
+            <tr><td>上側許容幅</td><td>中心価格×1.03</td><td>{upper_bound_text2}</td></tr>
+            <tr><td>下側許容幅</td><td>中心価格×0.95 または BB−1σの高い方</td><td>{lower_bound_text2}</td></tr>
             <tr><td>BB調整下限</td><td>BB−1σ</td><td>{bb_adjusted_text}</td></tr>
             <tr><td>出力</td><td>裁量買いレンジ</td><td><strong>{trend_range_text}</strong></td></tr>
         </table>""", unsafe_allow_html=True)
