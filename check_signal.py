@@ -324,7 +324,7 @@ for code in ticker_list:
             "per": per,
             "pbr": pbr,
             "dividend_yield":dividend_yield,    
-            "high_52w": high_52w
+            "high_52w": high_52w,
             "low_52w": low_52w
 
         }
