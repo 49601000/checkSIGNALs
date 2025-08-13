@@ -254,7 +254,7 @@ for code in ticker_list:
         # ✅ 表示部分（重複なし）
         st.markdown(f"---\n### 💡 {code} - {name}")
         st.markdown(f"**🏭 業種**: {industry}")
-        st.markdown(f"**💰 配当利回り**: {div_text}｜**📈 PER**: {per_text}")
+        st.markdown(f"**💰 配当利回り**: {div_text}｜**📈 PER**: {per_text}|**📈 PBR**: {per_text}")
         # 色の判定（高い→赤、安い→緑、変わらず→黒）
         if close > close_price:
             color = "red"
@@ -263,10 +263,9 @@ for code in ticker_list:
         else:
             color = "black"
         st.markdown(
-            f"📊 {price_label}: <span style='color:{color}; font-weight:bold;'>{close:.2f}</span>（前日終値: {close_price:.2f}）｜25MA: {ma25:.2f}｜75MA: {ma75:.2f}｜RSI: {rsi:.1f}</span>",
+            f"📊 {price_label}: <span style='color:{color}; font-weight:bold;'>{close:.2f}</span>（前日終値: {close_price:.2f}）｜25MA: {ma25:.2f}｜50MA: {ma50:.2f}｜75MA: {ma75:.2f}｜RSI: {rsi:.1f}</span>",
             unsafe_allow_html=True
 )
-
 
         bb_signal_text, bb_icon, bb_strength = judge_bb_signal(close, last["BB_+1σ"], last["BB_+2σ"],last["BB_-1σ"], last["BB_-2σ"])
         st.markdown(f"**📏 BB判定(20日)**: {bb_icon} {bb_signal_text}")
