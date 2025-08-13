@@ -61,7 +61,7 @@ def judge_bb_signal(price, bb_upper1, bb_upper2, bb_lower1, bb_lower2):
     else:
         return "平均圏（±1σ内）", "⚪️", 1
 
-# 🎯 押し目＆RSIによる高値圏シグナル判定
+# 🎯<順張り> 押し目＆RSIによる高値圏シグナル判定
 def is_high_price_zone(price, ma25, ma50, bb_upper1, rsi, per, pbr, high_52w):
     if None in [price, ma25, ma50, bb_upper1, rsi, per, pbr, high_52w]:
         return False  # データ不足で判定不可
@@ -86,6 +86,35 @@ def is_high_price_zone(price, ma25, ma50, bb_upper1, rsi, per, pbr, high_52w):
         highprice_score += 15
     return highprice_score >= 60  # 高値圏シグナル
 
+# 🎯<逆張り> 押し目＆割安圏シグナル判定
+def is_low_price_zone(price, ma25, ma50, bb_lower1, bb_lower2, rsi, per, pbr, low_52w):
+    if None in [price, ma25, ma50, bb_lower1, bb_lower2, rsi, per, pbr, low_52w]:
+        return False  # データ不足で判定不可
+    lowprice_score = 0
+    # 株価が25MAおよび50MAより−10%以上
+    if price < ma25 * 0.90 and price < ma50 * 0.90:
+        lowprice_score += 20
+    # 株価がBB−1σ以下
+    if price < bb_lower1:
+        lowprice_score += 15
+    # 株価がBB−2σ以下
+    if price < bb_lower2:
+        lowprice_score += 20
+    # RSIが30未満（売られすぎ）
+    if rsi < 30:
+        lowprice_score += 15
+    # PERが10未満（割安）
+    if per and per < 10:
+        lowprice_score += 15
+    # PBRが1.0未満（資産割安）
+    if pbr and pbr < 1.0:
+        lowprice_score += 15
+    # 株価が52週安値圏の105%以上（底値圏）
+    if price <= low_52w * 1.05:
+        lowprice_score += 15
+    return lowprice_score >= 60  # 割安圏シグナル
+
+
 # 🎯 押し目＆RSIによるシグナル判定
 def judge_signal(price, ma25, ma50, ma75, bb_lower1, bb_upper1, rsi, per, pbr, high_52w):
     if rsi is None:
@@ -101,7 +130,7 @@ def judge_signal(price, ma25, ma50, ma75, bb_lower1, bb_upper1, rsi, per, pbr, h
     else:
         return "シグナルなし", "🟢", 0
 
-#🎯 裁量枠購入可能レンジの作成
+#🎯 順張り裁量枠購入可能レンジの作成
 def calc_discretionary_buy_range(df, ma25, ma50, ma75, bb_lower):
     # トレンド条件：MA75 > MA50 > MA25 かつ MA25の傾きが±0.3%以内
     ma25_slope = (df['25MA'].iloc[-1] - df['25MA'].iloc[-5]) / df['25MA'].iloc[-5] * 100
@@ -113,6 +142,37 @@ def calc_discretionary_buy_range(df, ma25, ma50, ma75, bb_lower):
     upper_price = center_price * 1.03
     lower_price = max(center_price * 0.95, bb_lower)
     return round(lower_price, 2), round(upper_price, 2)
+
+# 🎯 売られすぎスコア連動型：逆張り裁量枠購入可能レンジ
+def calc_discretionary_buy_range_contrarian(df, ma25, ma50, ma75, bb_lower1, bb_lower2, rsi, price, per, pbr, dividend_yield, low_52w):
+    # トレンド条件：下降または横ばい
+    if not (ma75 >= ma50 >= ma25):
+        return None
+    # 25MAの傾きがマイナス
+    ma25_slope = (df['25MA'].iloc[-1] - df['25MA'].iloc[-5]) / df['25MA'].iloc[-5] * 100
+    if ma25_slope >= 0:
+        return None
+    # 売られすぎスコア判定
+    if not is_low_price_zone(price, ma25, ma50, bb_lower1, bb_lower2, rsi, per, pbr, low_52w):
+        return None
+    # 中心価格：25MAとBB−1σの平均
+    center_price = (ma25 + bb_lower1) / 2
+    upper_price = center_price * 1.08
+    lower_price = center_price * 0.97
+
+    # ファンダメンタル補正
+    fundamentals = ""
+    if pbr is not None and pbr < 1.0:
+        fundamentals += "PBR割安 "
+    if dividend_yield is not None and dividend_yield > 3.0:
+        fundamentals += "高配当 "
+
+    return {
+        "lower_price": round(lower_price, 2),
+        "upper_price": round(upper_price, 2),
+        "center_price": round(center_price, 2),
+        "fundamentals": fundamentals.strip() if fundamentals else None
+    }
 
 # 🧭 ティッカーから取引所を判別
 def get_exchange_name(ticker: str) -> str:
@@ -193,6 +253,8 @@ for code in ticker_list:
         pbr = info.get("priceToBook",None)
         price = info.get("regularMarketPrice", None)
         high_52w = info.get("fiftyTwoWeekHigh", None)
+        low_52w = info.get("fiftyTwoWeekLow", None)
+
 
         div_text = f"{div_yield:.2f}%" if div_yield else "—"
         per_text = f"{per:.2f}" if per else "—"
@@ -289,10 +351,11 @@ for code in ticker_list:
         st.markdown(f"### {signal_icon} {signal_text}")
         st.progress(signal_strength / 3)
 
+        #順張りレンジ
         if buy_range:
-            st.markdown(f"**🎯 裁量買いレンジ**: **{buy_range[0]}** ～ **{buy_range[1]}**")
+            st.markdown(f"**🎯<順張り>裁量買いレンジ**: **{buy_range[0]}** ～ **{buy_range[1]}**")
         else:
-            st.markdown("📉 トレンド条件未達のため、裁量買いレンジは表示されません。")
+            st.markdown("📉 <順張り>トレンド条件未達のため、裁量買いレンジは表示されません。")
 
 
         # 安全に値を取り出す
