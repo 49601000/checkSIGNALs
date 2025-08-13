@@ -382,8 +382,9 @@ for code in ticker_list:
             upper_bound = buy_range_contrarian["upper_price"]
             lower_bound = buy_range_contrarian["lower_price"]
         else:
+            buy_range = None
+            buy_range_type = None
             center_price = upper_bound = lower_bound = None
-
             
             
         # ✅ 表示部分（重複なし）
