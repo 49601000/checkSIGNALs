@@ -501,7 +501,7 @@ for code in ticker_list:
                 <tr><td>上側許容幅</td><td>中心価格×1.03</td><td>{upper_bound_text2}</td></tr>
                 <tr><td>下側許容幅</td><td>中心価格×0.95 または BB−1σの高い方</td><td>{lower_bound_text2}</td></tr>
                 <tr><td>BB調整下限</td><td>BB−1σ</td><td>{bb_adjusted_text}</td></tr>
-                <tr><td>判定</td><td>上記の組み合わせによる判定</td><td><strong>{trend_range}</strong></td></tr>
+                <tr><td>判定</td><td>上記の組み合わせによる判定</td><td><strong>{trend_judge}</strong></td></tr>
             </table>""", unsafe_allow_html=True)
         
         else:
