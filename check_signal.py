@@ -411,9 +411,9 @@ for code in ticker_list:
             trend_center = trend_upper = trend_lower = None
         # ✅ 順張り条件の達成度に応じたコメント生成
         trend_conditions = [
-            ma75 < ma50 < ma25,               # 中期トレンド
-            is_flat_or_gentle_up,            # 短期傾向
-            highprice_score <= 60            # 割高スコア（押し目）
+            ma75 < ma50 < ma25 or is_flat_ma(ma25, ma50, ma75, tolerance=0.03), # 中期トレンド
+            is_flat_or_gentle_up,                                               # 短期傾向
+            highprice_score <= 60                                               # 割高スコア（押し目）
         ]
         trend_ok_count = sum(trend_conditions)
         if trend_ok_count == 3:
@@ -504,9 +504,10 @@ for code in ticker_list:
 
         # 1. 順張りロジックの判定（このブロック）
         is_uptrend = ma75 < ma50 < ma25
-        trend_ok = is_uptrend and is_flat_or_gentle_up
-        trend_mark = "○" if is_uptrend else "×"
-        slope_mark = "○" if is_flat_or_gentle_up else "×"
+        is_flattrend = is_flat_ma(ma25, ma50, ma75, tolerance=0.03)
+        trend_ok = is_downtrend or is_flattrend   
+        trend_mark = "○" if trend_ok else "×"               #25-50-75が上昇or横ばい
+        slope_mark = "○" if is_flat_or_gentle_up else "×"   #+25MA上昇
 
         # 2. 高値圏スコア判定（←ここに入れる！）
         high_score_text = f"{highprice_score}点"
@@ -531,7 +532,7 @@ for code in ticker_list:
             <div style="margin-top:4em; font-size:24px; font-weight:bold;">📈 <順張り>裁量買いの検討</div>
             <table>
                 <tr><th align="left">項目</th><th align="left">内容</th><th align="left">判定</th></tr>
-                <tr><td>中期トレンド</td><td>75MA &gt; 50MA &gt; 25MA</td><td>{trend_mark}</td></tr>
+                <tr><td>中期トレンド</td><td>25MA(±3%) ≧ 50MA(±3%) ≧ 75MA(±3%)（上昇または横ばい）</td><td>{trend_mark}</td></tr>
                 <tr><td>短期傾向</td><td>25MAの傾きが過去5日で ±0.3%以内（横ばい〜緩やかな上昇）</td><td>{slope_mark}</td></tr>
                 <tr><td>順張り押し目判定</td><td>ブルスコアが60点以下で「押し目」と判定（ブルスコアは RSI・PER・PBR・BB・52週高値などを加点評価／スコアが高いほど割高傾向）</td><td>{high_score_text}</td></tr>
                 <tr><td>中心価格</td><td>25MAと50MAの平均</td><td>{center_price_text}</td></tr>
