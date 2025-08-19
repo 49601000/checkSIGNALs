@@ -505,7 +505,7 @@ for code in ticker_list:
         # 1. 順張りロジックの判定（このブロック）
         is_uptrend = ma75 < ma50 < ma25
         is_flattrend = is_flat_ma(ma25, ma50, ma75, tolerance=0.03)
-        trend_ok = is_downtrend or is_flattrend   
+        trend_ok = is_mid_uptrend or is_flattrend   
         trend_mark = "○" if trend_ok else "×"               #25-50-75が上昇or横ばい
         slope_mark = "○" if is_flat_or_gentle_up else "×"   #+25MA上昇
 
