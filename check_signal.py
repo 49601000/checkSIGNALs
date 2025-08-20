@@ -125,7 +125,7 @@ def judge_signal(price, ma25, ma50, ma75, bb_lower1, bb_upper1, bb_lower2, rsi, 
         return "そこそこ押し目", "🟠", 2
     elif price < ma25 * 0.97 and rsi < 37.5 and price<=bb_lower1:
         return "軽い押し目", "🟡", 1
-    elif is_high_price_zone(price, ma25, ma50, bb_upper1, rsi, per, pbr, high_52w)>= 60:
+    elif is_high_price_zone(price, ma25, ma50, bb_upper1, rsi, per, pbr, high_52w)<= 40:
         return "高値圏（要注意！）", "🔥", 0
     else:
         return "押し目シグナルなし", "🟢", 0
