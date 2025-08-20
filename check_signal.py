@@ -529,7 +529,7 @@ for code in ticker_list:
         if is_mid_uptrend:
             # 4. 順張りテーブルの表示
             st.markdown(f"""
-            <div style="margin-top:4em; font-size:24px; font-weight:bold;">📈 <順張り>裁量買いの検討</div>
+            <div style="margin-top:4em; font-size:24px; font-weight:bold;">📈 <順張り>裁量買いの検討（25MA>50MA∧25MA＞75MA）</div>
             <table>
                 <tr><th align="left">項目</th><th align="left">内容</th><th align="left">判定</th></tr>
                 <tr><td>中期トレンド</td><td>25MA(±3%) ≧ 50MA(±3%) ≧ 75MA(±3%)（上昇または横ばい）</td><td>{trend_mark}</td></tr>
