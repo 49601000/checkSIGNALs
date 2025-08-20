@@ -66,25 +66,25 @@ def is_high_price_zone(price, ma25, ma50, bb_upper1, rsi, per, pbr, high_52w):
     if None in [price, ma25, ma50, bb_upper1, rsi, per, pbr, high_52w]:
         return 0 # データ不足で判定不可
     highprice_score = 0
-    #株価が25日および50日移動平均よりも＋10%超
-    if price > ma25 * 1.10 and price > ma50 * 1.10:
+    # 株価が25日・50日移動平均より＋10%未満 → 割高否定
+    if price <= ma25 * 1.10 and price <= ma50 * 1.10:
         highprice_score += 20
-    #株価がボリンジャーバンド1δ以上
-    if price > bb_upper1:
+    # ボリンジャーバンド1σ以下 → 割高否定
+    if price <= bb_upper1:
         highprice_score += 20
-    #RSI（14日）が70以上
-    if rsi >= 70:
+    #RSI（14日）が70未満 → 割高否定
+    if rsi < 70:
         highprice_score += 15
-    #PERが20以上
-    if per and per >= 20:
+    #PERが20未満 → 割高否定
+    if per is not None and per < 20::
         highprice_score += 15
-    #PBRが2.0以上
-    if pbr and pbr >= 2.0:
+    #PBRが2.0未満 → 割高否定
+    if pbr is not None and pbr < 2.0:
         highprice_score += 15
-    #株価52週高値圏の95％以上       
-    if price >= high_52w * 0.95:
+    #株価が52週高値の95%未満 → 割高否定       
+    if price < high_52w * 0.95:
         highprice_score += 15
-    return highprice_score   # 割高圏スコア
+    return highprice_score   # 高値否定スコア（最大100）
 
 # 🎯<逆張り> 押し目＆割安圏シグナル判定
 def is_low_price_zone(price, ma25, ma50, bb_lower1, bb_lower2, rsi, per, pbr, low_52w):
