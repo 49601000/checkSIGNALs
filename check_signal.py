@@ -76,7 +76,7 @@ def is_high_price_zone(price, ma25, ma50, bb_upper1, rsi, per, pbr, high_52w):
     if rsi < 70:
         highprice_score += 15
     #PERが20未満 → 割高否定
-    if per is not None and per < 20::
+    if per is not None and per < 20:
         highprice_score += 15
     #PBRが2.0未満 → 割高否定
     if pbr is not None and pbr < 2.0:
