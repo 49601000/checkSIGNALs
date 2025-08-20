@@ -413,7 +413,7 @@ for code in ticker_list:
         trend_conditions = [
             ma75 < ma50 < ma25 or is_flat_ma(ma25, ma50, ma75, tolerance=0.03), # 中期トレンド
             is_flat_or_gentle_up,                                               # 短期傾向
-            highprice_score <= 60                                               # 割高スコア（押し目）
+            highprice_score >= 60                                               # 割高否定スコア（押し目）
         ]
         trend_ok_count = sum(trend_conditions)
         if trend_ok_count == 3:
@@ -534,7 +534,7 @@ for code in ticker_list:
                 <tr><th align="left">項目</th><th align="left">内容</th><th align="left">判定</th></tr>
                 <tr><td>中期トレンド</td><td>25MA(±3%) ≧ 50MA(±3%) ≧ 75MA(±3%)（上昇または横ばい）</td><td>{trend_mark}</td></tr>
                 <tr><td>短期傾向</td><td>25MAの傾きが過去5日で ±0.3%以内（横ばい〜緩やかな上昇）</td><td>{slope_mark}</td></tr>
-                <tr><td>順張り押し目判定</td><td>ブルスコアが60点以下で「押し目」と判定（ブルスコアは RSI・PER・PBR・BB・52週高値などを加点評価／スコアが高いほど割高傾向）</td><td>{high_score_text}</td></tr>
+                <tr><td>順張り押し目判定</td><td>ブルスコアが60点以上で「押し目」と判定（ブルスコアは RSI・PER・PBR・BB・52週高値などを加点評価／スコアが高いほど割高否定傾向）</td><td>{high_score_text}</td></tr>
                 <tr><td>中心価格</td><td>25MAと50MAの平均</td><td>{center_price_text}</td></tr>
                 <tr><td>上側許容幅</td><td>中心価格×1.03</td><td>{upper_bound_text2}</td></tr>
                 <tr><td>下側許容幅</td><td>中心価格×0.95 または BB−1σの高い方</td><td>{lower_bound_text2}</td></tr>
