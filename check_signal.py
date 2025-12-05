@@ -70,30 +70,50 @@ def calc_discretionary_buy_range(df, ma25, ma50, ma75, bb_lower, highprice_score
         "lower_price": round(max(center * 0.95, bb_lower), 2)
     }
 
-def calc_discretionary_buy_range_contrarian(df, price, ma25, ma50, ma75,
-                                            bb_lower1, bb_lower2, rsi,
-                                            per, pbr, dividend_yield,
-                                            low_52w, slope_ok):
+def calc_discretionary_buy_range_contrarian(
+        df, price, ma25, ma50, ma75,
+        bb_lower1, bb_lower2, rsi, per, pbr,
+        dividend_yield, low_52w):
 
+    # --------------------------
+    # ① レンジ計算は必ず行う
+    # --------------------------
+    # 中心価格（あなたの仕様：25MA と BB−1σの平均）
+    center_price = (ma25 + bb_lower1) / 2
+
+    upper_price = center_price * 1.08
+    lower_price = center_price * 0.97
+
+    # --------------------------
+    # ② ここから下は判定用（○×）
+    # --------------------------
     is_downtrend = ma75 > ma50 > ma25
     is_flattrend = is_flat_ma(ma25, ma50, ma75)
 
-    if not (is_downtrend or is_flattrend):
-        return None
-    if not slope_ok:
-        return None
+    ma25_slope = (df["25MA"].iloc[-1] - df["25MA"].iloc[-5]) / df["25MA"].iloc[-5] * 100
+    slope_ok = ma25_slope < 0
 
-    low_score = is_low_price_zone(price, ma25, ma50, bb_lower1, bb_lower2,
-                                  rsi, None, None, low_52w)
-    if low_score < 60:
-        return None
+    low_score = is_low_price_zone(price, ma25, ma50,
+                                  bb_lower1, bb_lower2,
+                                  rsi, per, pbr, low_52w)
 
-    center = (ma25 + bb_lower1) / 2
+    fundamentals = ""
+    if pbr is not None and pbr < 1.0:
+        fundamentals += "PBR割安 "
+    if dividend_yield and dividend_yield > 3.0:
+        fundamentals += "高配当 "
+
     return {
-        "center_price": round(center, 2),
-        "upper_price": round(center * 1.08, 2),
-        "lower_price": round(center * 0.97, 2),
-        "fundamentals": None
+        # ★レンジは必ず返す
+        "center_price": round(center_price, 2),
+        "upper_price": round(upper_price, 2),
+        "lower_price": round(lower_price, 2),
+
+        # ★判定結果も返す（○×用）
+        "trend_ok": (is_downtrend or is_flattrend),
+        "slope_ok": slope_ok,
+        "lowprice_score": low_score,
+        "fundamentals": fundamentals.strip() if fundamentals else None
     }
 
 # -----------------------------------------------------------
