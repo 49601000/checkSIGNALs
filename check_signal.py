@@ -273,9 +273,11 @@ st.markdown(
     f"""
 **RSI**: {rsi:.1f} ｜ **BB判定**: {bb_icon} {bb_text}
     """
+)
 # 押し目判定表示
 st.markdown(f"### {signal_icon} {signal_text}")
 st.progress(signal_strength / 3)
+
 
 # -----------------------------------------------------------
 # 追加：順張り用スコア（高値圏）計算
