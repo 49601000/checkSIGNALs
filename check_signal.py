@@ -288,17 +288,24 @@ close = df[close_col].iloc[-1]
 previous_close = df[close_col].iloc[-2]
 
 # -----------------------------------------------------------
-# API 2回目：過去配当データの取得
+# API 2回目：配当データ（dividends）
 # -----------------------------------------------------------
 ticker_obj = yf.Ticker(ticker)
-divs = ticker_obj.dividends  # infoではないので軽い
+divs = ticker_obj.dividends  # Series形式
 
-# 過去1年分だけ抽出
-one_year_ago = datetime.now() - timedelta(days=365)
-annual_div = divs[divs.index > one_year_ago].sum()
+# デフォルトは配当利回りなし
+dividend_yield = None
 
-# 配当利回り（％）
-dividend_yield = (annual_div / close * 100) if annual_div > 0 else None
+# 配当データがあり、かつ index が datetime のときだけ計算
+if divs is not None and len(divs) > 0 and isinstance(divs.index, pd.DatetimeIndex):
+    one_year_ago = datetime.now() - timedelta(days=365)
+
+    # 過去1年の配当合計
+    annual_div = divs[divs.index > one_year_ago].sum()
+
+    if annual_div > 0:
+        dividend_yield = (annual_div / close) * 100
+
 
 
 # -----------------------------------------------------------
