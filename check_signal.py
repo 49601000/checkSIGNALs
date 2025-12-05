@@ -142,11 +142,24 @@ arrow75 = slope_arrow(df["75MA"])
 # 銘柄名取得（API コール追加なし）
 # -----------------------------------------------------------
 company_name = None
+
 try:
-    info = ticker_obj.info  # ← ★既に作成済み ticker_obj を再利用
-    company_name = info.get("longName") or info.get("shortName") or ticker
-except Exception:
-    company_name = ticker  # Fallback
+    # fast_info（高速・安定）
+    company_name = ticker_obj.fast_info.get("longName")
+except:
+    pass
+
+# fallback（通常info）
+if not company_name:
+    try:
+        company_name = ticker_obj.info.get("longName") or ticker_obj.info.get("shortName")
+    except:
+        company_name = None
+
+# 最終fallback
+if not company_name:
+    company_name = ticker
+
 
 # -----------------------------------------------------------
 # 配当利回り算出（dividends）
