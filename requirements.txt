@@ -2,3 +2,6 @@ streamlit
 yfinance
 pandas
 numpy
+beautifulsoup4
+lxml
+requests
