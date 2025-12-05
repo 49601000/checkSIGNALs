@@ -269,12 +269,11 @@ st.markdown(
 
 
 # RSI / BB 表示
-st.markdown("## 📉 RSI / ボリンジャーバンド 判定")
-st.markdown(f"**RSI**: {rsi:.1f}")
-st.markdown(f"**BB判定**: {bb_icon} {bb_text}")
-
+st.markdown(
+    f"""
+**RSI**: {rsi:.1f} ｜ **BB判定**: {bb_icon} {bb_text}
+    """
 # 押し目判定表示
-st.markdown("## 🎯 押し目判定（システム判定）")
 st.markdown(f"### {signal_icon} {signal_text}")
 st.progress(signal_strength / 3)
 
