@@ -139,6 +139,16 @@ arrow50 = slope_arrow(df["50MA"])
 arrow75 = slope_arrow(df["75MA"])
 
 # -----------------------------------------------------------
+# 銘柄名取得（API コール追加なし）
+# -----------------------------------------------------------
+company_name = None
+try:
+    info = ticker_obj.info  # ← ★既に作成済み ticker_obj を再利用
+    company_name = info.get("longName") or info.get("shortName") or ticker
+except Exception:
+    company_name = ticker  # Fallback
+
+# -----------------------------------------------------------
 # 配当利回り算出（dividends）
 # -----------------------------------------------------------
 ticker_obj = yf.Ticker(ticker)
@@ -255,7 +265,7 @@ signal_text, signal_icon, signal_strength = judge_signal(
 # UI 表示（Part1の直後に配置）
 # -----------------------------------------------------------
 st.markdown("---")
-st.markdown("## 📊 現在価格 ＋ MA（トレンド矢印付き）")
+st.markdown(f"## 📌 {ticker}（{company_name}）")
 
 st.markdown(
     f"""
