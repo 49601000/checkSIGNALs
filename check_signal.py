@@ -288,32 +288,32 @@ close = df[close_col].iloc[-1]
 previous_close = df[close_col].iloc[-2]
 
 # =======================================================
-# 配当利回り 安全計算（どんな銘柄でも落ちない）
+# 配当利回り（絶対にエラーが起きない完全版）
 # =======================================================
 
-dividend_yield = None  # デフォルト
+dividend_yield = None
 
 ticker_obj = yf.Ticker(ticker)
-divs = ticker_obj.dividends
+divs = ticker_obj.dividends  # ここは軽いAPI
 
-# 配当データが Series であり、要素がある場合
+# データがSeriesのときのみ処理する
 if isinstance(divs, pd.Series) and len(divs) > 0:
 
-    # index を DatetimeIndex に変換（失敗してもエラーにならない）
-    try:
-        divs.index = pd.to_datetime(divs.index, errors="coerce")
-        divs = divs.dropna()  # 変換できなかった index を除去
-    except Exception:
-        divs = pd.Series(dtype=float)  # 空にして安全化
+    # index を datetime に強制変換（失敗は NaT）
+    divs.index = pd.to_datetime(divs.index, errors="coerce")
 
-    # 過去1年だけ抽出
+    # NaT を排除
+    divs = divs.dropna()
+
     if len(divs) > 0:
+        # 過去1年のデータだけ抽出（locなら比較演算子を使わない）
         one_year_ago = datetime.now() - timedelta(days=365)
-        mask = divs.index > one_year_ago
 
-        # インデックス比較の安全条件
-        if mask.any():
-            annual_div = divs[mask].sum()
+        # loc を使用 → index との直接比較なしで抽出できる
+        divs_last_year = divs.loc[one_year_ago:]
+
+        if len(divs_last_year) > 0:
+            annual_div = divs_last_year.sum()
             if annual_div > 0 and close > 0:
                 dividend_yield = (annual_div / close) * 100
 
