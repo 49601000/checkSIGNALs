@@ -288,34 +288,39 @@ close = df[close_col].iloc[-1]
 previous_close = df[close_col].iloc[-2]
 
 # =======================================================
-# 配当利回り（絶対にエラーが起きない完全版）
+# 配当利回り（tz-naive/tz-aware問題を完全解決）
 # =======================================================
 
 dividend_yield = None
 
 ticker_obj = yf.Ticker(ticker)
-divs = ticker_obj.dividends  # ここは軽いAPI
+divs = ticker_obj.dividends
 
-# データがSeriesのときのみ処理する
 if isinstance(divs, pd.Series) and len(divs) > 0:
 
-    # index を datetime に強制変換（失敗は NaT）
+    # index を datetime に変換
     divs.index = pd.to_datetime(divs.index, errors="coerce")
 
-    # NaT を排除
+    # 変換できなかったもの(NaT)を落とす
     divs = divs.dropna()
 
     if len(divs) > 0:
-        # 過去1年のデータだけ抽出（locなら比較演算子を使わない）
-        one_year_ago = datetime.now() - timedelta(days=365)
 
-        # loc を使用 → index との直接比較なしで抽出できる
-        divs_last_year = divs.loc[one_year_ago:]
+        # ⭐ タイムゾーンを強制的に揃える（ここが最重要！）
+        divs.index = divs.index.tz_localize(None)
+
+        # one_year_ago も tz-naive に揃える
+        one_year_ago = datetime.now().replace(tzinfo=None) - timedelta(days=365)
+
+        # 過去1年分だけ抽出
+        divs_last_year = divs[divs.index >= one_year_ago]
 
         if len(divs_last_year) > 0:
             annual_div = divs_last_year.sum()
+
             if annual_div > 0 and close > 0:
                 dividend_yield = (annual_div / close) * 100
+
 
 # -----------------------------------------------------------
 # テクニカル計算（すべてローカル）
