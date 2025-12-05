@@ -170,26 +170,53 @@ def calc_rsi(df, col="Close", period=14):
 # ============================================================
 # 押し目判定
 # ============================================================
-def judge_signal(price, ma25, ma50, ma75, bb_l1, bb_u1, bb_l2, rsi, per, pbr, high, low):
-    # RSI の NaN/None 防御
-    try:
-        if rsi is None or (isinstance(rsi, float) and np.isnan(rsi)):
-            return "RSI不明", "⚪️", 0
-    except:
-        # Series や例外時は安全にフォールバック
-        return "RSI不明", "⚪️", 0
+def judge_signal(price, ma25, ma50, ma75, bb_lower1, bb_upper1, bb_lower2, rsi, per, pbr, high_52w, low_52w):
 
-    # --- 以下は通常の押し目判定 ---
-    if price <= ma75 and rsi < 40 and price <= bb_l1:
+    # --- 安全な変換（NaN → None、比較可能な float に） ---
+    def safe(v):
+        try:
+            if v is None or (isinstance(v, float) and np.isnan(v)):
+                return None
+            return float(v)
+        except:
+            return None
+
+    price      = safe(price)
+    ma25       = safe(ma25)
+    ma50       = safe(ma50)
+    ma75       = safe(ma75)
+    bb_lower1  = safe(bb_lower1)
+    bb_lower2  = safe(bb_lower2)
+    bb_upper1  = safe(bb_upper1)
+    rsi        = safe(rsi)
+
+    # --- 必須データが欠けている場合 ---
+    if price is None or ma25 is None or ma50 is None or ma75 is None:
+        return "判定不可（データ不足）", "⚪️", 0
+
+    # RSIが無い場合は軽い判定のみ
+    if rsi is None:
+        return "RSI不足（軽い押し目判定のみ）", "🟢", 0
+
+    # --- 押し目判定（安全な比較） ---
+    # 強い押し目
+    if (ma75 is not None and bb_lower1 is not None and 
+        price <= ma75 and rsi < 40 and price <= bb_lower1):
         return "バーゲン（強い押し目）", "🔴", 3
 
-    if (price <= ma75 and price < bb_l1) or (rsi < 30 and price < bb_l1):
+    # そこそこ押し目
+    if (ma75 is not None and bb_lower1 is not None and 
+        (price <= ma75 and price < bb_lower1)) or (rsi < 30 and bb_lower1 is not None and price < bb_lower1):
         return "そこそこ押し目", "🟠", 2
 
-    if price < ma25 * 0.97 and rsi < 37.5 and price <= bb_l1:
+    # 軽い押し目
+    if bb_lower1 is not None and price < ma25 * 0.97 and rsi < 37.5 and price <= bb_lower1:
         return "軽い押し目", "🟡", 1
 
+    # その他
     return "押し目シグナルなし", "🟢", 0
+
+
 # ============================================================
 # BB 判定
 # ============================================================
