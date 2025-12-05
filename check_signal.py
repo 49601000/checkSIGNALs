@@ -255,8 +255,10 @@ def calc_discretionary_buy_range_contrarian(df, price, ma25, ma50, ma75,
     }
 
 # ===========================================================
-# Part 3 — メイン処理（API を 2回だけ叩く）
+# Part 3 — API は download() + dividends の2回だけ
 # ===========================================================
+
+from datetime import timedelta
 
 # 🟦 ユーザー入力
 user_input = st.text_input(
@@ -269,42 +271,8 @@ if not ticker:
     st.warning("ティッカーを入力してください。")
     st.stop()
 
-
 # -----------------------------------------------------------
-# API 1回目：info の取得（再利用するため一度だけ）
-# -----------------------------------------------------------
-ticker_obj = yf.Ticker(ticker)
-info_dict = get_stock_info(ticker_obj)
-
-name_raw = info_dict["name_raw"]
-industry = info_dict["industry"]
-dividend_yield = info_dict["dividend_yield"]
-per = info_dict["per"]
-pbr = info_dict["pbr"]
-market_price = info_dict["market_price"]
-close_price = info_dict["close_price"]
-high_52w = info_dict["high_52w"]
-low_52w = info_dict["low_52w"]
-market_state = info_dict["market_state"]
-exchange_raw = info_dict["exchange"]
-
-
-# -----------------------------------------------------------
-# 市場状態の表示
-# -----------------------------------------------------------
-custom_labels = {
-    "OPEN": "取引中",
-    "CLOSED": "取引終了",
-    "HOLIDAY": "休場中"
-}
-
-exchange_name = normalize_exchange(exchange_raw)
-market_status_jp = get_market_status(exchange_name, "REGULAR", custom_labels)
-st.write(f"🕒 現在の市場状態：**{market_status_jp}**")
-
-
-# -----------------------------------------------------------
-# API 2回目：download（株価履歴は 1回で全て計算）
+# API 1回目：download による株価取得
 # -----------------------------------------------------------
 df = yf.download(ticker, period="120d", interval="1d")
 
@@ -312,19 +280,29 @@ if df.empty:
     st.warning("株価データが取得できませんでした。")
     st.stop()
 
-# マルチインデックス対応
 if isinstance(df.columns, pd.MultiIndex):
     df.columns = ["_".join(col).strip() for col in df.columns]
 
-# Close 列特定
-close_col = next((c for c in df.columns if "Close" in c), None)
-if close_col is None:
-    st.error("Close 列が見つかりません。")
-    st.stop()
+close_col = next(c for c in df.columns if "Close" in c)
+close = df[close_col].iloc[-1]
+previous_close = df[close_col].iloc[-2]
+
+# -----------------------------------------------------------
+# API 2回目：過去配当データの取得
+# -----------------------------------------------------------
+ticker_obj = yf.Ticker(ticker)
+divs = ticker_obj.dividends  # infoではないので軽い
+
+# 過去1年分だけ抽出
+one_year_ago = datetime.now() - timedelta(days=365)
+annual_div = divs[divs.index > one_year_ago].sum()
+
+# 配当利回り（％）
+dividend_yield = (annual_div / close * 100) if annual_div > 0 else None
 
 
 # -----------------------------------------------------------
-# テクニカル指標をローカル計算（API不要）
+# テクニカル計算（すべてローカル）
 # -----------------------------------------------------------
 df["25MA"] = df[close_col].rolling(25).mean()
 df["50MA"] = df[close_col].rolling(50).mean()
@@ -338,7 +316,7 @@ df["BB_+2σ"] = df["20MA"] + 2 * df["20STD"]
 df["BB_-1σ"] = df["20MA"] - df["20STD"]
 df["BB_-2σ"] = df["20MA"] - 2 * df["20STD"]
 
-# RSI 計算
+# RSI
 delta = df[close_col].diff()
 gain = delta.clip(lower=0)
 loss = -delta.clip(upper=0)
@@ -347,68 +325,50 @@ avg_loss = loss.rolling(14).mean().replace(0, 1e-10)
 rs = avg_gain / avg_loss
 df["RSI"] = 100 - (100 / (1 + rs))
 
-
-# -----------------------------------------------------------
-# 最新データの抽出
-# -----------------------------------------------------------
+# 有効データ
 df_valid = df.dropna()
-if df_valid.empty:
-    st.warning("有効なデータがありません。")
-    st.stop()
-
 last = df_valid.iloc[-1]
 
-price = market_price if market_price else close_price
-close = float(last[close_col])
-ma25 = float(last["25MA"])
-ma50 = float(last["50MA"])
-ma75 = float(last["75MA"])
-rsi = float(last["RSI"])
-bb_upper1 = float(last["BB_+1σ"])
-bb_upper2 = float(last["BB_+2σ"])
-bb_lower1 = float(last["BB_-1σ"])
-bb_lower2 = float(last["BB_-2σ"])
+ma25 = last["25MA"]
+ma50 = last["50MA"]
+ma75 = last["75MA"]
+rsi = last["RSI"]
+bb_upper1 = last["BB_+1σ"]
+bb_upper2 = last["BB_+2σ"]
+bb_lower1 = last["BB_-1σ"]
+bb_lower2 = last["BB_-2σ"]
 
+# 52週高値/安値（downloadのデータから算出）
+high_52w = df[close_col].max()
+low_52w = df[close_col].min()
 
-# -----------------------------------------------------------
-# スロープ判定（順張り・逆張りで使用）
-# -----------------------------------------------------------
+# スロープ
 ma25_slope = (df["25MA"].iloc[-1] - df["25MA"].iloc[-5]) / df["25MA"].iloc[-5] * 100
-is_flat_or_gentle_up = abs(ma25_slope) <= 0.3 and ma25_slope >= 0  # 順張り用
-slope_ok = ma25_slope < 0  # 逆張り用
+is_flat_or_gentle_up = abs(ma25_slope) <= 0.3 and ma25_slope >= 0
+slope_ok = ma25_slope < 0
 
-
-# -----------------------------------------------------------
-# 割高スコア（順張り押し目判定用）
-# -----------------------------------------------------------
+# 順張りスコア
 highprice_score = is_high_price_zone(
-    close, ma25, ma50, bb_upper1, rsi, per, pbr, high_52w
+    close, ma25, ma50, bb_upper1, rsi, None, None, high_52w
 )
 
-
-# -----------------------------------------------------------
-# メインシグナル（押し目 or 高値圏）
-# -----------------------------------------------------------
+# シグナル
 signal_text, signal_icon, signal_strength = judge_signal(
     close, ma25, ma50, ma75, bb_lower1, bb_upper1, bb_lower2,
-    rsi, per, pbr, dividend_yield, high_52w, low_52w
+    rsi, None, None, dividend_yield, high_52w, low_52w
 )
 
-
-# -----------------------------------------------------------
-# 順張り・逆張りの裁量買いレンジを計算（A方式）
-# -----------------------------------------------------------
-# 順張り
+# 裁量レンジ（順張り）
 buy_range_trend = calc_discretionary_buy_range(
     df_valid, ma25, ma50, ma75, bb_lower1,
     highprice_score,
     is_flat_or_gentle_up
 )
 
-# 逆張り
+# 裁量レンジ（逆張り）
 buy_range_contrarian = calc_discretionary_buy_range_contrarian(
     df_valid, close, ma25, ma50, ma75,
-    bb_lower1, bb_lower2, rsi, per, pbr,
+    bb_lower1, bb_lower2, rsi, None, None,
     dividend_yield, low_52w, slope_ok
 )
 
