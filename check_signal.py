@@ -260,14 +260,13 @@ st.markdown("## 📊 現在価格 ＋ MA（トレンド矢印付き）")
 st.markdown(
     f"""
 **現在価格**: <span style='color:{price_color}; font-weight:bold;'>{close:.2f}</span>  
-（前日終値: {previous_close:.2f}）
+（前日終値: {previous_close:.2f}）  
 
-- **25MA**: {ma25:.2f} {arrow25}  
-- **50MA**: {ma50:.2f} {arrow50}  
-- **75MA**: {ma75:.2f} {arrow75}  
+**25MA**: {ma25:.2f} {arrow25} ｜ **50MA**: {ma50:.2f} {arrow50} ｜ **75MA**: {ma75:.2f} {arrow75}
     """,
     unsafe_allow_html=True
 )
+
 
 # RSI / BB 表示
 st.markdown("## 📉 RSI / ボリンジャーバンド 判定")
