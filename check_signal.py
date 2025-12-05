@@ -13,6 +13,20 @@ st.title("🔍 買いシグナルチェッカー（高速×安定版）")
 
 
 # ============================================================
+# 東証銘柄の企業名辞書（補完用）
+# ============================================================
+JP_STOCK_NAMES = {
+    "9023.T": "TOKYO METRO",
+    "7203.T": "TOYOTA MOTOR",
+    "8306.T": "MITSUBISHI UFJ",
+    "4063.T": "SHIN-ETSU CHEMICAL",
+    "9432.T": "NTT",
+    "2768.T": "SOGO SHOSHA",
+    # 必要なら後で増やす
+}
+
+
+# ============================================================
 # yfinance 安全アクセス（Rate limit 対策）
 # ============================================================
 def safe_info(ticker, retries=3, wait=2):
@@ -50,23 +64,24 @@ def convert_ticker(t):
 
 
 # ============================================================
-# 銘柄名を必ず取得（fast_info → info → fallback）
+# 銘柄名を必ず取得（fast_info → info → displayName → JP辞書）
 # ============================================================
 def get_company_name(ticker):
     try:
+        if ticker in JP_STOCK_NAMES:
+            return JP_STOCK_NAMES[ticker]
+
         tk = yf.Ticker(ticker)
 
-        # fast_info
         fi = tk.fast_info
-        if "longName" in fi and isinstance(fi["longName"], str):
-            return fi["longName"]
+        for key in ["longName", "shortName", "displayName"]:
+            if key in fi and isinstance(fi[key], str):
+                return fi[key]
 
-        # info
         info = tk.info
-        if "longName" in info and isinstance(info["longName"], str):
-            return info["longName"]
-        if "shortName" in info and isinstance(info["shortName"], str):
-            return info["shortName"]
+        for key in ["longName", "shortName", "displayName"]:
+            if key in info and isinstance(info[key], str):
+                return info[key]
 
         return ticker
     except:
@@ -102,6 +117,22 @@ def market_state(exchange):
 
 
 # ============================================================
+# ボリンジャーバンド判定（あなたのロジック）
+# ============================================================
+def judge_bb_signal(price, bb_upper1, bb_upper2, bb_lower1, bb_lower2):
+    if price >= bb_upper2:
+        return "非常に割高（+2σ以上）", "🔥", 3
+    elif price >= bb_upper1:
+        return "やや割高（+1σ以上）", "📈", 2
+    elif price <= bb_lower2:
+        return "過度な売られすぎ（-2σ以下）", "🧊", 3
+    elif price <= bb_lower1:
+        return "やや売られ気味（-1σ以下）", "📉", 2
+    else:
+        return "平均圏（±1σ内）", "⚪️", 1
+
+
+# ============================================================
 # テクニカル指標
 # ============================================================
 def calc_rsi(df, col="Close", period=14):
@@ -120,7 +151,7 @@ def is_flat(ma25, ma50, ma75, tol=0.03):
 
 
 # ============================================================
-# 押し目シグナル（あなたの元ロジック通り）
+# 押し目シグナル（あなたの元ロジック）
 # ============================================================
 def judge_signal(price, ma25, ma50, ma75, bb_l1, bb_u1, bb_l2, rsi, per, pbr, div, high_52w, low_52w):
     if rsi is None:
@@ -143,7 +174,7 @@ def judge_signal(price, ma25, ma50, ma75, bb_l1, bb_u1, bb_l2, rsi, per, pbr, di
 
 
 # ============================================================
-# 順張りスコア & 逆張りスコア
+# スコア（順張り/逆張り）
 # ============================================================
 def is_high_price_zone(price, ma25, ma50, bb_u1, rsi, per, pbr, high_52w):
     score = 0
@@ -169,7 +200,7 @@ def is_low_price_zone(price, ma25, ma50, bb_l1, bb_l2, rsi, per, pbr, low_52w):
 
 
 # ============================================================
-# メイン処理
+# メイン処理開始
 # ============================================================
 ticker_input = st.text_input("ティッカー（例: AAPL / 7203 / 8306.T）", "")
 
@@ -177,7 +208,6 @@ ticker = convert_ticker(ticker_input)
 if not ticker:
     st.stop()
 
-# info
 info = get_info_cached(ticker)
 name = get_company_name(ticker)
 
@@ -188,12 +218,8 @@ st.subheader(f"📌 {ticker} / {name}")
 st.write(f"🕒 市場状態：**{exchange}（{state}）**")
 
 
-# price
+# price データ
 df = get_price_cached(ticker)
-if df.empty:
-    st.error("株価データが取得できません")
-    st.stop()
-
 close_col = [c for c in df.columns if "Close" in c][0]
 
 df["25MA"] = df[close_col].rolling(25).mean()
@@ -202,9 +228,10 @@ df["75MA"] = df[close_col].rolling(75).mean()
 df["20MA"] = df[close_col].rolling(20).mean()
 df["20STD"] = df[close_col].rolling(20).std()
 
-df["BB_u1"] = df["20MA"] + df["20STD"]
-df["BB_l1"] = df["20MA"] - df["20STD"]
-df["BB_l2"] = df["20MA"] - 2 * df["20STD"]
+df["BB_+1σ"] = df["20MA"] + df["20STD"]
+df["BB_+2σ"] = df["20MA"] + 2 * df["20STD"]
+df["BB_-1σ"] = df["20MA"] - df["20STD"]
+df["BB_-2σ"] = df["20MA"] - 2 * df["20STD"]
 
 df["RSI"] = calc_rsi(df, close_col)
 
@@ -214,34 +241,67 @@ price = float(last[close_col])
 ma25 = float(last["25MA"])
 ma50 = float(last["50MA"])
 ma75 = float(last["75MA"])
-bb_u1 = float(last["BB_u1"])
-bb_l1 = float(last["BB_l1"])
-bb_l2 = float(last["BB_l2"])
+bb_u1 = float(last["BB_+1σ"])
+bb_u2 = float(last["BB_+2σ"])
+bb_l1 = float(last["BB_-1σ"])
+bb_l2 = float(last["BB_-2σ"])
 rsi = float(last["RSI"])
 
-high52 = info.get("fiftyTwoWeekHigh")
-low52 = info.get("fiftyTwoWeekLow")
+# 前日終値
+close_price = df[close_col].iloc[-2]
+
+# 企業情報
+industry = info.get("industry", "N/A")
+div = info.get("dividendYield")
 per = info.get("trailingPE")
 pbr = info.get("priceToBook")
-div = info.get("dividendYield")
+
+div_text = f"{div*100:.2f}%" if div else "N/A"
+per_text = f"{per:.2f}" if per else "N/A"
+pbr_text = f"{pbr:.2f}" if pbr else "N/A"
+
+# BB 判定
+bb_text, bb_icon, _ = judge_bb_signal(price, bb_u1, bb_u2, bb_l1, bb_l2)
 
 # RSI slope
 rsi_slope = (df["RSI"].iloc[-1] - df["RSI"].iloc[-5]) / abs(df["RSI"].iloc[-5] + 1e-10) * 100
 
 # スコア
-high_score = is_high_price_zone(price, ma25, ma50, bb_u1, rsi, per, pbr, high52)
-low_score = is_low_price_zone(price, ma25, ma50, bb_l1, bb_l2, rsi, per, pbr, low52)
+high_score = is_high_price_zone(price, ma25, ma50, bb_u1, rsi, per, pbr, info.get("fiftyTwoWeekHigh"))
+low_score = is_low_price_zone(price, ma25, ma50, bb_l1, bb_l2, rsi, per, pbr, info.get("fiftyTwoWeekLow"))
 
-# 押し目
-signal_text, signal_emoji, signal_lv = judge_signal(
-    price, ma25, ma50, ma75, bb_l1, bb_u1, bb_l2, rsi, per, pbr, div, high52, low52
+
+# ============================================================
+# 銘柄基本情報の表示
+# ============================================================
+st.markdown(f"**🏭 業種**: {industry}")
+st.markdown(f"**💰 配当利回り**: {div_text}｜**📐 PER**: {per_text}｜**🧮 PBR**: {pbr_text}")
+
+# 色付け
+if price > close_price:
+    color = "red"
+elif price < close_price:
+    color = "green"
+else:
+    color = "white"
+
+st.markdown(
+    f"📊 現値: <span style='color:{color}; font-weight:bold;'>{price:.2f}</span> "
+    f"（前日終値: {close_price:.2f}）｜25MA: {ma25:.2f}｜50MA: {ma50:.2f}｜75MA: {ma75:.2f}",
+    unsafe_allow_html=True
 )
 
+st.markdown(f"📊 **RSI**: {rsi:.1f}｜**📏 BB判定(20日)**: {bb_icon} {bb_text}")
+st.markdown("---")
+
 
 # ============================================================
-# 押し目シグナル表示
+# 押し目シグナル
 # ============================================================
-st.markdown("## 🎯 押し目シグナル（短期判定）")
+signal_text, signal_emoji, _ = judge_signal(price, ma25, ma50, ma75, bb_l1, bb_u1, bb_l2, rsi,
+                                           per, pbr, div, info.get("fiftyTwoWeekHigh"), info.get("fiftyTwoWeekLow"))
+
+st.subheader("🎯 押し目シグナル（短期判定）")
 st.write(f"### {signal_emoji} {signal_text}")
 st.markdown("---")
 
@@ -250,7 +310,7 @@ st.markdown("---")
 # 順張り or 逆張り 自動判定
 # ============================================================
 is_mid_uptrend = (ma25 > ma50) and (ma25 > ma75)
-is_mid_downtrend = (ma75 >= ma50 >= ma25) and (ma75 > ma25 * 1.03)
+is_mid_downtrend = (ma75 >= ma50 >= ma25)
 
 
 # ============================================================
@@ -273,7 +333,7 @@ def trend_eval():
 # ============================================================
 def contrarian_eval():
     c = 0
-    if (ma75 >= ma50 >= ma25): c += 1
+    if ma75 >= ma50 >= ma25: c += 1
     if rsi_slope < 0: c += 1
     if low_score >= 60: c += 1
 
@@ -287,38 +347,54 @@ def contrarian_eval():
 # テーブル表示（順張り or 逆張り）
 # ============================================================
 if is_mid_uptrend:
+
     ok_count, comment = trend_eval()
 
     trend_mark = "〇" if (ma25 > ma50 > ma75 or is_flat(ma25, ma50, ma75)) else "×"
     slope_mark = "〇" if 0 <= rsi_slope <= 0.3 else "×"
     high_score_text = f"{high_score}点"
 
+    center_price = (ma25 + ma50) / 2
+    upper_bound = center_price * 1.03
+    lower_bound = max(center_price * 0.95, bb_l1)
+
     st.markdown(f"""
-    <div style="margin-top:2em; font-size:24px; font-weight:bold;">📈 <順張り>裁量買いの検討（25MA＞50MA＞75MA）</div>
+    <div style="margin-top:2em; font-size:24px; font-weight:bold;">📈 <順張り>裁量買いの検討</div>
     <table>
         <tr><th align="left">項目</th><th align="left">内容</th><th align="left">判定</th></tr>
-        <tr><td>中期トレンド</td><td>25MA ≧ 50MA ≧ 75MA（上昇または横ばい）</td><td>{trend_mark}</td></tr>
+        <tr><td>中期トレンド</td><td>25MA ≧ 50MA ≧ 75MA（上昇 or 横ばい）</td><td>{trend_mark}</td></tr>
         <tr><td>短期傾向</td><td>25MA傾きが過去5日で ±0.3%以内</td><td>{slope_mark}</td></tr>
         <tr><td>順張り押し目判定</td><td>ブルスコア（60点以上で押し目）</td><td>{high_score_text}</td></tr>
+        <tr><td>中心価格</td><td>25MAと50MAの平均</td><td>{center_price:.2f}</td></tr>
+        <tr><td>上側許容幅</td><td>中心価格×1.03</td><td>{upper_bound:.2f}</td></tr>
+        <tr><td>下側許容幅</td><td>中心×0.95 or BB-1σの大きい方</td><td>{lower_bound:.2f}</td></tr>
         <tr><td>判定</td><td>順張り裁量評価</td><td><strong>{comment}</strong></td></tr>
     </table>
     """, unsafe_allow_html=True)
 
 
 else:
+
     ok_count, comment = contrarian_eval()
 
     trend_mark2 = "〇" if (ma75 >= ma50 >= ma25) else "×"
     slope_mark2 = "〇" if rsi_slope < 0 else "×"
     score_text = f"{low_score}点"
 
+    center_price = (ma25 + bb_l1) / 2
+    upper_bound = center_price * 1.08
+    lower_bound = center_price * 0.97
+
     st.markdown(f"""
     <div style="margin-top:2em; font-size:24px; font-weight:bold;">🧮 <逆張り>裁量買いの検討</div>
     <table>
         <tr><th align="left">項目</th><th align="left">内容</th><th align="left">判定</th></tr>
-        <tr><td>中期トレンド</td><td>75MA ≥ 50MA ≥ 25MA（下降または横ばい）</td><td>{trend_mark2}</td></tr>
+        <tr><td>中期トレンド</td><td>75MA ≥ 50MA ≥ 25MA（下降 or 横ばい）</td><td>{trend_mark2}</td></tr>
         <tr><td>短期傾向</td><td>25MA傾きが過去5日でマイナス</td><td>{slope_mark2}</td></tr>
-        <tr><td>割安圏判定</td><td>ベアスコア（60点以上で割安）</td><td>{score_text}</td></tr>
+        <tr><td>割安圏判定</td><td>ベアスコア（60点以上）</td><td>{score_text}</td></tr>
+        <tr><td>中心価格</td><td>25MAとBB-1σの平均</td><td>{center_price:.2f}</td></tr>
+        <tr><td>上側許容幅</td><td>中心価格×1.08</td><td>{upper_bound:.2f}</td></tr>
+        <tr><td>下側許容幅</td><td>中心価格×0.97</td><td>{lower_bound:.2f}</td></tr>
         <tr><td>判定</td><td>逆張り裁量評価</td><td><strong>{comment}</strong></td></tr>
     </table>
     """, unsafe_allow_html=True)
