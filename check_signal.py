@@ -1,6 +1,7 @@
 import streamlit as st
 import yfinance as yf
 import pandas as pd
+import numpy as np
 import time
 from datetime import datetime, time as t
 import pytz
@@ -8,34 +9,40 @@ import pytz
 # ============================================================
 # Streamlit 基本設定
 # ============================================================
-st.set_page_config(page_title="買いシグナルチェッカー", page_icon="📊")
-st.title("🔍 買いシグナルチェッカー（高速×安定版）")
+st.set_page_config(page_title="買いシグナルチェッカー（高速×安定版）", page_icon="📊")
+st.title("🔍 買いシグナルチェッカー（超高速 × 超安定版）")
 
 
 # ============================================================
-# yfinance 安全アクセス（Rate limit 対策）
+# yfinance 安全取得（Rate limit 無敵版）
 # ============================================================
-def safe_info(ticker, retries=3, wait=2):
-    """yfinance の .info を安全取得"""
+def safe_ticker(ticker, retries=5, wait=1):
+    """fast_info ベースで安全に Ticker を返す"""
     for i in range(retries):
         try:
-            return yf.Ticker(ticker).info
+            tk = yf.Ticker(ticker)
+            _ = tk.fast_info  # 軽量API → RateLimitほぼ無し
+            return tk
         except Exception as e:
-            if "Too Many Requests" in str(e):
-                time.sleep(wait)
-                wait *= 2
-            else:
-                raise
-    raise Exception("Rate Limit により info 取得失敗")
+            time.sleep(wait)
+            wait *= 2
+    raise Exception("Yahoo API RateLimit のため Ticker 取得失敗")
 
 
-@st.cache_data(ttl=1800)
-def get_info_cached(ticker):
-    return safe_info(ticker)
+def safe_fast_info(tk, retries=5, wait=1):
+    """fast_info を安全取得（info を使わない）"""
+    for i in range(retries):
+        try:
+            return tk.fast_info
+        except:
+            time.sleep(wait)
+            wait *= 2
+    raise Exception("fast_info の取得に失敗しました（RateLimit）")
 
 
-@st.cache_data(ttl=1800)
+@st.cache_data(ttl=900)
 def get_price_cached(ticker):
+    """120日分を高速キャッシュ"""
     return yf.download(ticker, period="120d", interval="1d")
 
 
@@ -50,17 +57,19 @@ def convert_ticker(t):
 
 
 # ============================================================
-# 市場状態判定（ローカル計算）
+# 市場の開閉判定
 # ============================================================
-def get_exchange(info, ticker):
+def get_exchange_from_fastinfo(info, ticker):
     if ticker.endswith(".T") or ticker.isdigit():
         return "東証"
 
-    ex = info.get("exchange", "").upper()
-    if ex in ["NMS", "NASDAQ"]:
+    exch = str(info.get("exchange", "")).upper()
+
+    if "NASDAQ" in exch or "NMS" in exch:
         return "NASDAQ"
-    if ex in ["NYQ", "NYSE"]:
+    if "NYSE" in exch or "NYQ" in exch:
         return "NYSE"
+
     return "不明"
 
 
@@ -81,27 +90,28 @@ def market_state(exchange):
 
 
 # ============================================================
-# テクニカル指標
+# テクニカル計算
 # ============================================================
 def calc_rsi(df, col="Close", period=14):
     d = df[col].diff()
     up = d.clip(lower=0)
     down = -d.clip(upper=0)
+
     ag = up.rolling(period).mean()
     al = down.rolling(period).mean().replace(0, 1e-10)
+
     rs = ag / al
     return 100 - (100 / (1 + rs))
 
 
 # ============================================================
-# 裁量買いロジック（あなたの元コードを忠実に反映）
+# 裁量買いロジック（あなたの元コード完全移植）
 # ============================================================
 def is_flat(ma25, ma50, ma75, tol=0.03):
     arr = [ma25, ma50, ma75]
     return (max(arr) - min(arr)) / max(arr) <= tol
 
 
-# ----- 順張り：割高否定スコア -----
 def is_high_price_zone(price, ma25, ma50, bb_upper1, rsi, per, pbr, high_52w):
     score = 0
     if price <= ma25 * 1.10 and price <= ma50 * 1.10:
@@ -114,12 +124,11 @@ def is_high_price_zone(price, ma25, ma50, bb_upper1, rsi, per, pbr, high_52w):
         score += 15
     if pbr and pbr < 2.0:
         score += 15
-    if price < high_52w * 0.95:
+    if high_52w and price < high_52w * 0.95:
         score += 15
     return score
 
 
-# ----- 逆張り：割安スコア -----
 def is_low_price_zone(price, ma25, ma50, bb_l1, bb_l2, rsi, per, pbr, low_52w):
     score = 0
     if price < ma25 * 0.90 and price < ma50 * 0.90:
@@ -134,21 +143,17 @@ def is_low_price_zone(price, ma25, ma50, bb_l1, bb_l2, rsi, per, pbr, low_52w):
         score += 15
     if pbr and pbr < 1.0:
         score += 15
-    if price <= low_52w * 1.05:
+    if low_52w and price <= low_52w * 1.05:
         score += 15
     return score
 
 
-# ------ 順張り裁量買い ------
 def trend_buy_range(ma25, ma50, ma75, bb_l1, highscore):
-    is_trend = ma75 < ma50 < ma25 or is_flat(ma25, ma50, ma75)
-    if not is_trend:
+    if not (ma75 < ma50 < ma25 or is_flat(ma25, ma50, ma75)):
         return None
 
     slope = (ma25 - ma50) / ma50 * 100
-    is_slope_ok = abs(slope) <= 0.3 and slope >= 0
-
-    if not is_slope_ok:
+    if not (0 <= slope <= 0.3):
         return None
 
     if highscore < 60:
@@ -161,24 +166,23 @@ def trend_buy_range(ma25, ma50, ma75, bb_l1, highscore):
     return {"center": center, "upper": upper, "lower": lower}
 
 
-# ------ 逆張り裁量買い ------
 def contrarian_buy_range(ma25, ma50, ma75, bb_l1, low_score, rsi_slope, pbr, div):
-    is_trend = ma75 > ma50 > ma25 or is_flat(ma25, ma50, ma75)
-    if not is_trend:
+    if not (ma75 > ma50 > ma25 or is_flat(ma25, ma50, ma75)):
         return None
-
     if rsi_slope >= 0:
         return None
-
     if low_score < 60:
         return None
 
     center = (ma25 + bb_l1) / 2
     upper = center * 1.08
     lower = center * 0.97
+
     tag = []
-    if pbr and pbr < 1.0: tag.append("PBR割安")
-    if div and div > 3.0: tag.append("高配当")
+    if pbr and pbr < 1.0:
+        tag.append("PBR割安")
+    if div and div > 3.0:
+        tag.append("高配当")
 
     return {"center": center, "upper": upper, "lower": lower, "tag": " ".join(tag)}
 
@@ -187,19 +191,20 @@ def contrarian_buy_range(ma25, ma50, ma75, bb_l1, low_score, rsi_slope, pbr, div
 # メイン処理
 # ============================================================
 ticker_input = st.text_input("ティッカー（例: AAPL / 7203 / 8306.T）", "")
-
 ticker = convert_ticker(ticker_input)
+
 if not ticker:
     st.stop()
 
-# ----- info -----
+# ----- fast_info -----
 try:
-    info = get_info_cached(ticker)
+    tk = safe_ticker(ticker)
+    info = safe_fast_info(tk)
 except Exception as e:
     st.error(f"info取得エラー: {e}")
     st.stop()
 
-exchange = get_exchange(info, ticker)
+exchange = get_exchange_from_fastinfo(info, ticker)
 st.write(f"🕒 市場状態：**{exchange}（{market_state(exchange)}）**")
 
 
@@ -236,9 +241,9 @@ bb_u2 = float(last["BB_u2"])
 bb_l1 = float(last["BB_l1"])
 bb_l2 = float(last["BB_l2"])
 
-high52 = info.get("fiftyTwoWeekHigh", None)
-low52 = info.get("fiftyTwoWeekLow", None)
-per = info.get("trailingPE", None)
+high52 = info.get("yearHigh", None)
+low52 = info.get("yearLow", None)
+per = info.get("peRatio", None)
 pbr = info.get("priceToBook", None)
 div = info.get("dividendYield", None)
 
