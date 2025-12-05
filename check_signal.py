@@ -22,7 +22,6 @@ JP_STOCK_NAMES = {
     "4063.T": "SHIN-ETSU CHEMICAL",
     "9432.T": "NTT",
     "2768.T": "SOGO SHOSHA",
-    # 必要なら後で増やす
 }
 
 
@@ -30,7 +29,6 @@ JP_STOCK_NAMES = {
 # yfinance 安全アクセス（Rate limit 対策）
 # ============================================================
 def safe_info(ticker, retries=3, wait=2):
-    """yfinance の .info を安全取得"""
     for i in range(retries):
         try:
             return yf.Ticker(ticker).info
@@ -89,6 +87,22 @@ def get_company_name(ticker):
 
 
 # ============================================================
+# ボリンジャーバンド判定（あなたのロジック）
+# ============================================================
+def judge_bb_signal(price, bb_upper1, bb_upper2, bb_lower1, bb_lower2):
+    if price >= bb_upper2:
+        return "非常に割高（+2σ以上）", "🔥", 3
+    elif price >= bb_upper1:
+        return "やや割高（+1σ以上）", "📈", 2
+    elif price <= bb_lower2:
+        return "過度な売られすぎ（-2σ以下）", "🧊", 3
+    elif price <= bb_lower1:
+        return "やや売られ気味（-1σ以下）", "📉", 2
+    else:
+        return "平均圏（±1σ内）", "⚪️", 1
+
+
+# ============================================================
 # 市場状態判定
 # ============================================================
 def get_exchange(info, ticker):
@@ -114,22 +128,6 @@ def market_state(exchange):
         is_open = now >= op or now <= close
 
     return "取引中" if is_open else "取引終了"
-
-
-# ============================================================
-# ボリンジャーバンド判定（あなたのロジック）
-# ============================================================
-def judge_bb_signal(price, bb_upper1, bb_upper2, bb_lower1, bb_lower2):
-    if price >= bb_upper2:
-        return "非常に割高（+2σ以上）", "🔥", 3
-    elif price >= bb_upper1:
-        return "やや割高（+1σ以上）", "📈", 2
-    elif price <= bb_lower2:
-        return "過度な売られすぎ（-2σ以下）", "🧊", 3
-    elif price <= bb_lower1:
-        return "やや売られ気味（-1σ以下）", "📉", 2
-    else:
-        return "平均圏（±1σ内）", "⚪️", 1
 
 
 # ============================================================
@@ -200,7 +198,54 @@ def is_low_price_zone(price, ma25, ma50, bb_l1, bb_l2, rsi, per, pbr, low_52w):
 
 
 # ============================================================
-# メイン処理開始
+# ファンダメンタル強化取得（今回の強化ポイント）
+# ============================================================
+def get_fundamentals(ticker, info, price):
+    """industry / PER / PBR / 配当利回り を強化取得"""
+
+    # ---------- 業種 ----------
+    industry = "N/A"
+
+    if "industry" in info and isinstance(info["industry"], str):
+        industry = info["industry"]
+    elif "sector" in info and isinstance(info["sector"], str):
+        industry = info["sector"]
+
+    # ---------- 配当利回り（過去1年配当から再計算） ----------
+    div_yield = "N/A"
+    try:
+        tk = yf.Ticker(ticker)
+        divs = tk.dividends
+        if len(divs) > 0:
+            one_year = divs[divs.index > (divs.index.max() - pd.Timedelta(days=365))].sum()
+            if one_year > 0:
+                div_yield = round(one_year / price * 100, 2)
+    except:
+        pass
+
+    # ---------- PER ----------
+    per = "N/A"
+    try:
+        eps = info.get("epsTrailingTwelveMonths")
+        if eps and eps != 0:
+            per = round(price / eps, 2)
+    except:
+        pass
+
+    # ---------- PBR ----------
+    pbr = "N/A"
+    try:
+        book = info.get("bookValue")
+        if book and book != 0:
+            pbr = round(price / book, 2)
+    except:
+        pass
+
+    return industry, div_yield, per, pbr
+
+
+# ============================================================
+# メイン処理
 # ============================================================
 ticker_input = st.text_input("ティッカー（例: AAPL / 7203 / 8306.T）", "")
 
@@ -250,15 +295,12 @@ rsi = float(last["RSI"])
 # 前日終値
 close_price = df[close_col].iloc[-2]
 
-# 企業情報
-industry = info.get("industry", "N/A")
-div = info.get("dividendYield")
-per = info.get("trailingPE")
-pbr = info.get("priceToBook")
+# 企業情報ファンダメンタル
+industry, div_calc, per_calc, pbr_calc = get_fundamentals(ticker, info, price)
 
-div_text = f"{div*100:.2f}%" if div else "N/A"
-per_text = f"{per:.2f}" if per else "N/A"
-pbr_text = f"{pbr:.2f}" if pbr else "N/A"
+div_text = f"{div_calc}%" if div_calc != "N/A" else "N/A"
+per_text = f"{per_calc}" if per_calc != "N/A" else "N/A"
+pbr_text = f"{pbr_calc}" if pbr_calc != "N/A" else "N/A"
 
 # BB 判定
 bb_text, bb_icon, _ = judge_bb_signal(price, bb_u1, bb_u2, bb_l1, bb_l2)
@@ -267,8 +309,8 @@ bb_text, bb_icon, _ = judge_bb_signal(price, bb_u1, bb_u2, bb_l1, bb_l2)
 rsi_slope = (df["RSI"].iloc[-1] - df["RSI"].iloc[-5]) / abs(df["RSI"].iloc[-5] + 1e-10) * 100
 
 # スコア
-high_score = is_high_price_zone(price, ma25, ma50, bb_u1, rsi, per, pbr, info.get("fiftyTwoWeekHigh"))
-low_score = is_low_price_zone(price, ma25, ma50, bb_l1, bb_l2, rsi, per, pbr, info.get("fiftyTwoWeekLow"))
+high_score = is_high_price_zone(price, ma25, ma50, bb_u1, rsi, per_calc, pbr_calc, info.get("fiftyTwoWeekHigh"))
+low_score = is_low_price_zone(price, ma25, ma50, bb_l1, bb_l2, rsi, per_calc, pbr_calc, info.get("fiftyTwoWeekLow"))
 
 
 # ============================================================
@@ -298,8 +340,10 @@ st.markdown("---")
 # ============================================================
 # 押し目シグナル
 # ============================================================
-signal_text, signal_emoji, _ = judge_signal(price, ma25, ma50, ma75, bb_l1, bb_u1, bb_l2, rsi,
-                                           per, pbr, div, info.get("fiftyTwoWeekHigh"), info.get("fiftyTwoWeekLow"))
+signal_text, signal_emoji, _ = judge_signal(
+    price, ma25, ma50, ma75, bb_l1, bb_u1, bb_l2, rsi,
+    per_calc, pbr_calc, div_calc, info.get("fiftyTwoWeekHigh"), info.get("fiftyTwoWeekLow")
+)
 
 st.subheader("🎯 押し目シグナル（短期判定）")
 st.write(f"### {signal_emoji} {signal_text}")
