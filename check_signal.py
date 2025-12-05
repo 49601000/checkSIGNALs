@@ -193,7 +193,16 @@ rsi = last["RSI"]
 high52 = df[close_col].max()
 low52 = df[close_col].min()
 
-ma25_slope = (df["25MA"].iloc[-1] - df["25MA"].iloc[-5]) / df["25MA"].iloc[-5] * 100
+# MA25 の傾き（df ではなく df2 を使用）
+if len(df2) >= 6:
+    ma25_slope = (
+        (df2["25MA"].iloc[-1] - df2["25MA"].iloc[-5])
+        / df2["25MA"].iloc[-5]
+        * 100
+    )
+else:
+    ma25_slope = 0  # データ不足時の安全処理
+
 is_gentle_up = abs(ma25_slope) <= 0.3 and ma25_slope >= 0
 is_slope_down = ma25_slope < 0
 
