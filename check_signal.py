@@ -6,7 +6,7 @@ from datetime import datetime, time as t
 import pytz
 
 # ============================================================
-# Streamlit 基本設定
+# Streamlit 設定
 # ============================================================
 st.set_page_config(page_title="買いシグナルチェッカー", page_icon="📊")
 st.title("🔍 買いシグナルチェッカー（高速×安定版）")
@@ -21,12 +21,11 @@ JP_STOCK_NAMES = {
     "8306.T": "MITSUBISHI UFJ",
     "4063.T": "SHIN-ETSU CHEMICAL",
     "9432.T": "NTT",
-    "2768.T": "SOGO SHOSHA",
 }
 
 
 # ============================================================
-# yfinance 安全アクセス（Rate limit 対策）
+# yfinance 安全アクセス
 # ============================================================
 def safe_info(ticker, retries=3, wait=2):
     for i in range(retries):
@@ -52,7 +51,7 @@ def get_price_cached(ticker):
 
 
 # ============================================================
-# ティッカー変換
+# Ticker 変換
 # ============================================================
 def convert_ticker(t):
     t = t.strip().upper()
@@ -62,7 +61,7 @@ def convert_ticker(t):
 
 
 # ============================================================
-# 銘柄名を必ず取得（fast_info → info → displayName → JP辞書）
+# 銘柄名取得（fast_info → info → displayName → 辞書）
 # ============================================================
 def get_company_name(ticker):
     try:
@@ -71,23 +70,22 @@ def get_company_name(ticker):
 
         tk = yf.Ticker(ticker)
 
-        fi = tk.fast_info
         for key in ["longName", "shortName", "displayName"]:
-            if key in fi and isinstance(fi[key], str):
-                return fi[key]
+            if key in tk.fast_info and isinstance(tk.fast_info[key], str):
+                return tk.fast_info[key]
 
-        info = tk.info
         for key in ["longName", "shortName", "displayName"]:
-            if key in info and isinstance(info[key], str):
-                return info[key]
+            if key in tk.info and isinstance(tk.info[key], str):
+                return tk.info[key]
 
         return ticker
+
     except:
         return ticker
 
 
 # ============================================================
-# ボリンジャーバンド判定（あなたのロジック）
+# BB 判定（あなたのロジック）
 # ============================================================
 def judge_bb_signal(price, bb_upper1, bb_upper2, bb_lower1, bb_lower2):
     if price >= bb_upper2:
@@ -103,7 +101,7 @@ def judge_bb_signal(price, bb_upper1, bb_upper2, bb_lower1, bb_lower2):
 
 
 # ============================================================
-# 市場状態判定
+# 市場状態
 # ============================================================
 def get_exchange(info, ticker):
     if ticker.endswith(".T") or ticker.isdigit():
@@ -117,6 +115,7 @@ def get_exchange(info, ticker):
 
 def market_state(exchange):
     now = datetime.now(pytz.timezone("Asia/Tokyo")).time()
+
     if exchange == "東証":
         op, close = t(9, 0), t(15, 30)
     else:
@@ -131,7 +130,7 @@ def market_state(exchange):
 
 
 # ============================================================
-# テクニカル指標
+# テクニカル算出
 # ============================================================
 def calc_rsi(df, col="Close", period=14):
     d = df[col].diff()
@@ -149,7 +148,7 @@ def is_flat(ma25, ma50, ma75, tol=0.03):
 
 
 # ============================================================
-# 押し目シグナル（あなたの元ロジック）
+# 押し目シグナル（あなたの元コード）
 # ============================================================
 def judge_signal(price, ma25, ma50, ma75, bb_l1, bb_u1, bb_l2, rsi, per, pbr, div, high_52w, low_52w):
     if rsi is None:
@@ -157,16 +156,10 @@ def judge_signal(price, ma25, ma50, ma75, bb_l1, bb_u1, bb_l2, rsi, per, pbr, di
 
     if price <= ma75 and rsi < 40 and price <= bb_l1:
         return "バーゲン（強い押し目）", "🔴", 3
-
     elif (price <= ma75 and price < bb_l1) or (rsi < 30 and price < bb_l1):
         return "そこそこ押し目", "🟠", 2
-
     elif price < ma25 * 0.97 and rsi < 37.5 and price <= bb_l1:
         return "軽い押し目", "🟡", 1
-
-    elif is_high_price_zone(price, ma25, ma50, bb_u1, rsi, per, pbr, high_52w) <= 40:
-        return "高値圏（要注意！）", "🔥", 0
-
     else:
         return "押し目シグナルなし", "🟢", 0
 
@@ -179,8 +172,8 @@ def is_high_price_zone(price, ma25, ma50, bb_u1, rsi, per, pbr, high_52w):
     if price <= ma25 * 1.10 and price <= ma50 * 1.10: score += 20
     if price <= bb_u1: score += 20
     if rsi < 70: score += 15
-    if per and per < 20: score += 15
-    if pbr and pbr < 2.0: score += 15
+    if per is not None and per < 20: score += 15
+    if pbr is not None and pbr < 2.0: score += 15
     if high_52w and price < high_52w * 0.95: score += 15
     return score
 
@@ -191,28 +184,24 @@ def is_low_price_zone(price, ma25, ma50, bb_l1, bb_l2, rsi, per, pbr, low_52w):
     if price < bb_l1: score += 15
     if price < bb_l2: score += 20
     if rsi < 30: score += 15
-    if per and per < 10: score += 15
-    if pbr and pbr < 1.0: score += 15
+    if per is not None and per < 10: score += 15
+    if pbr is not None and pbr < 1.0: score += 15
     if low_52w and price <= low_52w * 1.05: score += 15
     return score
 
 
 # ============================================================
-# ファンダメンタル強化取得（今回の強化ポイント）
+# ファンダメンタル取得（None で統一）
 # ============================================================
 def get_fundamentals(ticker, info, price):
-    """industry / PER / PBR / 配当利回り を強化取得"""
+    industry = None
+    for key in ["industry", "sector"]:
+        if key in info and isinstance(info[key], str):
+            industry = info[key]
+            break
 
-    # ---------- 業種 ----------
-    industry = "N/A"
-
-    if "industry" in info and isinstance(info["industry"], str):
-        industry = info["industry"]
-    elif "sector" in info and isinstance(info["sector"], str):
-        industry = info["sector"]
-
-    # ---------- 配当利回り（過去1年配当から再計算） ----------
-    div_yield = "N/A"
+    # 配当利回り
+    div_yield = None
     try:
         tk = yf.Ticker(ticker)
         divs = tk.dividends
@@ -223,23 +212,17 @@ def get_fundamentals(ticker, info, price):
     except:
         pass
 
-    # ---------- PER ----------
-    per = "N/A"
-    try:
-        eps = info.get("epsTrailingTwelveMonths")
-        if eps and eps != 0:
-            per = round(price / eps, 2)
-    except:
-        pass
+    # PER
+    per = None
+    eps = info.get("epsTrailingTwelveMonths")
+    if eps not in [None, 0]:
+        per = round(price / eps, 2)
 
-    # ---------- PBR ----------
-    pbr = "N/A"
-    try:
-        book = info.get("bookValue")
-        if book and book != 0:
-            pbr = round(price / book, 2)
-    except:
-        pass
+    # PBR
+    pbr = None
+    book = info.get("bookValue")
+    if book not in [None, 0]:
+        pbr = round(price / book, 2)
 
     return industry, div_yield, per, pbr
 
@@ -248,7 +231,6 @@ def get_fundamentals(ticker, info, price):
 # メイン処理
 # ============================================================
 ticker_input = st.text_input("ティッカー（例: AAPL / 7203 / 8306.T）", "")
-
 ticker = convert_ticker(ticker_input)
 if not ticker:
     st.stop()
@@ -292,15 +274,15 @@ bb_l1 = float(last["BB_-1σ"])
 bb_l2 = float(last["BB_-2σ"])
 rsi = float(last["RSI"])
 
-# 前日終値
 close_price = df[close_col].iloc[-2]
 
-# 企業情報ファンダメンタル
 industry, div_calc, per_calc, pbr_calc = get_fundamentals(ticker, info, price)
 
-div_text = f"{div_calc}%" if div_calc != "N/A" else "N/A"
-per_text = f"{per_calc}" if per_calc != "N/A" else "N/A"
-pbr_text = f"{pbr_calc}" if pbr_calc != "N/A" else "N/A"
+div_text = f"{div_calc}%" if div_calc is not None else "N/A"
+per_text = f"{per_calc}" if per_calc is not None else "N/A"
+pbr_text = f"{pbr_calc}" if pbr_calc is not None else "N/A"
+industry_text = industry if industry is not None else "N/A"
+
 
 # BB 判定
 bb_text, bb_icon, _ = judge_bb_signal(price, bb_u1, bb_u2, bb_l1, bb_l2)
@@ -314,18 +296,17 @@ low_score = is_low_price_zone(price, ma25, ma50, bb_l1, bb_l2, rsi, per_calc, pb
 
 
 # ============================================================
-# 銘柄基本情報の表示
+# 銘柄基本情報
 # ============================================================
-st.markdown(f"**🏭 業種**: {industry}")
+st.markdown(f"**🏭 業種**: {industry_text}")
 st.markdown(f"**💰 配当利回り**: {div_text}｜**📐 PER**: {per_text}｜**🧮 PBR**: {pbr_text}")
 
-# 色付け
+# 現値の色
+color = "white"
 if price > close_price:
     color = "red"
 elif price < close_price:
     color = "green"
-else:
-    color = "white"
 
 st.markdown(
     f"📊 現値: <span style='color:{color}; font-weight:bold;'>{price:.2f}</span> "
@@ -351,7 +332,7 @@ st.markdown("---")
 
 
 # ============================================================
-# 順張り or 逆張り 自動判定
+# トレンド自動判定
 # ============================================================
 is_mid_uptrend = (ma25 > ma50) and (ma25 > ma75)
 is_mid_downtrend = (ma75 >= ma50 >= ma25)
@@ -388,7 +369,7 @@ def contrarian_eval():
 
 
 # ============================================================
-# テーブル表示（順張り or 逆張り）
+# 順張りテーブル or 逆張りテーブル
 # ============================================================
 if is_mid_uptrend:
 
