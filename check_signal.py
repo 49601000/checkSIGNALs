@@ -171,9 +171,15 @@ def calc_rsi(df, col="Close", period=14):
 # 押し目判定
 # ============================================================
 def judge_signal(price, ma25, ma50, ma75, bb_l1, bb_u1, bb_l2, rsi, per, pbr, high, low):
-    if rsi is None or np.isnan(rsi):
+    # RSI の NaN/None 防御
+    try:
+        if rsi is None or (isinstance(rsi, float) and np.isnan(rsi)):
+            return "RSI不明", "⚪️", 0
+    except:
+        # Series や例外時は安全にフォールバック
         return "RSI不明", "⚪️", 0
 
+    # --- 以下は通常の押し目判定 ---
     if price <= ma75 and rsi < 40 and price <= bb_l1:
         return "バーゲン（強い押し目）", "🔴", 3
 
@@ -184,8 +190,6 @@ def judge_signal(price, ma25, ma50, ma75, bb_l1, bb_u1, bb_l2, rsi, per, pbr, hi
         return "軽い押し目", "🟡", 1
 
     return "押し目シグナルなし", "🟢", 0
-
-
 # ============================================================
 # BB 判定
 # ============================================================
