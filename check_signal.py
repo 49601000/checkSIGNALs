@@ -16,9 +16,9 @@ st.title("🔍買いシグナルチェッカー（完全版）")
 # -----------------------------------------------------------
 # ティッカー補正（日本株は自動 .T 付与）
 # -----------------------------------------------------------
-def convert_ticker(ticker):
+def convert_ticker(ticker: str) -> str:
     ticker = ticker.strip().upper()
-    # 日本株：4桁で .T が付いていない場合に自動付与
+    # 日本株：数字のみで .T が付いていない場合に自動付与
     if ticker.isdigit() and len(ticker) <= 5 and not ticker.endswith(".T"):
         return ticker + ".T"
     return ticker
@@ -26,8 +26,7 @@ def convert_ticker(ticker):
 # -----------------------------------------------------------
 # MA の矢印判定：上昇 ↗ / 下降 ↘ / 横ばい →
 # -----------------------------------------------------------
-def slope_arrow(series, window=3):
-    # series: pandas Series
+def slope_arrow(series: pd.Series, window: int = 3) -> str:
     if len(series) < window + 1:
         return "→"
     recent = series.iloc[-window:]
@@ -66,7 +65,17 @@ if df.empty:
 if isinstance(df.columns, pd.MultiIndex):
     df.columns = ["_".join(col).strip() for col in df.columns]
 
-close_col = next(c for c in df.columns if "Close" in c)
+# Close カラム特定
+try:
+    close_col = next(c for c in df.columns if "Close" in c)
+except StopIteration:
+    st.error("終値（Close）列が見つかりません。")
+    st.stop()
+
+if len(df[close_col]) < 2:
+    st.error("データ日数が不足しています（2営業日未満）。")
+    st.stop()
+
 close = df[close_col].iloc[-1]
 previous_close = df[close_col].iloc[-2]
 
@@ -95,6 +104,10 @@ df["RSI"] = 100 - (100 / (1 + (avg_gain / avg_loss)))
 
 # 有効データ（dropna）
 df_valid = df.dropna()
+if df_valid.empty or len(df_valid) < 5:
+    st.error("テクニカル指標を計算するためのデータが不足しています。")
+    st.stop()
+
 last = df_valid.iloc[-1]
 
 # 最終計算値
@@ -110,9 +123,12 @@ low_52w = df[close_col].min()
 # -----------------------------------------------------------
 # MA の傾き（判定基準）
 # -----------------------------------------------------------
-ma25_slope = (df["25MA"].iloc[-1] - df["25MA"].iloc[-4]) / df["25MA"].iloc[-4] * 100
-slope_ok = ma25_slope < 0  # 逆張り向け条件
+if len(df["25MA"].dropna()) >= 4:
+    ma25_slope = (df["25MA"].iloc[-1] - df["25MA"].iloc[-4]) / df["25MA"].iloc[-4] * 100
+else:
+    ma25_slope = 0.0
 
+slope_ok = ma25_slope < 0  # 逆張り向け条件
 is_flat_or_gentle_up = abs(ma25_slope) <= 0.3 and ma25_slope >= 0  # 順張り向け条件
 
 # -----------------------------------------------------------
@@ -130,13 +146,26 @@ divs = ticker_obj.dividends
 
 dividend_yield = None
 if isinstance(divs, pd.Series) and len(divs) > 0:
-    divs.index = pd.to_datetime(divs.index, errors="coerce").dropna()
+    # ★ ここがバグポイントだったので修正 ★
+    divs.index = pd.to_datetime(divs.index, errors="coerce")
+    divs = divs.dropna()
+
+    # タイムゾーンをNaive（tzなし）に統一
+    try:
+        if divs.index.tz is not None:
+            divs.index = divs.index.tz_localize(None)
+    except Exception:
+        pass
+
     one_year_ago = datetime.now() - timedelta(days=365)
+    one_year_ago = one_year_ago.replace(tzinfo=None)
+
     last_year_divs = divs[divs.index >= one_year_ago]
 
     if len(last_year_divs) > 0:
         annual_div = last_year_divs.sum()
-        dividend_yield = (annual_div / close) * 100
+        if close > 0:
+            dividend_yield = (annual_div / close) * 100
 
 # -----------------------------------------------------------
 # 現在価格の色付け
@@ -175,7 +204,6 @@ bb_text, bb_icon, bb_strength = judge_bb_signal(
 # -----------------------------------------------------------
 # 押し目判定ロジック（あなた仕様100%そのまま）
 # -----------------------------------------------------------
-
 def is_high_price_zone(price, ma25, ma50, bb_upper1, rsi, per, pbr, high_52w):
     score = 0
     if price <= ma25 * 1.10 and price <= ma50 * 1.10:
@@ -207,7 +235,7 @@ def judge_signal(price, ma25, ma50, ma75, bb_lower1, bb_upper1, bb_lower2,
     elif price < ma25 * 0.97 and rsi < 37.5 and price <= bb_lower1:
         return "軽い押し目", "🟡", 1
 
-    # --- 🔥 高値圏（要注意！）←あなたが超重要と言った分岐 ---
+    # --- 🔥 高値圏（要注意！） ---
     elif is_high_price_zone(price, ma25, ma50, bb_upper1, rsi,
                             None, None, high_52w) <= 40:
         return "高値圏（要注意！）", "🔥", 0
@@ -226,7 +254,6 @@ signal_text, signal_icon, signal_strength = judge_signal(
 # -----------------------------------------------------------
 # UI 表示（Part1の直後に配置）
 # -----------------------------------------------------------
-
 st.markdown("---")
 st.markdown("## 📊 現在価格 ＋ MA（トレンド矢印付き）")
 
@@ -307,7 +334,6 @@ trend_comment = [
     "買い候補として非常に魅力的です。"
 ][trend_ok]
 
-
 # -------------------------------
 # 逆張り条件の評価
 # -------------------------------
@@ -330,13 +356,11 @@ contr_comment = [
     "買い候補として非常に魅力的です。"
 ][contr_ok]
 
-
 # ===========================================================
 # UI 出力：順張り or 逆張りレンジ
 # ===========================================================
 st.markdown("---")
 st.markdown("## 🎯 裁量買いレンジ（トレンド別）")
-
 
 # -------------------------------
 # 順張り（25 > 50 > 75）
@@ -383,4 +407,3 @@ else:
 | 下側許容 | ×0.97 | {lower_price:.2f} |
 | 判定 | — | **{contr_comment}** |
 """)
-
