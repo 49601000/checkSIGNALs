@@ -287,26 +287,35 @@ close_col = next(c for c in df.columns if "Close" in c)
 close = df[close_col].iloc[-1]
 previous_close = df[close_col].iloc[-2]
 
-# -----------------------------------------------------------
-# API 2回目：配当データ（dividends）
-# -----------------------------------------------------------
+# =======================================================
+# 配当利回り 安全計算（どんな銘柄でも落ちない）
+# =======================================================
+
+dividend_yield = None  # デフォルト
+
 ticker_obj = yf.Ticker(ticker)
-divs = ticker_obj.dividends  # Series形式
+divs = ticker_obj.dividends
 
-# デフォルトは配当利回りなし
-dividend_yield = None
+# 配当データが Series であり、要素がある場合
+if isinstance(divs, pd.Series) and len(divs) > 0:
 
-# 配当データがあり、かつ index が datetime のときだけ計算
-if divs is not None and len(divs) > 0 and isinstance(divs.index, pd.DatetimeIndex):
-    one_year_ago = datetime.now() - timedelta(days=365)
+    # index を DatetimeIndex に変換（失敗してもエラーにならない）
+    try:
+        divs.index = pd.to_datetime(divs.index, errors="coerce")
+        divs = divs.dropna()  # 変換できなかった index を除去
+    except Exception:
+        divs = pd.Series(dtype=float)  # 空にして安全化
 
-    # 過去1年の配当合計
-    annual_div = divs[divs.index > one_year_ago].sum()
+    # 過去1年だけ抽出
+    if len(divs) > 0:
+        one_year_ago = datetime.now() - timedelta(days=365)
+        mask = divs.index > one_year_ago
 
-    if annual_div > 0:
-        dividend_yield = (annual_div / close) * 100
-
-
+        # インデックス比較の安全条件
+        if mask.any():
+            annual_div = divs[mask].sum()
+            if annual_div > 0 and close > 0:
+                dividend_yield = (annual_div / close) * 100
 
 # -----------------------------------------------------------
 # テクニカル計算（すべてローカル）
