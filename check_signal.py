@@ -400,7 +400,7 @@ if ma75 < ma50 < ma25:
 |---|---|---|
 | 中期トレンド | 25MA ＞ 50MA ＞ 75MA | {"○" if trend_conditions[0] else "×"} |
 | 短期傾向 | MA25 が横ばい〜緩やか上昇 | {"○" if trend_conditions[1] else "×"} |
-| 割高否定 | スコア ≥ 60 | {highprice_score} |
+| 割高否定 | ブルスコアが60点以上で「押し目」と判定（ブルスコアは RSI・PER・PBR・BB・52週高値の95%未満などを加点評価／スコアが高いほど割高否定傾向） | {highprice_score} |
 | 中心価格 | 25MA と 50MA の平均 | {center_price:.2f} |
 | 上側許容 | ×1.03 | {upper_price:.2f} |
 | 下側許容 | ×0.95 または BB-1σ | {lower_price:.2f} |
@@ -423,7 +423,7 @@ else:
 |---|---|---|
 | 中期トレンド | 下降 or 横ばい | {"○" if contrarian_conditions[0] else "×"} |
 | 短期傾向 | MA25 が下降 | {"○" if contrarian_conditions[1] else "×"} |
-| 割安判定 | スコア ≥ 60 | {low_score} |
+| 割安判定 | ベアスコアが60点以上で「割安」と判定（RSI・PER・PBR・BB・52週安値などを加点評価／スコアが高いほど割安傾向） | {low_score} |
 | 中心価格 | 25MA と BB−1σ の平均 | {center_price:.2f} |
 | 上側許容 | ×1.08 | {upper_price:.2f} |
 | 下側許容 | ×0.97 | {lower_price:.2f} |
