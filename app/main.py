@@ -22,20 +22,20 @@ def setup_page():
     /* Google Fonts: Noto Sans JP（日本語）+ IBM Plex Mono（数字・視認性重視）+ Outfit（UI） */
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&family=Outfit:wght@600;700;800&display=swap');
 
-    /* ── カラー変数 ── */
+    /* ── カラー変数（ミッドトーン・読みやすさ優先） ── */
     :root {
-        --bg:       #f5f3ef;
-        --surface:  #ede9e2;
-        --card:     #e8e3da;
-        --border:   #d4cfc6;
-        --text:     #1c1917;
-        --text-2:   #57534e;
-        --text-3:   #a8a29e;
-        --accent:   #2563eb;
-        --green:    #16a34a;
-        --red:      #dc2626;
-        --yellow:   #d97706;
-        --orange:   #ea580c;
+        --bg:       #ddd8cf;
+        --surface:  #ccc6bc;
+        --card:     #c2bbb0;
+        --border:   #a8a099;
+        --text:     #1a1714;
+        --text-2:   #3d3830;
+        --text-3:   #6b6358;
+        --accent:   #1d4ed8;
+        --green:    #15803d;
+        --red:      #b91c1c;
+        --yellow:   #b45309;
+        --orange:   #c2410c;
     }
 
     /* ── 全体 ── */
@@ -71,16 +71,17 @@ def setup_page():
         margin-bottom: 0.5rem;
     }
     .score-label {
-        font-size: 0.6rem; letter-spacing: 1.5px;
-        text-transform: uppercase; color: var(--text-3);
+        font-size: 0.68rem; letter-spacing: 1.5px;
+        text-transform: uppercase; color: var(--text-2);
+        font-weight: 700;
         margin-bottom: 0.4rem;
     }
     .score-value {
         font-family: 'IBM Plex Mono', monospace;
-        font-size: 2rem; font-weight: 600;
+        font-size: 2.2rem; font-weight: 700;
         line-height: 1;
     }
-    .score-max { font-size: 0.65rem; color: var(--text-3); margin-top: 0.2rem; }
+    .score-max { font-size: 0.7rem; color: var(--text-3); font-weight: 600; margin-top: 0.2rem; }
 
     /* ── シグナルバナー ── */
     .signal-banner {
@@ -91,9 +92,9 @@ def setup_page():
     .signal-icon { font-size: 1.8rem; }
     .signal-text {
         font-family: 'Outfit', sans-serif;
-        font-size: 1rem; font-weight: 700; color: var(--text);
+        font-size: 1.05rem; font-weight: 700; color: var(--text);
     }
-    .signal-sub { font-size: 0.7rem; color: var(--text-2); margin-top: 0.1rem; }
+    .signal-sub { font-size: 0.75rem; color: var(--text-2); font-weight: 600; margin-top: 0.1rem; }
 
     /* ── 価格ヘッダー ── */
     .price-header {
@@ -108,18 +109,18 @@ def setup_page():
     }
     .price-company {
         font-family: 'Noto Sans JP', sans-serif;
-        font-size: 1rem; font-weight: 700; color: var(--text);
+        font-size: 1.05rem; font-weight: 700; color: var(--text);
         margin-top: 0.2rem; line-height: 1.4;
     }
     .price-main {
         font-family: 'IBM Plex Mono', monospace;
-        font-size: 2.2rem; font-weight: 600; margin-top: 0.6rem;
+        font-size: 2.4rem; font-weight: 700; margin-top: 0.6rem;
         letter-spacing: -0.5px;
     }
     .price-up   { color: var(--red); }
     .price-down { color: var(--green); }
     .price-flat { color: var(--text); }
-    .price-chg  { font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; margin-top: 0.2rem; }
+    .price-chg  { font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; font-weight: 600; margin-top: 0.2rem; }
 
     /* ── メトリクスグリッド ── */
     .metric-grid {
@@ -128,15 +129,21 @@ def setup_page():
     }
     .metric-item {
         background: var(--surface); border: 1px solid var(--border);
-        border-radius: 10px; padding: 0.75rem 0.9rem;
+        border-radius: 10px; padding: 0.8rem 0.9rem;
     }
-    .metric-lbl { font-size: 0.6rem; letter-spacing: 1.2px;
-        text-transform: uppercase; color: var(--text-3); margin-bottom: 0.3rem; }
+    .metric-lbl {
+        font-size: 0.65rem; letter-spacing: 1.2px;
+        text-transform: uppercase; color: var(--text-2);
+        font-weight: 700; margin-bottom: 0.3rem;
+    }
     .metric-val {
         font-family: 'IBM Plex Mono', monospace;
-        font-size: 1.15rem; font-weight: 600; color: var(--text);
+        font-size: 1.3rem; font-weight: 700; color: var(--text);
     }
-    .metric-sub { font-size: 0.7rem; color: var(--text-3); margin-top: 0.1rem; }
+    .metric-sub {
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 0.8rem; font-weight: 600; color: var(--text-2); margin-top: 0.15rem;
+    }
 
     /* ── レンジボックス ── */
     .range-grid {
@@ -144,38 +151,43 @@ def setup_page():
     }
     .range-item {
         background: var(--card); border: 1px solid var(--border);
-        border-radius: 8px; padding: 0.7rem;
+        border-radius: 8px; padding: 0.75rem;
         text-align: center;
     }
-    .range-lbl { font-size: 0.55rem; letter-spacing: 1px;
-        text-transform: uppercase; color: var(--text-3); margin-bottom: 0.2rem; }
+    .range-lbl {
+        font-size: 0.6rem; letter-spacing: 1px;
+        text-transform: uppercase; color: var(--text-2);
+        font-weight: 700; margin-bottom: 0.25rem;
+    }
     .range-val {
         font-family: 'IBM Plex Mono', monospace;
-        font-size: 0.95rem; font-weight: 600; color: var(--text);
+        font-size: 1.05rem; font-weight: 700; color: var(--text);
     }
 
     /* ── テーブル ── */
-    .cs-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    .cs-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
     .cs-table th {
-        text-align: left; font-size: 0.6rem; letter-spacing: 1.2px;
-        text-transform: uppercase; color: var(--text-3);
-        padding: 0 0 0.5rem; border-bottom: 1px solid var(--border);
+        text-align: left; font-size: 0.65rem; letter-spacing: 1.2px;
+        text-transform: uppercase; color: var(--text-2); font-weight: 700;
+        padding: 0 0 0.5rem; border-bottom: 2px solid var(--border);
     }
-    .cs-table td { padding: 0.6rem 0; border-bottom: 1px solid var(--border); }
+    .cs-table td { padding: 0.65rem 0; border-bottom: 1px solid var(--border); font-weight: 500; }
     .cs-table tr:last-child td { border-bottom: none; }
-    .td-ok  { color: var(--green); font-weight: 700; }
-    .td-ng  { color: var(--red);   font-weight: 700; }
+    .td-ok  { color: var(--green); font-weight: 800; }
+    .td-ng  { color: var(--red);   font-weight: 800; }
     .td-neu { color: var(--text-3); }
     .td-right {
         text-align: right; color: var(--text);
-        font-family: 'IBM Plex Mono', monospace; font-weight: 500;
+        font-family: 'IBM Plex Mono', monospace; font-weight: 600;
     }
 
     /* ── Streamlit標準コンポーネント上書き ── */
     div[data-testid="stTabs"] button {
-        font-size: 0.78rem !important;
+        font-size: 0.82rem !important;
+        font-weight: 700 !important;
         padding: 0.5rem 0.9rem !important;
         font-family: 'Noto Sans JP', sans-serif !important;
+        color: var(--text-2) !important;
     }
     div[data-testid="metric-container"] {
         background: var(--surface) !important;
@@ -185,27 +197,36 @@ def setup_page():
     }
     div[data-testid="metric-container"] [data-testid="stMetricValue"] {
         font-family: 'IBM Plex Mono', monospace !important;
-        font-size: 1.5rem !important; font-weight: 600 !important;
+        font-size: 1.6rem !important; font-weight: 700 !important;
+        color: var(--text) !important;
     }
-    /* ボタンを大きく（iPhone指タップ向け） */
+    div[data-testid="metric-container"] label {
+        font-size: 0.7rem !important; font-weight: 700 !important;
+        color: var(--text-2) !important; letter-spacing: 0.05em !important;
+    }
+    /* ボタン（iPhone指タップ向け） */
     div[data-testid="stButton"] > button {
         height: 3rem !important;
         font-size: 1rem !important;
+        font-weight: 700 !important;
         border-radius: 10px !important;
         width: 100%;
         font-family: 'Noto Sans JP', sans-serif !important;
     }
-    /* テキスト入力を大きく */
+    /* テキスト入力 */
     div[data-testid="stTextInput"] input {
         font-family: 'IBM Plex Mono', monospace !important;
         font-size: 1.1rem !important;
+        font-weight: 600 !important;
         height: 3rem !important;
         border-radius: 10px !important;
+        color: var(--text) !important;
     }
     /* number_input */
     div[data-testid="stNumberInput"] input {
         font-family: 'IBM Plex Mono', monospace !important;
         font-size: 1rem !important;
+        font-weight: 600 !important;
         height: 2.8rem !important;
     }
     /* セパレータ */
