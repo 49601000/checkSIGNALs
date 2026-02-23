@@ -22,20 +22,20 @@ def setup_page():
     /* Google Fonts: Noto Sans JP（日本語）+ IBM Plex Mono（数字・視認性重視）+ Outfit（UI） */
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&family=Outfit:wght@600;700;800&display=swap');
 
-    /* ── カラー変数（ミッドトーン・読みやすさ優先） ── */
+    /* ── カラー変数（ダーク） ── */
     :root {
-        --bg:       #ddd8cf;
-        --surface:  #ccc6bc;
-        --card:     #c2bbb0;
-        --border:   #a8a099;
-        --text:     #1a1714;
-        --text-2:   #3d3830;
-        --text-3:   #6b6358;
-        --accent:   #1d4ed8;
-        --green:    #15803d;
-        --red:      #b91c1c;
-        --yellow:   #b45309;
-        --orange:   #c2410c;
+        --bg:       #0f1117;
+        --surface:  #1a1d27;
+        --card:     #22263a;
+        --border:   #2e3452;
+        --text:     #e8eaf0;
+        --text-2:   #9da3b8;
+        --text-3:   #5c6280;
+        --accent:   #4f8ef7;
+        --green:    #3ecf72;
+        --red:      #f05c6e;
+        --yellow:   #f5c542;
+        --orange:   #f28c38;
     }
 
     /* ── 全体 ── */
@@ -43,6 +43,10 @@ def setup_page():
         font-family: 'Noto Sans JP', sans-serif;
         background-color: var(--bg) !important;
         color: var(--text) !important;
+    }
+    /* Streamlit のデフォルト白背景を上書き */
+    .stApp, .stApp > div, section.main, .block-container {
+        background-color: var(--bg) !important;
     }
     .main > div { padding-top: 1rem; padding-bottom: 3rem; }
     section[data-testid="stSidebar"] { display: none; }
@@ -164,18 +168,32 @@ def setup_page():
         font-size: 1.05rem; font-weight: 700; color: var(--text);
     }
 
-    /* ── テーブル ── */
-    .cs-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-    .cs-table th {
-        text-align: left; font-size: 0.65rem; letter-spacing: 1.2px;
-        text-transform: uppercase; color: var(--text-2); font-weight: 700;
-        padding: 0 0 0.5rem; border-bottom: 2px solid var(--border);
+    /* ── テーブル（横幅あふれ防止） ── */
+    .cs-table {
+        width: 100%; border-collapse: collapse; font-size: 0.88rem;
+        table-layout: fixed;          /* 列幅を固定して見切れ防止 */
     }
-    .cs-table td { padding: 0.65rem 0; border-bottom: 1px solid var(--border); font-weight: 500; }
+    .cs-table th {
+        text-align: left; font-size: 0.63rem; letter-spacing: 1px;
+        text-transform: uppercase; color: var(--text-2); font-weight: 700;
+        padding: 0 0.3rem 0.5rem 0; border-bottom: 2px solid var(--border);
+        overflow: hidden; white-space: nowrap;
+    }
+    /* 列幅の割り当て: 指標 30% / 値 55% / 判定 15% */
+    .cs-table th:nth-child(1), .cs-table td:nth-child(1) { width: 30%; }
+    .cs-table th:nth-child(2), .cs-table td:nth-child(2) { width: 55%; }
+    .cs-table th:nth-child(3), .cs-table td:nth-child(3) { width: 15%; }
+    .cs-table td {
+        padding: 0.6rem 0.3rem 0.6rem 0;
+        border-bottom: 1px solid var(--border);
+        font-weight: 500;
+        overflow: hidden;
+        word-break: break-word;   /* 長い文字列を折り返す */
+    }
     .cs-table tr:last-child td { border-bottom: none; }
-    .td-ok  { color: var(--green); font-weight: 800; }
-    .td-ng  { color: var(--red);   font-weight: 800; }
-    .td-neu { color: var(--text-3); }
+    .td-ok  { color: var(--green); font-weight: 800; text-align: center; }
+    .td-ng  { color: var(--red);   font-weight: 800; text-align: center; }
+    .td-neu { color: var(--text-3); text-align: center; }
     .td-right {
         text-align: right; color: var(--text);
         font-family: 'IBM Plex Mono', monospace; font-weight: 600;
@@ -203,6 +221,11 @@ def setup_page():
     div[data-testid="metric-container"] label {
         font-size: 0.7rem !important; font-weight: 700 !important;
         color: var(--text-2) !important; letter-spacing: 0.05em !important;
+    }
+    /* info/warning メッセージ背景 */
+    div[data-testid="stAlert"] {
+        background-color: var(--surface) !important;
+        color: var(--text) !important;
     }
     /* ボタン（iPhone指タップ向け） */
     div[data-testid="stButton"] > button {
@@ -254,10 +277,10 @@ def _fmt_x(x):
     return "—" if x is None else f"{float(x):.2f}倍"
 
 def _color_score(s):
-    if s >= 70: return "#16a34a"   # green
-    if s >= 55: return "#2563eb"   # blue
-    if s >= 40: return "#d97706"   # amber
-    return "#dc2626"               # red
+    if s >= 70: return "#3ecf72"   # bright green
+    if s >= 55: return "#4f8ef7"   # bright blue
+    if s >= 40: return "#f5c542"   # amber
+    return "#f05c6e"               # red
 
 def _price_class(change):
     if change > 0: return "price-up"
@@ -266,12 +289,12 @@ def _price_class(change):
 
 def _signal_style(strength, hi_alert):
     if strength >= 3:
-        return "background:rgba(22,163,74,.08);border:1px solid #16a34a;"
+        return "background:rgba(62,207,114,.12);border:1px solid #3ecf72;"
     if strength == 2:
-        return "background:rgba(217,119,6,.08);border:1px solid #d97706;"
+        return "background:rgba(245,197,66,.10);border:1px solid #f5c542;"
     if hi_alert:
-        return "background:rgba(220,38,38,.08);border:1px solid #dc2626;"
-    return "background:rgba(37,99,235,.06);border:1px solid #2563eb;"
+        return "background:rgba(240,92,110,.12);border:1px solid #f05c6e;"
+    return "background:rgba(79,142,247,.10);border:1px solid #4f8ef7;"
 
 
 # ─── UI パーツ ───────────────────────────────────────────────
@@ -282,7 +305,7 @@ def render_price_header(ticker, company_name, close, prev_close):
     d = 0 if close >= 100 else 2
     cls = _price_class(change)
     sign = "+" if change >= 0 else ""
-    chg_color = "#dc2626" if change >= 0 else "#16a34a"
+    chg_color = "#f05c6e" if change >= 0 else "#3ecf72"
     st.markdown(f"""
     <div class="price-header">
       <div class="price-company">{company_name}</div>
@@ -402,7 +425,7 @@ def render_t_tab(tech):
 
     table_html = '<table class="cs-table"><tr><th>指標</th><th>値</th><th style="text-align:right">判定</th></tr>'
     for label, val, cond in rows:
-        table_html += f'<tr><td style="color:var(--text-2,#57534e)">{label}</td><td style="color:var(--text,#1c1917)">{val}</td><td style="text-align:right">{ok_ng(cond)}</td></tr>'
+        table_html += f'<tr><td style="color:var(--text-2)">{label}</td><td style="color:var(--text)">{val}</td><td style="text-align:right">{ok_ng(cond)}</td></tr>'
     table_html += "</table>"
     st.markdown(table_html, unsafe_allow_html=True)
 
@@ -458,7 +481,7 @@ def render_q_tab(tech):
         <tr><th>指標</th><th style="text-align:right">値</th></tr>"""
         for label, val in [("ROE", _fmt_pct(roe)), ("ROA", _fmt_pct(roa)),
                             ("自己資本比率", _fmt_pct(er))]:
-            table_html += f'<tr><td style="color:var(--text-2,#57534e)">{label}</td><td class="td-right">{val}</td></tr>'
+            table_html += f'<tr><td style="color:var(--text-2)">{label}</td><td class="td-right">{val}</td></tr>'
         table_html += "</table>"
         st.markdown(table_html, unsafe_allow_html=True)
 
@@ -539,8 +562,8 @@ def render_v_tab(tech):
         ("配当利回り", _fmt_pct(dy), eval_dy(dy)),
     ]
     for label, val, ev in rows:
-        ev_html = f'<span style="color:#16a34a;font-size:.7rem">{ev}</span>' if ev and ev not in ("—","") else ""
-        table_html += f'<tr><td style="color:var(--text-2,#57534e)">{label}</td><td class="td-right">{val}</td><td style="text-align:right">{ev_html}</td></tr>'
+        ev_html = f'<span style="color:#3ecf72;font-size:.7rem">{ev}</span>' if ev and ev not in ("—","") else ""
+        table_html += f'<tr><td style="color:var(--text-2)">{label}</td><td class="td-right">{val}</td><td style="text-align:right">{ev_html}</td></tr>'
     table_html += "</table>"
     st.markdown(table_html, unsafe_allow_html=True)
     st.caption("Vスコアは PER / PBR / 配当利回りを正規化したざっくり指標。セクター特性と合わせて解釈推奨。")
@@ -586,7 +609,7 @@ def render_qvt_tab(tech):
       <div class="score-value" style="color:{color};font-size:3.5rem">{qvt_show:.1f}</div>
       <div class="score-max">/ 100</div>
       <div style="font-size:1.2rem;margin-top:.5rem">{star}</div>
-      <div style="font-size:.8rem;color:#57534e;margin-top:.5rem">{msg}</div>
+      <div style="font-size:.8rem;color:#9da3b8;margin-top:.5rem">{msg}</div>
     </div>
     """, unsafe_allow_html=True)
 
