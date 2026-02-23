@@ -466,12 +466,41 @@ def render_t_tab(tech):
         if cond is None: return '<span class="td-neu">—</span>'
         return '<span class="td-ok">○</span>' if cond else '<span class="td-ng">×</span>'
 
+    def _slope_label(s) -> str:
+        """MA25傾き → +0.08% (緩やかに上昇中) 形式"""
+        if s is None: return "—"
+        sign = "+" if s >= 0 else ""
+        if s >= 1.5:   desc = "急上昇中"
+        elif s >= 0.3: desc = "上昇中"
+        elif s >= 0:   desc = "緩やかに上昇中"
+        elif s >= -0.3: desc = "緩やかに下落中"
+        elif s >= -1.5: desc = "下落中"
+        else:           desc = "急下落中"
+        color = "var(--green)" if s >= 0 else "var(--red)"
+        mono = 'IBM Plex Mono'
+        return (
+            f'<span style="font-family:{mono},monospace;color:{color};font-weight:700">'
+            f'{sign}{s:.2f}%</span>'
+            f'<span style="font-size:.8rem;color:var(--text-2);margin-left:6px">({desc})</span>'
+        )
+    def make_52w_bar(pos: int) -> str:
+        """████████░░ （高値 92%）形式のプログレスバー文字列を生成"""
+        filled = round(pos / 10)          # 0〜10
+        empty  = 10 - filled
+        bar    = '█' * filled + '░' * empty
+        from_hi = 100 - pos
+        color = '#f05c6e' if pos >= 80 else '#f5c542' if pos >= 60 else '#3ecf72'
+        return (
+            f'<span style="font-family:monospace;letter-spacing:1px;color:{color}">{bar}</span>'
+            f'<span style="font-size:.8rem;color:var(--text-2);margin-left:6px">（高値まで {from_hi}%）</span>'
+        )
+
     rows = [
         ("BB 位置",    f'{tech["bb_icon"]} {tech["bb_text"]}',  None),
         ("RSI (14)",   f'{_fmt(rsi, 1)}',   rsi < 30 if rsi else None),
         ("25MA vs 価格", "価格 < MA25" if price < ma25 else "価格 ≥ MA25", price < ma25),
-        ("MA25 傾き",  f'{_fmt(slope, 2)}%',  None),
-        ("52W 位置",   f'{pos52}%（安値から）', None),
+        ("MA25 傾き",  _slope_label(slope), None),
+        ("52W 位置",   make_52w_bar(pos52),  None),
         ("モード",     "📈 順張り" if tmode == "trend" else "🧮 逆張り", None),
     ]
 
