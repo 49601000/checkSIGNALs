@@ -168,32 +168,84 @@ def setup_page():
         font-size: 1.05rem; font-weight: 700; color: var(--text);
     }
 
-    /* ── テーブル（横幅あふれ防止） ── */
+    /* ── テーブル ── */
     .cs-table {
-        width: 100%; border-collapse: collapse; font-size: 0.88rem;
-        table-layout: fixed;          /* 列幅を固定して見切れ防止 */
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.87rem;
+        table-layout: fixed;
     }
-    .cs-table th {
-        text-align: left; font-size: 0.63rem; letter-spacing: 1px;
-        text-transform: uppercase; color: var(--text-2); font-weight: 700;
-        padding: 0 0.3rem 0.5rem 0; border-bottom: 2px solid var(--border);
-        overflow: hidden; white-space: nowrap;
-    }
-    /* 列幅の割り当て: 指標 30% / 値 55% / 判定 15% */
-    .cs-table th:nth-child(1), .cs-table td:nth-child(1) { width: 30%; }
-    .cs-table th:nth-child(2), .cs-table td:nth-child(2) { width: 55%; }
-    .cs-table th:nth-child(3), .cs-table td:nth-child(3) { width: 15%; }
-    .cs-table td {
-        padding: 0.6rem 0.3rem 0.6rem 0;
+    /* 列幅 */
+    .cs-table th:nth-child(1), .cs-table td:nth-child(1) { width: 28%; }
+    .cs-table th:nth-child(2), .cs-table td:nth-child(2) { width: 54%; }
+    .cs-table th:nth-child(3), .cs-table td:nth-child(3) { width: 18%; }
+    /* ヘッダー */
+    .cs-table thead th {
+        padding: 6px 10px 6px 12px;
+        font-size: 0.58rem; letter-spacing: 1.8px;
+        text-transform: uppercase;
+        color: var(--text-3); font-weight: 700;
+        background: transparent;
         border-bottom: 1px solid var(--border);
-        font-weight: 500;
-        overflow: hidden;
-        word-break: break-word;   /* 長い文字列を折り返す */
+        white-space: nowrap;
     }
-    .cs-table tr:last-child td { border-bottom: none; }
-    .td-ok  { color: var(--green); font-weight: 800; text-align: center; }
-    .td-ng  { color: var(--red);   font-weight: 800; text-align: center; }
-    .td-neu { color: var(--text-3); text-align: center; }
+    /* 奇数行・偶数行で交互カラー */
+    .cs-table tbody tr:nth-child(odd)  { background: var(--surface); }
+    .cs-table tbody tr:nth-child(even) { background: var(--card); }
+    /* セル共通 */
+    .cs-table tbody td {
+        padding: 8px 10px 8px 12px;
+        overflow: hidden; word-break: break-word;
+        border: none;
+    }
+    /* 指標ラベル列 */
+    .cs-table tbody td:nth-child(1) {
+        color: var(--text-2);
+        font-size: 0.78rem; font-weight: 600;
+        letter-spacing: 0.1px;
+        border-left: 3px solid transparent;
+    }
+    /* 値列 */
+    .cs-table tbody td:nth-child(2) {
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 0.9rem; font-weight: 600;
+        color: var(--text);
+    }
+    /* 判定列 */
+    .cs-table tbody td:nth-child(3) {
+        text-align: center;
+        vertical-align: middle;
+    }
+    /* ○ バッジ */
+    .td-ok {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 24px; height: 24px;
+        background: rgba(62,207,114,.20);
+        color: var(--green);
+        font-weight: 900; font-size: 0.8rem;
+        border-radius: 50%;
+        border: 1.5px solid rgba(62,207,114,.50);
+    }
+    /* × バッジ */
+    .td-ng {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 24px; height: 24px;
+        background: rgba(240,92,110,.20);
+        color: var(--red);
+        font-weight: 900; font-size: 0.8rem;
+        border-radius: 50%;
+        border: 1.5px solid rgba(240,92,110,.50);
+    }
+    .td-neu { color: var(--text-3); font-size: 1rem; }
+    /* 評価バッジ（Vタブ） */
+    .ev-badge {
+        display: inline-block;
+        background: rgba(62,207,114,.15);
+        color: var(--green);
+        font-size: 0.72rem; font-weight: 700;
+        border-radius: 4px; padding: 2px 6px;
+        white-space: nowrap;
+    }
     .td-right {
         text-align: right; color: var(--text);
         font-family: 'IBM Plex Mono', monospace; font-weight: 600;
@@ -423,10 +475,14 @@ def render_t_tab(tech):
         ("モード",     "📈 順張り" if tmode == "trend" else "🧮 逆張り", None),
     ]
 
-    table_html = '<table class="cs-table"><tr><th>指標</th><th>値</th><th style="text-align:right">判定</th></tr>'
+    table_html = '''<table class="cs-table">
+      <thead><tr>
+        <th>指標</th><th>値</th><th style="text-align:center">判定</th>
+      </tr></thead>
+      <tbody>'''
     for label, val, cond in rows:
-        table_html += f'<tr><td style="color:var(--text-2)">{label}</td><td style="color:var(--text)">{val}</td><td style="text-align:right">{ok_ng(cond)}</td></tr>'
-    table_html += "</table>"
+        table_html += f'<tr><td>{label}</td><td>{val}</td><td>{ok_ng(cond)}</td></tr>'
+    table_html += '</tbody></table>'
     st.markdown(table_html, unsafe_allow_html=True)
 
     st.markdown("---")
@@ -477,12 +533,11 @@ def render_q_tab(tech):
     if roe is None and roa is None and er is None:
         st.caption("⚠️ ROE / ROA / 自己資本比率のデータが取得できませんでした。")
     else:
-        table_html = """<table class="cs-table">
-        <tr><th>指標</th><th style="text-align:right">値</th></tr>"""
+        table_html = '<table class="cs-table"><thead><tr><th>指標</th><th style="text-align:right">値</th></tr></thead><tbody>'
         for label, val in [("ROE", _fmt_pct(roe)), ("ROA", _fmt_pct(roa)),
                             ("自己資本比率", _fmt_pct(er))]:
-            table_html += f'<tr><td style="color:var(--text-2)">{label}</td><td class="td-right">{val}</td></tr>'
-        table_html += "</table>"
+            table_html += f'<tr><td>{label}</td><td class="td-right">{val}</td></tr>'
+        table_html += '</tbody></table>'
         st.markdown(table_html, unsafe_allow_html=True)
 
     st.markdown("---")
@@ -553,18 +608,17 @@ def render_v_tab(tech):
         if x >= 3: return "✓ 高配当"
         return ""
 
-    table_html = """<table class="cs-table">
-    <tr><th>指標</th><th style="text-align:right">値</th><th style="text-align:right">評価</th></tr>"""
     rows = [
         ("PER（実績）", _fmt_x(per), eval_per(per)),
-        ("予想 PER", _fmt_x(per_fwd), eval_per(per_fwd)),
-        ("PBR", _fmt_x(pbr), eval_pbr(pbr)),
-        ("配当利回り", _fmt_pct(dy), eval_dy(dy)),
+        ("予想 PER",    _fmt_x(per_fwd), eval_per(per_fwd)),
+        ("PBR",        _fmt_x(pbr), eval_pbr(pbr)),
+        ("配当利回り",  _fmt_pct(dy), eval_dy(dy)),
     ]
+    table_html = '<table class="cs-table"><thead><tr><th>指標</th><th style="text-align:right">値</th><th style="text-align:right">評価</th></tr></thead><tbody>'
     for label, val, ev in rows:
-        ev_html = f'<span style="color:#3ecf72;font-size:.7rem">{ev}</span>' if ev and ev not in ("—","") else ""
-        table_html += f'<tr><td style="color:var(--text-2)">{label}</td><td class="td-right">{val}</td><td style="text-align:right">{ev_html}</td></tr>'
-    table_html += "</table>"
+        badge = f'<span class="ev-badge">{ev}</span>' if ev and ev not in ("—","") else ""
+        table_html += f'<tr><td>{label}</td><td class="td-right">{val}</td><td style="text-align:right">{badge}</td></tr>'
+    table_html += '</tbody></table>'
     st.markdown(table_html, unsafe_allow_html=True)
     st.caption("Vスコアは PER / PBR / 配当利回りを正規化したざっくり指標。セクター特性と合わせて解釈推奨。")
 
