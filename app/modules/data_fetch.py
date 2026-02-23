@@ -192,8 +192,9 @@ def get_us_fundamentals_alpha(symbol: str, api_key: str) -> Tuple[
 
 # ─── メイン取得関数 ─────────────────────────────────────────
 
-def get_price_and_meta(ticker: str, period: str = "180d", interval: str = "1d") -> dict:
+def get_price_and_meta(ticker: str, period: str = "400d", interval: str = "1d") -> dict:
     # 株価データ（yfinance・リトライ付き）
+    # period="400d" で52週（約260営業日）を確実にカバー
     df = None
     last_err = None
     for _ in range(2):
@@ -218,10 +219,27 @@ def get_price_and_meta(ticker: str, period: str = "180d", interval: str = "1d") 
     except StopIteration:
         raise ValueError("終値（Close）列が見つかりませんでした。")
 
+    # 直近252営業日（≒52週）だけを52W計算対象にする
+    # High/Low列があればより正確（ヒゲを含む）
+    try:
+        high_col = next(c for c in df.columns if c.startswith("High"))
+        low_col  = next(c for c in df.columns if c.startswith("Low"))
+        use_hl   = True
+    except StopIteration:
+        use_hl   = False
+
+    TRADING_DAYS_1Y = 252
+    df_1y = df.iloc[-TRADING_DAYS_1Y:]   # 直近1年分
+
     close          = float(df[close_col].iloc[-1])
     previous_close = float(df[close_col].iloc[-2])
-    high_52w       = float(df[close_col].max())
-    low_52w        = float(df[close_col].min())
+
+    if use_hl:
+        high_52w = float(df_1y[high_col].max())
+        low_52w  = float(df_1y[low_col].min())
+    else:
+        high_52w = float(df_1y[close_col].max())
+        low_52w  = float(df_1y[close_col].min())
 
     eps = bps = per_fwd = eps_fwd = roe = roa = equity_ratio = None
 
