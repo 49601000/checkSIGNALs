@@ -456,17 +456,13 @@ def get_price_and_meta(ticker: str, period: str = "400d", interval: str = "1d") 
     dividend_yield = _compute_dividend_yield(ticker_obj, close)
 
     # ── 業種分類（ノックアウト閾値補正用） ──
-    # 日本株: TSEマスター優先 → yfinanceは使わない（誤分類防止）
-    # 米国株: yfinance の industry / sector をそのまま使用
-    if is_jpx_ticker(ticker):
-        _master = get_industry_from_master(ticker)
-        industry = _master.get("industry", "")
-        sector   = _master.get("sector",   "")
-    else:
-        # 米国株: yfinance から取得（info は会社名取得時に既にキャッシュ済み）
-        industry = _extract_industry_from_info(info)
-        sector   = info.get("sector", "") if isinstance(info, dict) else ""
+    industry = _extract_industry_from_info(info)
 
+    "# デバッグコード（後で消すこと！）──────────"
+    import streamlit as st
+    st.write("DEBUG industry:", industry)
+    
+    
     return {
         "df":             df,
         "close_col":      close_col,
@@ -476,8 +472,7 @@ def get_price_and_meta(ticker: str, period: str = "400d", interval: str = "1d") 
         "low_52w":        low_52w,
         "company_name":   company_name,
         "dividend_yield": dividend_yield,
-        "industry":       industry,
-        "sector":         sector,
+        "industry": industry,
         # ファンダメンタル
         **fundamentals,
     }
