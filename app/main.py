@@ -5,7 +5,7 @@ import streamlit as st
 from modules.data_fetch import convert_ticker, get_price_and_meta
 from modules.indicators import compute_indicators
 from modules.q_correction import apply_q_correction
-from modules.pattern_db import (
+from modules.pattern_db import (          # ★v3
     load_pattern_db,
     classify_ticker,
     calc_sector_relative_scores,
@@ -337,17 +337,25 @@ def _build_table(headers: list, rows: list) -> str:
 
 # ─── UI パーツ ───────────────────────────────────────────────
 
-def render_price_header(ticker, company_name, close, prev_close):
+def render_price_header(ticker, company_name, close, prev_close, industry="", sector=""):
     change = close - prev_close
     change_pct = (change / prev_close * 100) if prev_close else 0
     d = 0 if close >= 100 else 2
     cls = _price_class(change)
     sign = "+" if change >= 0 else ""
     chg_color = "#f05c6e" if change >= 0 else "#3ecf72"
+    # 業種バッジ（industry優先、なければsector）
+    _ind = industry or sector
+    industry_html = (
+        f'<span style="display:inline-block;background:rgba(79,142,247,.15);'
+        f'border:1px solid rgba(79,142,247,.4);border-radius:4px;'
+        f'font-size:0.72rem;padding:1px 7px;margin-left:8px;'
+        f'color:#8ab4f8;vertical-align:middle;">{_ind}</span>'
+    ) if _ind else ""
     st.markdown(f"""
     <div class="price-header">
       <div class="price-company">{company_name}</div>
-      <div class="price-ticker">{ticker}</div>
+      <div class="price-ticker">{ticker}{industry_html}</div>
       <div class="price-main {cls}">{_fmt(close, d)}</div>
       <div class="price-chg" style="color:{chg_color}">
         前日比 {sign}{_fmt(change, d)} ({sign}{_fmt(change_pct, 2)}%)
@@ -552,32 +560,6 @@ def render_q_tab(tech):
     col1, col2 = st.columns(2)
     col1.metric("Q1 収益性", f"{q1:.1f}")
     col2.metric("Q3 財務健全性", f"{q3:.1f}")
-
-    # ─ 相対評価バッジ ─
-    q_alpha = tech.get("q_alpha", 0.0)
-    ft_code = tech.get("financial_type", {}).get("code", "UNK")
-    ft_ja   = tech.get("financial_type", {}).get("ja", "—")
-    ft_est  = tech.get("financial_type", {}).get("estimated", False)
-    if q_alpha > 0:
-        alpha_pct = int(q_alpha * 100)
-        est_label = "（推定）" if ft_est else "（確定）"
-        st.markdown(f"""
-        <div style="background:rgba(79,142,247,.12);border:1px solid #4f8ef7;border-radius:8px;padding:0.6rem 1rem;margin-bottom:0.6rem;font-size:0.82rem">
-          🎯 <b>タイプ相対評価が有効</b>{est_label} — <b>{ft_ja}</b>（{ft_code}）<br>
-          <span style="color:var(--text-2)">採点 = 絶対評価 {100-alpha_pct}% + タイプ内相対評価 {alpha_pct}%</span>
-        </div>
-        """, unsafe_allow_html=True)
-
-    # ─ 業種別閾値ノート ─
-    industry_cat = tech.get("industry_cat", "other")
-    _er_notes = {
-        "bank":      ("🏦 銀行業", "自己資本比率の閾値を BIS 基準 4% に緩和しています。"),
-        "insurance": ("🛡️ 保険業", "自己資本比率の閾値を 8% に緩和しています。"),
-        "fin_other": ("💹 証券・リース等", "自己資本比率の閾値を 8% に緩和しています。"),
-    }
-    if industry_cat in _er_notes:
-        _label, _note = _er_notes[industry_cat]
-        st.caption(f"{_label} — {_note}")
 
     # ─ ノックアウト警告 ─
     for w in q_warnings:
@@ -913,14 +895,7 @@ def main():
     # ─ 財務タイプ分類（pattern_db） ─
     with st.spinner("🔍 財務タイプを分類中…"):
         db             = load_pattern_db()
-        financial_type = classify_ticker(
-            ticker, db,
-            roe=base.get("roe"),
-            roa=base.get("roa"),
-            equity_ratio=base.get("equity_ratio"),
-            interest_coverage=base.get("interest_coverage"),
-            operating_margin=base.get("operating_margin"),
-        )
+        financial_type = classify_ticker(ticker, db)
 
         # セクター相対スコア計算用に PER/PBR を仮算出
         _close = base.get("close", 0)
@@ -935,18 +910,7 @@ def main():
             pbr=_pbr_tmp,
             ev_ebitda=base.get("ev_ebitda"),
         )
-        sector_v_score = sector_rel.get("sector_v_score") if financial_type.get("code") != "UNK" else None
-
-        # Q 相対評価スコア（タイプが推定済みの場合も有効）
-        from modules.pattern_db import calc_q_relative_scores
-        q_rel_scores = calc_q_relative_scores(
-            ft=financial_type,
-            roe=base.get("roe"),
-            roa=base.get("roa"),
-            equity_ratio=base.get("equity_ratio"),
-            interest_coverage=base.get("interest_coverage"),
-            operating_margin=base.get("operating_margin"),
-        )
+        sector_v_score = sector_rel.get("sector_v_score") if financial_type.get("matched") else None
 
     # ─ 指標計算 ─
     with st.spinner("🔢 指標を計算中…"):
@@ -968,15 +932,13 @@ def main():
                 sector_v_score=sector_v_score,
                 sector_rel_scores=sector_rel,
                 financial_type=financial_type,
-                q_rel_scores=q_rel_scores,      # ★v3.2 Q相対評価
-                industry=base.get("industry", ""),  # ★v3.3 業種別閾値
             )
         except ValueError as e:
             st.error(str(e))
             return
 
     # ─ ヘッダー ─
-    render_price_header(ticker, base["company_name"], base["close"], base["previous_close"])
+    render_price_header(ticker, base["company_name"], base["close"], base["previous_close"], base.get("industry",""), base.get("sector",""))
     render_metrics_row(tech)
     render_qvt_cards(tech["q_score"], tech["v_score"], tech["t_score"], tech["qvt_score"])
 
