@@ -103,7 +103,8 @@ def compute_indicators(
     sector_rel_scores: Optional[Dict[str, Any]] = None,  # ★v3
     financial_type: Optional[Dict[str, Any]] = None,     # ★v3
     q_rel_scores: Optional[Dict[str, Any]] = None,       # ★v3.2 Q相対評価
-    industry: str = "",                                   # ★v3.3 業種別閾値
+    industry: str = "",                                   # ★v3.3/v3.4 業種別閾値
+    sector: str = "",                                     # ★v3.4 閾値マッチング補助
 ) -> Dict[str, Any]:
     """
     テクニカル指標 + Q/V/T スコアをまとめて計算し、UI 用の dict を返す。
@@ -170,8 +171,9 @@ def compute_indicators(
         operating_margin=operating_margin,
         de_ratio=de_ratio,
         interest_coverage=interest_coverage,
-        q_rel_scores=q_rel_scores,   # ★v3.2 相対評価
-        industry=industry,           # ★v3.3 業種別閾値
+        q_rel_scores=q_rel_scores,
+        industry=industry,
+        sector=sector,
     )
     q_score = q_result["q_score"]
 
@@ -215,16 +217,13 @@ def compute_indicators(
         "ev_ebitda": ev_ebitda,                 # ★v3
 
         # Q サブスコア
-        "q_score":      q_score,
-        "q1":           q_result["q1"],
-        "q3":           q_result["q3"],
-        "q1_abs":       q_result.get("q1_abs", q_result["q1"]),   # ★v3.2
-        "q3_abs":       q_result.get("q3_abs", q_result["q3"]),   # ★v3.2
-        "q1_rel":       q_result.get("q1_rel"),                   # ★v3.2
-        "q3_rel":       q_result.get("q3_rel"),                   # ★v3.2
-        "q_alpha":      q_result.get("alpha", 0.0),               # ★v3.2
-        "industry_cat": q_result.get("industry_cat", "other"),    # ★v3.3
-        "q_warnings":   q_result["warnings"],                     # ★v3 ノックアウト警告
+        "q_score": q_score,
+        "q1": q_result["q1"],
+        "q3": q_result["q3"],
+        "q_warnings":      q_result["warnings"],
+        "er_threshold":    q_result.get("er_threshold",   10.0),   # ★v3.4
+        "ic_threshold":    q_result.get("ic_threshold",    1.5),   # ★v3.4
+        "threshold_note":  q_result.get("threshold_note", "標準基準"),  # ★v3.4
 
         # V サブスコア
         "v_score": v_score,
