@@ -2,10 +2,10 @@
 main.py — iPhone最適化 Streamlit UI  (v3)
 """
 import streamlit as st
-from modules.data_fetch import convert_ticker, get_price_and_meta
-from modules.indicators import compute_indicators
-from modules.q_correction import apply_q_correction
-from modules.pattern_db import (          # ★v3
+from app.modules.data_fetch import convert_ticker, get_price_and_meta
+from app.modules.indicators import compute_indicators
+from app.modules.q_correction import apply_q_correction
+from app.modules.pattern_db import (          # ★v3
     load_pattern_db,
     classify_ticker,
     calc_sector_relative_scores,
@@ -950,3 +950,7 @@ def main():
 
     if base.get("dividend_yield"):
         st.caption(f"予想配当利回り: **{base['dividend_yield']:.2f}%**")
+
+
+if __name__ == "__main__":
+    main()
