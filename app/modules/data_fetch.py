@@ -224,6 +224,15 @@ def _supplement_from_yfinance(info: dict, current: dict) -> dict:
     yfinance.info から未取得項目を補完する。
     current は既存の結果 dict（上書きは None のときのみ）。
     """
+    # ← ここに追加
+    import streamlit as st
+    st.write("DEBUG yf.info keys:", {k: info.get(k) for k in [
+        "operatingMargins", "ebit", "interestExpense", 
+        "operatingCashflow", "debtToEquity", "totalDebt", 
+        "totalStockholderEquity"
+    ]})
+    #####
+  
     def _fill(key_current, info_key, scale=1.0):
         if current.get(key_current) is None:
             val = _safe_float(info.get(info_key))
