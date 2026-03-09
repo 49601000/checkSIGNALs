@@ -12,6 +12,7 @@ data_fetch.py  (v3)
 """
 
 from typing import Optional, Tuple, Dict
+import os
 import re
 from datetime import datetime, timedelta
 import time
