@@ -341,7 +341,7 @@ def _score_er_financial(
 def _score_q3_abs_bank(
     equity_ratio: Optional[float],
     er_thr: float = 4.0,
-    weight_factor: float = 0.95,  # ← 影響度の微調整係数
+    weight_factor: float = 0.9,  # ← 自己資本比率影響度の微調整係数
 ) -> float:
     """
     銀行Q3（係数調整版）
