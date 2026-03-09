@@ -277,28 +277,33 @@ def _score_q3_abs(
     industry: str = "",
     sector: str = "",
 ) -> float:
-    """
-    ER・ICの採点ステップを業種別閾値（er_thr / ic_thr）に対して相対化する。
 
-    変更点:
-      - 一般業種は従来のER段階表を使う
-      - 金融業だけER段階表を別ロジックにする
-      - D/E, IC のロジックは現状維持
-    """
     raw = 0.0
     is_financial = _is_financial_industry(industry, sector)
 
-    if equity_ratio is not None:
-        if is_financial:
-            r = _score_er_financial(
-                equity_ratio=equity_ratio,
-                er_thr=er_thr,
-                industry=industry,
-                sector=sector,
-            )
-        else:
-            r = _score_er_general(equity_ratio=equity_ratio, er_thr=er_thr)
-        raw += w.er_w * r
+    # 銀行判定（より厳密にしたいなら industry 名で判定）
+    is_bank = any(k in (industry or "").lower() for k in ["bank"])
+
+    if equity_ratio is None:
+        return 0.0
+
+    # ───── 銀行のみ：ER単独で100点正規化 ─────
+    if is_bank:
+        r = _score_er_financial(
+            equity_ratio=equity_ratio,
+            er_thr=er_thr,
+            industry=industry,
+            sector=sector,
+        )
+        return max(0.0, min(100.0, r * 100.0))
+
+    # ───── それ以外は従来ロジック ─────
+    if is_financial:
+        r = _score_er_financial(equity_ratio, er_thr, industry, sector)
+    else:
+        r = _score_er_general(equity_ratio, er_thr)
+
+    raw += w.er_w * r
 
     if de_ratio is not None:
         r = (
