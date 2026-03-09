@@ -611,7 +611,7 @@ def render_q_tab(tech):
             if roe is None or roa is None:
                 st.error("ROE / ROA データが不足のため補正できません。")
             else:
-                result   = apply_q_correction(tech=tech, sector_roe=sect_roe, sector_roa=sect_roa)
+                result = apply_q_correction(tech=tech, sector_roe=sect_roe, sector_roa=sect_roa)
                 st.session_state["q_correction_result"] = result
                 st.rerun()
     with col_btn2:
@@ -650,6 +650,56 @@ def render_q_tab(tech):
 | テック・成長株 | 10〜20%+ | 5〜10% | 15〜30% |
 | 景気敏感（自動車等） | 8〜12% | 3〜6% | 5〜10% |
 | 金融 | 8〜12% | 0.5〜2% | — |
+        """)
+
+    # ─ パラメーター詳細テーブル ─
+    st.markdown("---")
+    with st.expander("⚙️ Qスコア パラメーター詳細（チューニング用）"):
+        st.markdown("##### Q1 収益性サブスコア — 各指標の寄与率（デフォルト値）")
+        params_q1 = [
+            ("ROE", "50点", "高ROEほど加点。5%刻みでステップ採点（最高25%超→100%）。借入依存ROEは別途セクター補正で調整。"),
+            ("ROA", "25点", "資産収益率。2%刻みでステップ採点（最高8%超→100%）。"),
+            ("営業利益率", "25点", "本業の稼ぎ。3〜7%で加速、12〜20%で高評価、20%超で満点。"),
+        ]
+        tbl = '<table class="cs-table"><thead><tr><th>指標</th><th>最大点</th><th>採点ロジック</th></tr></thead><tbody>'
+        for name, pts, desc in params_q1:
+            tbl += f'<tr><td>{name}</td><td style="text-align:center;font-family:IBM Plex Mono,monospace;font-weight:700">{pts}</td><td style="font-size:0.82rem">{desc}</td></tr>'
+        tbl += '</tbody></table>'
+        st.markdown(tbl, unsafe_allow_html=True)
+
+        st.markdown("##### Q3 財務健全性サブスコア — 各指標の寄与率（デフォルト値）")
+        params_q3 = [
+            ("自己資本比率", "40点", "10%未満で0点、60%超で満点。低レバレッジ企業を高評価。"),
+            ("D/Eレシオ", "30点", "0.5倍以下で満点。3.0倍超で0点。金融・不動産は別途補正推奨。"),
+            ("インタレストカバレッジ", "30点", "1.5倍未満で0点かつノックアウト。20倍超で満点。"),
+        ]
+        tbl2 = '<table class="cs-table"><thead><tr><th>指標</th><th>最大点</th><th>採点ロジック</th></tr></thead><tbody>'
+        for name, pts, desc in params_q3:
+            tbl2 += f'<tr><td>{name}</td><td style="text-align:center;font-family:IBM Plex Mono,monospace;font-weight:700">{pts}</td><td style="font-size:0.82rem">{desc}</td></tr>'
+        tbl2 += '</tbody></table>'
+        st.markdown(tbl2, unsafe_allow_html=True)
+
+        st.markdown("##### ノックアウトペナルティ")
+        params_ko = [
+            ("インタレストカバレッジ < 1.5x", "−15点", "利払い能力が危機的水準。"),
+            ("自己資本比率 < 10%", "−15点", "過剰レバレッジ。財務破綻リスクが高い。"),
+            ("営業利益率 < 0%", "−15点", "本業が赤字。継続的な損失懸念。"),
+        ]
+        tbl3 = '<table class="cs-table"><thead><tr><th>条件</th><th>減点</th><th>理由</th></tr></thead><tbody>'
+        for cond, pts, reason in params_ko:
+            tbl3 += f'<tr><td>{cond}</td><td style="text-align:center;font-family:IBM Plex Mono,monospace;font-weight:700;color:#f05c6e">{pts}</td><td style="font-size:0.82rem">{reason}</td></tr>'
+        tbl3 += '</tbody></table>'
+        st.markdown(tbl3, unsafe_allow_html=True)
+
+        st.markdown("##### 合成ウェイト（Q1 / Q3）")
+        st.markdown("""
+| パラメーター | デフォルト | 説明 |
+|---|---|---|
+| w_q1 | 0.50 | Q1（収益性）の最終Qへの寄与率 |
+| w_q3 | 0.50 | Q3（財務健全性）の最終Qへの寄与率 |
+
+> **チューニング方法**: `param_tuning.ipynb` のスライダーまたは Optuna で上記パラメーターを調整し、  
+> `QWeights` インスタンスを `score_quality(weights=...)` に渡すと反映されます。
         """)
 
 
