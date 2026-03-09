@@ -50,6 +50,62 @@ def _load_csv_to_dict(path: str, key_col: str) -> Dict[str, Dict]:
     }
 
 
+# ── ビルトイン閾値（CSVが見つからない場合のフォールバック） ────────────────
+_BUILTIN_TSE = {
+    "Banks - Regional":                 {"er": 4.0,  "ic": 1.0, "note": "銀行業基準(BIS Tier1)"},
+    "Banks - Diversified":              {"er": 4.0,  "ic": 1.0, "note": "銀行業基準(BIS Tier1)"},
+    "Insurance - Life":                 {"er": 8.0,  "ic": 1.5, "note": "保険業基準"},
+    "Insurance - Diversified":          {"er": 8.0,  "ic": 1.5, "note": "保険業基準"},
+    "Insurance - Property & Casualty":  {"er": 8.0,  "ic": 1.5, "note": "保険業基準"},
+    "Insurance Brokers":                {"er": 8.0,  "ic": 1.5, "note": "保険業基準"},
+    "Capital Markets":                  {"er": 8.0,  "ic": 1.5, "note": "証券・資本市場業基準"},
+    "Asset Management":                 {"er": 8.0,  "ic": 1.5, "note": "資産運用業基準"},
+    "Credit Services":                  {"er": 8.0,  "ic": 1.0, "note": "クレジット・リース業基準"},
+    "Mortgage Finance":                 {"er": 6.0,  "ic": 1.0, "note": "住宅ローン業基準"},
+    "Financial Conglomerates":          {"er": 8.0,  "ic": 1.5, "note": "金融複合企業基準"},
+    "Financial Data & Stock Exchanges": {"er": 15.0, "ic": 3.0, "note": "金融データ・取引所"},
+    "Real Estate Services":             {"er": 20.0, "ic": 1.5, "note": "不動産サービス業基準"},
+    "Real Estate - Diversified":        {"er": 15.0, "ic": 1.5, "note": "不動産業基準"},
+    "Real Estate - Development":        {"er": 15.0, "ic": 1.0, "note": "不動産開発業基準"},
+    "REIT - Diversified":               {"er": 30.0, "ic": 1.5, "note": "REIT基準"},
+    "REIT - Office":                    {"er": 30.0, "ic": 1.5, "note": "REIT基準"},
+    "REIT - Industrial":                {"er": 30.0, "ic": 1.5, "note": "REIT基準"},
+    "REIT - Retail":                    {"er": 30.0, "ic": 1.5, "note": "REIT基準"},
+    "REIT - Residential":               {"er": 30.0, "ic": 1.5, "note": "REIT基準"},
+    "REIT - Hotel & Motel":             {"er": 30.0, "ic": 1.5, "note": "REIT基準"},
+    "REIT - Healthcare Facilities":     {"er": 30.0, "ic": 1.5, "note": "REIT基準"},
+    "REIT - Specialty":                 {"er": 30.0, "ic": 1.5, "note": "REIT基準"},
+    "Utilities - Regulated Electric":   {"er": 20.0, "ic": 2.0, "note": "規制電力業基準"},
+    "Utilities - Regulated Gas":        {"er": 20.0, "ic": 2.0, "note": "規制ガス業基準"},
+    "Utilities - Regulated Water":      {"er": 20.0, "ic": 2.0, "note": "規制水道業基準"},
+    "Utilities - Diversified":          {"er": 20.0, "ic": 2.0, "note": "公益複合企業基準"},
+    "Utilities - Independent Power Producers": {"er": 20.0, "ic": 2.0, "note": "独立系電力業基準"},
+    "Utilities - Renewable":            {"er": 20.0, "ic": 2.0, "note": "再生可能エネルギー基準"},
+    "Airlines":                         {"er": 10.0, "ic": 1.5, "note": "航空業基準"},
+    "Rental & Leasing Services":        {"er": 10.0, "ic": 1.5, "note": "レンタル・リース基準"},
+    "Marine Shipping":                  {"er": 10.0, "ic": 1.5, "note": "海運業基準"},
+    "Auto & Truck Dealerships":         {"er": 10.0, "ic": 1.5, "note": "自動車販売業基準"},
+    "Oil & Gas Integrated":             {"er": 15.0, "ic": 2.0, "note": "石油・ガス総合基準"},
+    "Oil & Gas Refining & Marketing":   {"er": 15.0, "ic": 2.0, "note": "石油精製・販売基準"},
+    "Oil & Gas E&P":                    {"er": 20.0, "ic": 1.5, "note": "石油・ガス探鉱基準"},
+    "Thermal Coal":                     {"er": 20.0, "ic": 2.0, "note": "石炭業基準"},
+}
+
+_BUILTIN_US = {
+    "Financial Services":     {"er": 6.0,  "ic": 1.0, "note": "米国金融業基準"},
+    "Real Estate":            {"er": 30.0, "ic": 1.5, "note": "米国不動産・REIT基準"},
+    "Utilities":              {"er": 20.0, "ic": 2.0, "note": "米国公益事業基準"},
+    "Energy":                 {"er": 20.0, "ic": 2.0, "note": "米国エネルギー業基準"},
+    "Consumer Cyclical":      {"er": 15.0, "ic": 2.0, "note": "米国一般消費財業基準"},
+    "Consumer Defensive":     {"er": 20.0, "ic": 2.5, "note": "米国生活必需品業基準"},
+    "Basic Materials":        {"er": 20.0, "ic": 2.0, "note": "米国素材業基準"},
+    "Communication Services": {"er": 15.0, "ic": 2.0, "note": "米国通信業基準"},
+    "Healthcare":             {"er": 20.0, "ic": 1.5, "note": "米国医療業基準"},
+    "Industrials":            {"er": 20.0, "ic": 2.5, "note": "米国工業基準"},
+    "Technology":             {"er": 25.0, "ic": 3.0, "note": "米国テクノロジー業基準"},
+}
+
+
 def _find_file(filenames: list) -> Optional[str]:
     """
     CSVを探す。q_logic.py は app/modules/ にあるので ../data/ = app/data/。
@@ -77,32 +133,28 @@ def _find_file(filenames: list) -> Optional[str]:
 
 
 def _load_threshold_db_tse() -> Dict[str, Dict]:
-    """TSE用: industry単位の閾値DB（app/data/industry_thresholds.csv）"""
+    """TSE用: industry単位の閾値DB（CSVがあれば優先、なければビルトイン）"""
     global _THRESHOLD_DB_TSE
     if _THRESHOLD_DB_TSE is not None:
         return _THRESHOLD_DB_TSE
     path = _find_file(["industry_thresholds.csv"])
-    if path is None:
-        raise FileNotFoundError(
-            "industry_thresholds.csv が見つかりません。"
-            "app/data/industry_thresholds.csv を確認してください。"
-        )
-    _THRESHOLD_DB_TSE = _load_csv_to_dict(path, "industry")
+    try:
+        _THRESHOLD_DB_TSE = _load_csv_to_dict(path, "industry") if path else _BUILTIN_TSE
+    except Exception:
+        _THRESHOLD_DB_TSE = _BUILTIN_TSE
     return _THRESHOLD_DB_TSE
 
 
 def _load_threshold_db_us() -> Dict[str, Dict]:
-    """US用: sector単位の閾値DB（app/data/industry_thresholds_us.csv）"""
+    """US用: sector単位の閾値DB（CSVがあれば優先、なければビルトイン）"""
     global _THRESHOLD_DB_US
     if _THRESHOLD_DB_US is not None:
         return _THRESHOLD_DB_US
     path = _find_file(["industry_thresholds_us.csv"])
-    if path is None:
-        raise FileNotFoundError(
-            "industry_thresholds_us.csv が見つかりません。"
-            "app/data/industry_thresholds_us.csv を確認してください。"
-        )
-    _THRESHOLD_DB_US = _load_csv_to_dict(path, "sector")
+    try:
+        _THRESHOLD_DB_US = _load_csv_to_dict(path, "sector") if path else _BUILTIN_US
+    except Exception:
+        _THRESHOLD_DB_US = _BUILTIN_US
     return _THRESHOLD_DB_US
 
 
@@ -183,12 +235,38 @@ def _score_q1_abs(roe, roa, operating_margin, w: QWeights) -> float:
 
 # ─── Q3: 財務健全性（絶対評価） ──────────────────────────────────────────
 
-def _score_q3_abs(equity_ratio, de_ratio, interest_coverage, w: QWeights) -> float:
+def _score_q3_abs(
+    equity_ratio, de_ratio, interest_coverage, w: QWeights,
+    er_thr: float = 10.0, ic_thr: float = 1.5
+) -> float:
+    """
+    ER・ICの採点ステップを業種別閾値（er_thr / ic_thr）に対して相対化する。
+
+    ER採点: er_thr を「最低水準（0点）」の基準に使用
+      er < er_thr          → 0.000（ノックアウト対象）
+      er_thr   <= er < 2x  → 0.125
+      2x       <= er < 3x  → 0.250
+      3x       <= er < 4x  → 0.500
+      4x       <= er < 5x  → 0.750
+      5x       <= er < 6x  → 0.875
+      6x       <= er       → 1.000
+    例）銀行(er_thr=4%): ER=8.4% → 8.4/4=2.1倍 → 0.250
+    例）一般(er_thr=10%): ER=8.4% → 8.4/10=0.84倍 → 0.000
+
+    IC採点: ic_thr を「最低水準」の基準に使用
+      ic < ic_thr     → 0.000
+      ic_thr <= ic <2x→ 0.267
+      2x <= ic < 3x   → 0.500
+      3x <= ic < 6x   → 0.733
+      6x <= ic < 13x  → 0.900
+      13x <= ic       → 1.000
+    """
     raw = 0.0
     if equity_ratio is not None:
-        r = (0.000 if equity_ratio<10 else 0.125 if equity_ratio<20 else
-             0.250 if equity_ratio<30 else 0.500 if equity_ratio<40 else
-             0.750 if equity_ratio<50 else 0.875 if equity_ratio<60 else 1.000)
+        ratio = equity_ratio / er_thr if er_thr > 0 else 0
+        r = (0.000 if ratio < 1.0 else 0.125 if ratio < 2.0 else
+             0.250 if ratio < 3.0 else 0.500 if ratio < 4.0 else
+             0.750 if ratio < 5.0 else 0.875 if ratio < 6.0 else 1.000)
         raw += w.er_w * r
     if de_ratio is not None:
         r = (0.000 if de_ratio>3.0 else 0.167 if de_ratio>2.0 else
@@ -196,9 +274,10 @@ def _score_q3_abs(equity_ratio, de_ratio, interest_coverage, w: QWeights) -> flo
              0.733 if de_ratio>0.5 else 1.000)
         raw += w.de_w * r
     if interest_coverage is not None:
-        r = (0.000 if interest_coverage<1.5 else 0.267 if interest_coverage<3 else
-             0.500 if interest_coverage<5 else 0.733 if interest_coverage<10 else
-             0.900 if interest_coverage<20 else 1.000)
+        ratio_ic = interest_coverage / ic_thr if ic_thr > 0 else 0
+        r = (0.000 if ratio_ic < 1.0 else 0.267 if ratio_ic < 2.0 else
+             0.500 if ratio_ic < 3.0 else 0.733 if ratio_ic < 6.0 else
+             0.900 if ratio_ic < 13.0 else 1.000)
         raw += w.ic_w * r
     max_raw = w.er_w + w.de_w + w.ic_w
     return 0.0 if max_raw == 0 else max(0.0, min(100.0, raw / max_raw * 100.0))
@@ -306,7 +385,10 @@ def score_quality(
     w = weights if weights is not None else DEFAULT_WEIGHTS
 
     q1_abs = _score_q1_abs(roe, roa, operating_margin, w)
-    q3_abs = _score_q3_abs(equity_ratio, de_ratio, interest_coverage, w)
+    # 業種別閾値を採点ステップに反映（閾値=「0点の境界」として相対評価）
+    _thr   = get_thresholds(industry, sector, is_us=is_us)
+    q3_abs = _score_q3_abs(equity_ratio, de_ratio, interest_coverage, w,
+                           er_thr=_thr["er"], ic_thr=_thr["ic"])
 
     alpha, q1_rel, q3_rel = 0.0, None, None
     if q_rel_scores and q_rel_scores.get("available"):
