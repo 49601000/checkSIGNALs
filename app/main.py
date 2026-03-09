@@ -553,6 +553,21 @@ def render_q_tab(tech):
     col1.metric("Q1 収益性", f"{q1:.1f}")
     col2.metric("Q3 財務健全性", f"{q3:.1f}")
 
+    # ─ 相対評価バッジ ─
+    q_alpha = tech.get("q_alpha", 0.0)
+    ft_code = tech.get("financial_type", {}).get("code", "UNK")
+    ft_ja   = tech.get("financial_type", {}).get("ja", "—")
+    ft_est  = tech.get("financial_type", {}).get("estimated", False)
+    if q_alpha > 0:
+        alpha_pct = int(q_alpha * 100)
+        est_label = "（推定）" if ft_est else "（確定）"
+        st.markdown(f"""
+        <div style="background:rgba(79,142,247,.12);border:1px solid #4f8ef7;border-radius:8px;padding:0.6rem 1rem;margin-bottom:0.6rem;font-size:0.82rem">
+          🎯 <b>タイプ相対評価が有効</b>{est_label} — <b>{ft_ja}</b>（{ft_code}）<br>
+          <span style="color:var(--text-2)">採点 = 絶対評価 {100-alpha_pct}% + タイプ内相対評価 {alpha_pct}%</span>
+        </div>
+        """, unsafe_allow_html=True)
+
     # ─ ノックアウト警告 ─
     for w in q_warnings:
         st.warning(w)
@@ -605,30 +620,19 @@ def render_q_tab(tech):
     with col2:
         sect_roa = st.number_input("セクター平均 ROA (%)", 0.0, 20.0, 4.0, 0.1)
 
-    col_btn1, col_btn2 = st.columns(2)
-    with col_btn1:
-        if st.button("補正する", use_container_width=True):
-            if roe is None or roa is None:
-                st.error("ROE / ROA データが不足のため補正できません。")
-            else:
-                result = apply_q_correction(tech=tech, sector_roe=sect_roe, sector_roa=sect_roa)
-                st.session_state["q_correction_result"] = result
-                st.rerun()
-    with col_btn2:
-        if st.session_state.get("q_correction_result"):
-            if st.button("🔄 リセット", use_container_width=True):
-                del st.session_state["q_correction_result"]
-                st.rerun()
-
-    if st.session_state.get("q_correction_result"):
-        corr_r   = st.session_state["q_correction_result"]
-        q_corr   = corr_r.get("q_corrected")
-        qvt_corr = corr_r.get("qvt_corrected")
-        c1, c2 = st.columns(2)
-        c1.metric("Q（補正前）", f"{q_score:.1f}")
-        c2.metric("Q（補正後）", f"{q_corr:.1f}", delta=f"{q_corr - q_score:+.1f}")
-        st.caption(f"補正後 QVT: **{qvt_corr:.1f}**")
-        st.info("セクター基準を用いて Q を補正した結果です。")
+    if st.button("補正する", use_container_width=True):
+        if roe is None or roa is None:
+            st.error("ROE / ROA データが不足のため補正できません。")
+        else:
+            result   = apply_q_correction(tech=tech, sector_roe=sect_roe, sector_roa=sect_roa)
+            q_corr   = result.get("q_corrected")
+            qvt_corr = result.get("qvt_corrected")
+            st.session_state["q_correction_result"] = result
+            c1, c2 = st.columns(2)
+            c1.metric("Q（補正前）", f"{q_score:.1f}")
+            c2.metric("Q（補正後）", f"{q_corr:.1f}", delta=f"{q_corr - q_score:+.1f}")
+            st.caption(f"補正後 QVT: **{qvt_corr:.1f}**")
+            st.info("セクター基準を用いて Q を補正した結果です。")
 
     # ─ Qスコアの見方 ─
     st.markdown("---")
@@ -650,56 +654,6 @@ def render_q_tab(tech):
 | テック・成長株 | 10〜20%+ | 5〜10% | 15〜30% |
 | 景気敏感（自動車等） | 8〜12% | 3〜6% | 5〜10% |
 | 金融 | 8〜12% | 0.5〜2% | — |
-        """)
-
-    # ─ パラメーター詳細テーブル ─
-    st.markdown("---")
-    with st.expander("⚙️ Qスコア パラメーター詳細（チューニング用）"):
-        st.markdown("##### Q1 収益性サブスコア — 各指標の寄与率（デフォルト値）")
-        params_q1 = [
-            ("ROE", "50点", "高ROEほど加点。5%刻みでステップ採点（最高25%超→100%）。借入依存ROEは別途セクター補正で調整。"),
-            ("ROA", "25点", "資産収益率。2%刻みでステップ採点（最高8%超→100%）。"),
-            ("営業利益率", "25点", "本業の稼ぎ。3〜7%で加速、12〜20%で高評価、20%超で満点。"),
-        ]
-        tbl = '<table class="cs-table"><thead><tr><th>指標</th><th>最大点</th><th>採点ロジック</th></tr></thead><tbody>'
-        for name, pts, desc in params_q1:
-            tbl += f'<tr><td>{name}</td><td style="text-align:center;font-family:IBM Plex Mono,monospace;font-weight:700">{pts}</td><td style="font-size:0.82rem">{desc}</td></tr>'
-        tbl += '</tbody></table>'
-        st.markdown(tbl, unsafe_allow_html=True)
-
-        st.markdown("##### Q3 財務健全性サブスコア — 各指標の寄与率（デフォルト値）")
-        params_q3 = [
-            ("自己資本比率", "40点", "10%未満で0点、60%超で満点。低レバレッジ企業を高評価。"),
-            ("D/Eレシオ", "30点", "0.5倍以下で満点。3.0倍超で0点。金融・不動産は別途補正推奨。"),
-            ("インタレストカバレッジ", "30点", "1.5倍未満で0点かつノックアウト。20倍超で満点。"),
-        ]
-        tbl2 = '<table class="cs-table"><thead><tr><th>指標</th><th>最大点</th><th>採点ロジック</th></tr></thead><tbody>'
-        for name, pts, desc in params_q3:
-            tbl2 += f'<tr><td>{name}</td><td style="text-align:center;font-family:IBM Plex Mono,monospace;font-weight:700">{pts}</td><td style="font-size:0.82rem">{desc}</td></tr>'
-        tbl2 += '</tbody></table>'
-        st.markdown(tbl2, unsafe_allow_html=True)
-
-        st.markdown("##### ノックアウトペナルティ")
-        params_ko = [
-            ("インタレストカバレッジ < 1.5x", "−15点", "利払い能力が危機的水準。"),
-            ("自己資本比率 < 10%", "−15点", "過剰レバレッジ。財務破綻リスクが高い。"),
-            ("営業利益率 < 0%", "−15点", "本業が赤字。継続的な損失懸念。"),
-        ]
-        tbl3 = '<table class="cs-table"><thead><tr><th>条件</th><th>減点</th><th>理由</th></tr></thead><tbody>'
-        for cond, pts, reason in params_ko:
-            tbl3 += f'<tr><td>{cond}</td><td style="text-align:center;font-family:IBM Plex Mono,monospace;font-weight:700;color:#f05c6e">{pts}</td><td style="font-size:0.82rem">{reason}</td></tr>'
-        tbl3 += '</tbody></table>'
-        st.markdown(tbl3, unsafe_allow_html=True)
-
-        st.markdown("##### 合成ウェイト（Q1 / Q3）")
-        st.markdown("""
-| パラメーター | デフォルト | 説明 |
-|---|---|---|
-| w_q1 | 0.50 | Q1（収益性）の最終Qへの寄与率 |
-| w_q3 | 0.50 | Q3（財務健全性）の最終Qへの寄与率 |
-
-> **チューニング方法**: `param_tuning.ipynb` のスライダーまたは Optuna で上記パラメーターを調整し、  
-> `QWeights` インスタンスを `score_quality(weights=...)` に渡すと反映されます。
         """)
 
 
@@ -948,7 +902,14 @@ def main():
     # ─ 財務タイプ分類（pattern_db） ─
     with st.spinner("🔍 財務タイプを分類中…"):
         db             = load_pattern_db()
-        financial_type = classify_ticker(ticker, db)
+        financial_type = classify_ticker(
+            ticker, db,
+            roe=base.get("roe"),
+            roa=base.get("roa"),
+            equity_ratio=base.get("equity_ratio"),
+            interest_coverage=base.get("interest_coverage"),
+            operating_margin=base.get("operating_margin"),
+        )
 
         # セクター相対スコア計算用に PER/PBR を仮算出
         _close = base.get("close", 0)
@@ -963,7 +924,18 @@ def main():
             pbr=_pbr_tmp,
             ev_ebitda=base.get("ev_ebitda"),
         )
-        sector_v_score = sector_rel.get("sector_v_score") if financial_type.get("matched") else None
+        sector_v_score = sector_rel.get("sector_v_score") if financial_type.get("code") != "UNK" else None
+
+        # Q 相対評価スコア（タイプが推定済みの場合も有効）
+        from modules.pattern_db import calc_q_relative_scores
+        q_rel_scores = calc_q_relative_scores(
+            ft=financial_type,
+            roe=base.get("roe"),
+            roa=base.get("roa"),
+            equity_ratio=base.get("equity_ratio"),
+            interest_coverage=base.get("interest_coverage"),
+            operating_margin=base.get("operating_margin"),
+        )
 
     # ─ 指標計算 ─
     with st.spinner("🔢 指標を計算中…"):
@@ -985,6 +957,7 @@ def main():
                 sector_v_score=sector_v_score,
                 sector_rel_scores=sector_rel,
                 financial_type=financial_type,
+                q_rel_scores=q_rel_scores,      # ★v3.2 Q相対評価
             )
         except ValueError as e:
             st.error(str(e))
