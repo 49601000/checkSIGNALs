@@ -296,10 +296,11 @@ def get_us_fundamentals_alpha(symbol: str, api_key: str) -> dict:
 
 # ─── yfinance から新規項目を補完 ─────────────────────────────────────────
 
-def _supplement_from_yfinance(info: dict, current: dict) -> dict:
+def _supplement_from_yfinance(info: dict, current: dict, ticker_obj=None) -> dict:
     """
     yfinance.info から未取得項目を補完する。
     current は既存の結果 dict（上書きは None のときのみ）。
+    ticker_obj: yfinance.Ticker インスタンス（financials取得の経路③に使用）
     """
   
     def _fill(key_current, info_key, scale=1.0):
@@ -315,18 +316,43 @@ def _supplement_from_yfinance(info: dict, current: dict) -> dict:
     _fill("roa",              "returnOnAssets",  100.0)
     _fill("operating_margin", "operatingMargins", 100.0)  # ★新規
 
-    # インタレストカバレッジ：yfinance に直接フィールドなし → 複数経路で計算
+    # インタレストカバレッジ：複数経路で計算
     if current.get("interest_coverage") is None:
         ebit   = _safe_float(info.get("ebit"))
         int_ex = _safe_float(info.get("interestExpense"))
+
+        # 経路①: ebit / interestExpense（info直接）
         if ebit is not None and int_ex not in (None, 0):
-            # interestExpense はマイナス表記の場合あり → abs / cov < 0 も許容（赤字企業）
             current["interest_coverage"] = round(ebit / abs(int_ex), 2)
+
+        # 経路②: operatingCashflow / interestExpense
         elif current.get("interest_coverage") is None:
-            # 経路②: operatingCashflow / interestExpense
-            op_cf  = _safe_float(info.get("operatingCashflow"))
+            op_cf = _safe_float(info.get("operatingCashflow"))
             if op_cf is not None and int_ex not in (None, 0):
                 current["interest_coverage"] = round(op_cf / abs(int_ex), 2)
+
+        # 経路③: financials DataFrame から EBIT / Interest Expense を直接取得
+        if current.get("interest_coverage") is None:
+            try:
+                fin = ticker_obj.financials  # 損益計算書（年次）
+                if fin is not None and not fin.empty:
+                    # 最新年度の列を使用
+                    col = fin.columns[0]
+                    def _get_fin(keys):
+                        for k in keys:
+                            for idx in fin.index:
+                                if k.lower() in str(idx).lower():
+                                    v = fin.loc[idx, col]
+                                    if v is not None and str(v) != "nan":
+                                        return float(v)
+                        return None
+
+                    ebit_fin  = _get_fin(["EBIT", "Operating Income"])
+                    intex_fin = _get_fin(["Interest Expense", "Interest And Debt Expense"])
+                    if ebit_fin is not None and intex_fin not in (None, 0):
+                        current["interest_coverage"] = round(ebit_fin / abs(intex_fin), 2)
+            except Exception:
+                pass
 
     # D/E レシオ：yfinance から複数経路で取得
     if current.get("de_ratio") is None:
@@ -439,7 +465,7 @@ def get_price_and_meta(ticker: str, period: str = "400d", interval: str = "1d") 
         # yfinance で補完（IRBANK で取れない項目を埋める）
         try:
             info = yf.Ticker(ticker).info or {}
-            fundamentals = _supplement_from_yfinance(info, fundamentals)
+            fundamentals = _supplement_from_yfinance(info, fundamentals, ticker_obj=ticker_obj)
         except Exception:
             pass
 
@@ -454,7 +480,7 @@ def get_price_and_meta(ticker: str, period: str = "400d", interval: str = "1d") 
 
         try:
             info = yf.Ticker(ticker).info or {}
-            fundamentals = _supplement_from_yfinance(info, fundamentals)
+            fundamentals = _supplement_from_yfinance(info, fundamentals, ticker_obj=ticker_obj)
         except Exception:
             pass
 
