@@ -102,6 +102,7 @@ def compute_indicators(
     sector_v_score: Optional[float] = None,      # ★v3
     sector_rel_scores: Optional[Dict[str, Any]] = None,  # ★v3
     financial_type: Optional[Dict[str, Any]] = None,     # ★v3
+    q_rel_scores: Optional[Dict[str, Any]] = None,       # ★v3.2 Q相対評価
 ) -> Dict[str, Any]:
     """
     テクニカル指標 + Q/V/T スコアをまとめて計算し、UI 用の dict を返す。
@@ -168,6 +169,7 @@ def compute_indicators(
         operating_margin=operating_margin,
         de_ratio=de_ratio,
         interest_coverage=interest_coverage,
+        q_rel_scores=q_rel_scores,   # ★v3.2 相対評価
     )
     q_score = q_result["q_score"]
 
@@ -214,6 +216,11 @@ def compute_indicators(
         "q_score": q_score,
         "q1": q_result["q1"],
         "q3": q_result["q3"],
+        "q1_abs":  q_result["q1_abs"],          # ★v3.2
+        "q3_abs":  q_result["q3_abs"],          # ★v3.2
+        "q1_rel":  q_result["q1_rel"],          # ★v3.2
+        "q3_rel":  q_result["q3_rel"],          # ★v3.2
+        "q_alpha": q_result["alpha"],           # ★v3.2 ブレンド係数
         "q_warnings": q_result["warnings"],     # ★v3 ノックアウト警告
 
         # V サブスコア
