@@ -427,23 +427,27 @@ def get_price_and_meta(ticker: str, period: str = "400d", interval: str = "1d") 
 
     try:
         high_col = next(c for c in df.columns if c.startswith("High"))
-        low_col  = next(c for c in df.columns if c.startswith("Low"))
-        use_hl   = True
+        low_col = next(c for c in df.columns if c.startswith("Low"))
+        use_hl = True
     except StopIteration:
-        use_hl   = False
+        use_hl = False
 
     TRADING_DAYS_1Y = 252
     df_1y = df.iloc[-TRADING_DAYS_1Y:]
 
-    close          = float(df[close_col].iloc[-1])
+    close = float(df[close_col].iloc[-1])
     previous_close = float(df[close_col].iloc[-2])
 
     if use_hl:
         high_52w = float(df_1y[high_col].max())
-        low_52w  = float(df_1y[low_col].min())
+        low_52w = float(df_1y[low_col].min())
     else:
         high_52w = float(df_1y[close_col].max())
-        low_52w  = float(df_1y[close_col].min())
+        low_52w = float(df_1y[close_col].min())
+
+    # ── yfinance オブジェクト / info は最初に1回だけ取得 ──
+    ticker_obj = yf.Ticker(ticker)
+    info = _safe_get_yf_info(ticker_obj)
 
     # ── ファンダメンタル取得 ──
     fundamentals: dict = {k: None for k in [
@@ -454,23 +458,20 @@ def get_price_and_meta(ticker: str, period: str = "400d", interval: str = "1d") 
     ]}
 
     if is_jpx_ticker(ticker):
-        # ── 日本株: IRBANK ──
+        # 日本株: IRBANK
         code = ticker.replace(".T", "") if ticker.endswith(".T") else ticker
         irbank = get_jpx_fundamentals_irbank(code)
+
         for k in ("eps", "bps", "per_fwd", "roe", "roa", "equity_ratio",
                   "operating_margin", "interest_coverage"):
             if irbank.get(k) is not None:
                 fundamentals[k] = irbank[k]
 
-        # yfinance で補完（IRBANK で取れない項目を埋める）
-        try:
-            info = yf.Ticker(ticker).info or {}
-            fundamentals = _supplement_from_yfinance(info, fundamentals, ticker_obj=ticker_obj)
-        except Exception:
-            pass
+        # yfinance で補完
+        fundamentals = _supplement_from_yfinance(info, fundamentals, ticker_obj=ticker_obj)
 
     else:
-        # ── 米国株: Alpha Vantage → yfinance フォールバック ──
+        # 米国株: Alpha Vantage → yfinance 補完
         av_key = _get_av_key()
         if av_key:
             av = get_us_fundamentals_alpha(ticker, av_key)
@@ -478,11 +479,7 @@ def get_price_and_meta(ticker: str, period: str = "400d", interval: str = "1d") 
                 if v is not None:
                     fundamentals[k] = v
 
-        try:
-            info = yf.Ticker(ticker).info or {}
-            fundamentals = _supplement_from_yfinance(info, fundamentals, ticker_obj=ticker_obj)
-        except Exception:
-            pass
+        fundamentals = _supplement_from_yfinance(info, fundamentals, ticker_obj=ticker_obj)
 
     # PER（実績）が未計算なら補完
     if fundamentals["eps"] not in (None, 0) and close > 0 and fundamentals.get("per_fwd") is None:
@@ -492,48 +489,36 @@ def get_price_and_meta(ticker: str, period: str = "400d", interval: str = "1d") 
     if fundamentals["per_fwd"] not in (None, 0) and close > 0:
         fundamentals["eps_fwd"] = close / fundamentals["per_fwd"]
 
-    #  ── yfinance オブジェクト / info は 1回だけ取得 ──
-    ticker_obj   = yf.Ticker(ticker)
-    info = _safe_get_yf_info(ticker_obj)
-    
-  
     # ── 会社名 ──
-    key          = ticker.strip().upper()
+    key = ticker.strip().upper()
     company_name = COMPANY_NAME_CACHE.get(key)
     if not company_name:
         if is_jpx_ticker(ticker):
-            company_name = (
-                info.get("shortName")
-                or info.get("longName")
-                or ticker
-            )
+            company_name = info.get("shortName") or info.get("longName") or ticker
         else:
-            company_name = (info.get("longName") or info.get("shortName") or ticker)
+            company_name = info.get("longName") or info.get("shortName") or ticker
 
     dividend_yield = _compute_dividend_yield(ticker_obj, close)
 
     # ── 業種分類（ノックアウト閾値補正用） ──
-    # 日本株: TSEマスター優先（yfinanceの誤分類を防ぐ）
-    # 米国株: yfinance の industry / sector をそのまま使用
     if is_jpx_ticker(ticker):
         _master = get_industry_from_master(ticker)
         industry = _master.get("industry", "")
-        sector   = _master.get("sector",   "")
+        sector = _master.get("sector", "")
     else:
         industry = _extract_industry_from_info(info)
-        sector   = info.get("sector", "") if isinstance(info, dict) else ""
+        sector = info.get("sector", "") if isinstance(info, dict) else ""
 
     return {
-        "df":             df,
-        "close_col":      close_col,
-        "close":          close,
+        "df": df,
+        "close_col": close_col,
+        "close": close,
         "previous_close": previous_close,
-        "high_52w":       high_52w,
-        "low_52w":        low_52w,
-        "company_name":   company_name,
+        "high_52w": high_52w,
+        "low_52w": low_52w,
+        "company_name": company_name,
         "dividend_yield": dividend_yield,
-        "industry":       industry,
-        "sector":         sector,
-        # ファンダメンタル
+        "industry": industry,
+        "sector": sector,
         **fundamentals,
     }
