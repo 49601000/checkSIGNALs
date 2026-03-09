@@ -105,6 +105,7 @@ def compute_indicators(
     q_rel_scores: Optional[Dict[str, Any]] = None,       # ★v3.2 Q相対評価
     industry: str = "",                                   # ★v3.3/v3.4 業種別閾値
     sector: str = "",                                     # ★v3.4 閾値マッチング補助
+    is_us: bool = False,                                  # ★v3.5 US市場フラグ
 ) -> Dict[str, Any]:
     """
     テクニカル指標 + Q/V/T スコアをまとめて計算し、UI 用の dict を返す。
@@ -174,6 +175,7 @@ def compute_indicators(
         q_rel_scores=q_rel_scores,
         industry=industry,
         sector=sector,
+        is_us=is_us,
     )
     q_score = q_result["q_score"]
 
