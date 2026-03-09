@@ -1,10 +1,16 @@
 """
-main.py — iPhone最適化 Streamlit UI
+main.py — iPhone最適化 Streamlit UI  (v3)
 """
 import streamlit as st
 from app.modules.data_fetch import convert_ticker, get_price_and_meta
 from app.modules.indicators import compute_indicators
 from app.modules.q_correction import apply_q_correction
+from app.modules.pattern_db import (          # ★v3
+    load_pattern_db,
+    classify_ticker,
+    calc_sector_relative_scores,
+    get_all_types_for_display,
+)
 
 
 # ─── ページ設定 ─────────────────────────────────────────────
@@ -13,16 +19,13 @@ def setup_page():
     st.set_page_config(
         page_title="checkSIGNAL",
         page_icon="📡",
-        layout="centered",   # iPhone は centered が読みやすい
+        layout="centered",
         initial_sidebar_state="collapsed",
     )
-    # カスタムCSS（iPhone最適化・ウォームライトテーマ）
     st.markdown("""
     <style>
-    /* Google Fonts: Noto Sans JP（日本語）+ IBM Plex Mono（数字・視認性重視）+ Outfit（UI） */
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&family=Outfit:wght@600;700;800&display=swap');
 
-    /* ── カラー変数（ダーク） ── */
     :root {
         --bg:       #0f1117;
         --surface:  #1a1d27;
@@ -38,20 +41,17 @@ def setup_page():
         --orange:   #f28c38;
     }
 
-    /* ── 全体 ── */
     html, body, [class*="css"] {
         font-family: 'Noto Sans JP', sans-serif;
         background-color: var(--bg) !important;
         color: var(--text) !important;
     }
-    /* Streamlit のデフォルト白背景を上書き */
     .stApp, .stApp > div, section.main, .block-container {
         background-color: var(--bg) !important;
     }
     .main > div { padding-top: 1rem; padding-bottom: 3rem; }
     section[data-testid="stSidebar"] { display: none; }
 
-    /* ── タイトル ── */
     .cs-title {
         font-family: 'Outfit', sans-serif;
         font-size: 1.6rem; font-weight: 800;
@@ -65,7 +65,6 @@ def setup_page():
         margin-bottom: 1.2rem;
     }
 
-    /* ── スコアカード ── */
     .score-card {
         background: var(--surface);
         border: 1px solid var(--border);
@@ -87,7 +86,6 @@ def setup_page():
     }
     .score-max { font-size: 0.7rem; color: var(--text-3); font-weight: 600; margin-top: 0.2rem; }
 
-    /* ── シグナルバナー ── */
     .signal-banner {
         border-radius: 12px; padding: 1rem 1.2rem;
         margin-bottom: 0.8rem;
@@ -100,7 +98,6 @@ def setup_page():
     }
     .signal-sub { font-size: 0.75rem; color: var(--text-2); font-weight: 600; margin-top: 0.1rem; }
 
-    /* ── 価格ヘッダー ── */
     .price-header {
         background: var(--surface); border: 1px solid var(--border);
         border-radius: 12px; padding: 1rem 1.2rem;
@@ -126,7 +123,6 @@ def setup_page():
     .price-flat { color: var(--text); }
     .price-chg  { font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; font-weight: 600; margin-top: 0.2rem; }
 
-    /* ── メトリクスグリッド ── */
     .metric-grid {
         display: grid; grid-template-columns: 1fr 1fr;
         gap: 0.5rem; margin-bottom: 0.8rem;
@@ -149,7 +145,6 @@ def setup_page():
         font-size: 0.8rem; font-weight: 600; color: var(--text-2); margin-top: 0.15rem;
     }
 
-    /* ── レンジボックス ── */
     .range-grid {
         display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem;
     }
@@ -168,18 +163,15 @@ def setup_page():
         font-size: 1.05rem; font-weight: 700; color: var(--text);
     }
 
-    /* ── テーブル ── */
     .cs-table {
         width: 100%;
         border-collapse: collapse;
         font-size: 0.87rem;
         table-layout: fixed;
     }
-    /* 列幅 */
     .cs-table th:nth-child(1), .cs-table td:nth-child(1) { width: 28%; }
     .cs-table th:nth-child(2), .cs-table td:nth-child(2) { width: 54%; }
     .cs-table th:nth-child(3), .cs-table td:nth-child(3) { width: 18%; }
-    /* ヘッダー */
     .cs-table thead th {
         padding: 6px 10px 6px 12px;
         font-size: 0.58rem; letter-spacing: 1.8px;
@@ -189,34 +181,28 @@ def setup_page():
         border-bottom: 1px solid var(--border);
         white-space: nowrap;
     }
-    /* 奇数行・偶数行で交互カラー */
     .cs-table tbody tr:nth-child(odd)  { background: var(--surface); }
     .cs-table tbody tr:nth-child(even) { background: var(--card); }
-    /* セル共通 */
     .cs-table tbody td {
         padding: 8px 10px 8px 12px;
         overflow: hidden; word-break: break-word;
         border: none;
     }
-    /* 指標ラベル列 */
     .cs-table tbody td:nth-child(1) {
         color: var(--text-2);
         font-size: 0.78rem; font-weight: 600;
         letter-spacing: 0.1px;
         border-left: 3px solid transparent;
     }
-    /* 値列 */
     .cs-table tbody td:nth-child(2) {
         font-family: 'IBM Plex Mono', monospace;
         font-size: 0.9rem; font-weight: 600;
         color: var(--text);
     }
-    /* 判定列 */
     .cs-table tbody td:nth-child(3) {
         text-align: center;
         vertical-align: middle;
     }
-    /* ○ バッジ */
     .td-ok {
         display: inline-flex; align-items: center; justify-content: center;
         width: 24px; height: 24px;
@@ -226,7 +212,6 @@ def setup_page():
         border-radius: 50%;
         border: 1.5px solid rgba(62,207,114,.50);
     }
-    /* × バッジ */
     .td-ng {
         display: inline-flex; align-items: center; justify-content: center;
         width: 24px; height: 24px;
@@ -237,7 +222,6 @@ def setup_page():
         border: 1.5px solid rgba(240,92,110,.50);
     }
     .td-neu { color: var(--text-3); font-size: 1rem; }
-    /* 評価バッジ（Vタブ） */
     .ev-badge {
         display: inline-block;
         background: rgba(62,207,114,.15);
@@ -251,7 +235,6 @@ def setup_page():
         font-family: 'IBM Plex Mono', monospace; font-weight: 600;
     }
 
-    /* ── Streamlit標準コンポーネント上書き ── */
     div[data-testid="stTabs"] button {
         font-size: 0.82rem !important;
         font-weight: 700 !important;
@@ -274,12 +257,10 @@ def setup_page():
         font-size: 0.7rem !important; font-weight: 700 !important;
         color: var(--text-2) !important; letter-spacing: 0.05em !important;
     }
-    /* info/warning メッセージ背景 */
     div[data-testid="stAlert"] {
         background-color: var(--surface) !important;
         color: var(--text) !important;
     }
-    /* ボタン（iPhone指タップ向け） */
     div[data-testid="stButton"] > button {
         height: 3rem !important;
         font-size: 1rem !important;
@@ -288,7 +269,6 @@ def setup_page():
         width: 100%;
         font-family: 'Noto Sans JP', sans-serif !important;
     }
-    /* テキスト入力 */
     div[data-testid="stTextInput"] input {
         font-family: 'IBM Plex Mono', monospace !important;
         font-size: 1.1rem !important;
@@ -297,17 +277,13 @@ def setup_page():
         border-radius: 10px !important;
         color: var(--text) !important;
     }
-    /* number_input */
     div[data-testid="stNumberInput"] input {
         font-family: 'IBM Plex Mono', monospace !important;
         font-size: 1rem !important;
         font-weight: 600 !important;
         height: 2.8rem !important;
     }
-    /* セパレータ */
     hr { border-color: var(--border) !important; }
-
-    /* expander */
     div[data-testid="stExpander"] {
         background: var(--surface) !important;
         border: 1px solid var(--border) !important;
@@ -329,10 +305,10 @@ def _fmt_x(x):
     return "—" if x is None else f"{float(x):.2f}倍"
 
 def _color_score(s):
-    if s >= 70: return "#3ecf72"   # bright green
-    if s >= 55: return "#4f8ef7"   # bright blue
-    if s >= 40: return "#f5c542"   # amber
-    return "#f05c6e"               # red
+    if s >= 70: return "#3ecf72"
+    if s >= 55: return "#4f8ef7"
+    if s >= 40: return "#f5c542"
+    return "#f05c6e"
 
 def _price_class(change):
     if change > 0: return "price-up"
@@ -347,6 +323,16 @@ def _signal_style(strength, hi_alert):
     if hi_alert:
         return "background:rgba(240,92,110,.12);border:1px solid #f05c6e;"
     return "background:rgba(79,142,247,.10);border:1px solid #4f8ef7;"
+
+def _build_table(headers: list, rows: list) -> str:
+    """汎用 cs-table HTML ビルダー。"""
+    ths = "".join(f"<th>{h}</th>" for h in headers)
+    html = f'<table class="cs-table"><thead><tr>{ths}</tr></thead><tbody>'
+    for row in rows:
+        cells = "".join(f"<td>{c}</td>" for c in row)
+        html += f"<tr>{cells}</tr>"
+    html += "</tbody></table>"
+    return html
 
 
 # ─── UI パーツ ───────────────────────────────────────────────
@@ -430,12 +416,12 @@ def render_qvt_cards(q, v, t, qvt):
 # ─── タブ: T ─────────────────────────────────────────────────
 
 def render_t_tab(tech):
-    sig_txt = tech["signal_text"]
+    sig_txt  = tech["signal_text"]
     sig_icon = tech["signal_icon"]
-    sig_str = tech["signal_strength"]
+    sig_str  = tech["signal_strength"]
     hi_alert = tech.get("high_price_alert", False)
-    t_label = tech["timing_label"]
-    style = _signal_style(sig_str, hi_alert)
+    t_label  = tech["timing_label"]
+    style    = _signal_style(sig_str, hi_alert)
 
     st.markdown(f"""
     <div class="signal-banner" style="{style}">
@@ -450,7 +436,6 @@ def render_t_tab(tech):
     if hi_alert:
         st.warning("⚠️ 高値掴みリスク（高値圏 / RSI過熱 / 52W高値付近）")
 
-    # テーブル
     price = tech["close"]
     ma25  = tech["ma_25"]
     ma50  = tech["ma_50"]
@@ -467,12 +452,11 @@ def render_t_tab(tech):
         return '<span class="td-ok">○</span>' if cond else '<span class="td-ng">×</span>'
 
     def _slope_label(s) -> str:
-        """MA25傾き → +0.08% (緩やかに上昇中) 形式"""
         if s is None: return "—"
         sign = "+" if s >= 0 else ""
-        if s >= 1.5:   desc = "急上昇中"
-        elif s >= 0.3: desc = "上昇中"
-        elif s >= 0:   desc = "緩やかに上昇中"
+        if s >= 1.5:    desc = "急上昇中"
+        elif s >= 0.3:  desc = "上昇中"
+        elif s >= 0:    desc = "緩やかに上昇中"
         elif s >= -0.3: desc = "緩やかに下落中"
         elif s >= -1.5: desc = "下落中"
         else:           desc = "急下落中"
@@ -483,9 +467,9 @@ def render_t_tab(tech):
             f'{sign}{s:.2f}%</span>'
             f'<span style="font-size:.8rem;color:var(--text-2);margin-left:6px">({desc})</span>'
         )
+
     def make_52w_bar(pos: int) -> str:
-        """████████░░ （高値 92%）形式のプログレスバー文字列を生成"""
-        filled = round(pos / 10)          # 0〜10
+        filled = round(pos / 10)
         empty  = 10 - filled
         bar    = '█' * filled + '░' * empty
         from_hi = 100 - pos
@@ -496,12 +480,12 @@ def render_t_tab(tech):
         )
 
     rows = [
-        ("BB 位置",    f'{tech["bb_icon"]} {tech["bb_text"]}',  None),
-        ("RSI (14)",   f'{_fmt(rsi, 1)}',   rsi < 30 if rsi else None),
+        ("BB 位置",      f'{tech["bb_icon"]} {tech["bb_text"]}', None),
+        ("RSI (14)",     f'{_fmt(rsi, 1)}',                      rsi < 30 if rsi else None),
         ("25MA vs 価格", "価格 < MA25" if price < ma25 else "価格 ≥ MA25", price < ma25),
-        ("MA25 傾き",  _slope_label(slope), None),
-        ("52W 位置",   make_52w_bar(pos52),  None),
-        ("モード",     "📈 順張り" if tmode == "trend" else "🧮 逆張り", None),
+        ("MA25 傾き",    _slope_label(slope),                    None),
+        ("52W 位置",     make_52w_bar(pos52),                    None),
+        ("モード",       "📈 順張り" if tmode == "trend" else "🧮 逆張り", None),
     ]
 
     table_html = '''<table class="cs-table">
@@ -552,23 +536,66 @@ def render_t_tab(tech):
 # ─── タブ: Q ─────────────────────────────────────────────────
 
 def render_q_tab(tech):
-    q_score = float(tech.get("q_score", 0))
-    roe = tech.get("roe")
-    roa = tech.get("roa")
-    er  = tech.get("equity_ratio")
+    q_score    = float(tech.get("q_score", 0))
+    q1         = float(tech.get("q1", 0))
+    q3         = float(tech.get("q3", 0))
+    q_warnings = tech.get("q_warnings", [])
+    roe  = tech.get("roe")
+    roa  = tech.get("roa")
+    er   = tech.get("equity_ratio")
+    opm  = tech.get("operating_margin")
+    de   = tech.get("de_ratio")
+    ic   = tech.get("interest_coverage")
 
-    st.metric("Qスコア", f"{q_score:.1f} / 100")
+    # ─ Qスコア + サブスコア ─
+    st.metric("Qスコア（ビジネスの質）", f"{q_score:.1f} / 100")
+    col1, col2 = st.columns(2)
+    col1.metric("Q1 収益性", f"{q1:.1f}")
+    col2.metric("Q3 財務健全性", f"{q3:.1f}")
 
-    if roe is None and roa is None and er is None:
-        st.caption("⚠️ ROE / ROA / 自己資本比率のデータが取得できませんでした。")
-    else:
-        table_html = '<table class="cs-table"><thead><tr><th>指標</th><th style="text-align:right">値</th></tr></thead><tbody>'
-        for label, val in [("ROE", _fmt_pct(roe)), ("ROA", _fmt_pct(roa)),
-                            ("自己資本比率", _fmt_pct(er))]:
-            table_html += f'<tr><td>{label}</td><td class="td-right">{val}</td></tr>'
-        table_html += '</tbody></table>'
-        st.markdown(table_html, unsafe_allow_html=True)
+    # ─ ノックアウト警告 ─
+    for w in q_warnings:
+        st.warning(w)
 
+    st.markdown("---")
+
+    # ─ Q1: 収益性テーブル ─
+    st.markdown("##### 📊 収益性指標（Q1）")
+
+    def _q1_eval(key, val):
+        if val is None: return "—"
+        if key == "roe":  return "✓ 高収益" if val >= 15 else ("△ 低収益" if val < 5 else "")
+        if key == "roa":  return "✓ 高効率" if val >= 5  else ""
+        if key == "opm":  return "✓ 高利益率" if val >= 10 else ("⚠️ 赤字" if val < 0 else "")
+        return ""
+
+    rows_q1 = [
+        ("ROE",       _fmt_pct(roe), _q1_eval("roe", roe)),
+        ("ROA",       _fmt_pct(roa), _q1_eval("roa", roa)),
+        ("営業利益率", _fmt_pct(opm), _q1_eval("opm", opm)),
+    ]
+    st.markdown(_build_table(["指標", "値", "評価"], rows_q1), unsafe_allow_html=True)
+
+    # ─ Q3: 財務健全性テーブル ─
+    st.markdown("##### 🏦 財務健全性指標（Q3）")
+
+    def _q3_eval(key, val):
+        if val is None: return "—"
+        if key == "er": return "✓ 健全" if val >= 40 else ("⚠️ 高レバ" if val < 20 else "")
+        if key == "de": return "✓ 低負債" if val < 0.5 else ("⚠️ 過剰負債" if val > 2.0 else "")
+        if key == "ic": return "✓ 余裕あり" if val >= 5 else ("⚠️ 危険圏" if val < 1.5 else "")
+        return ""
+
+    de_str = f"{de:.2f}x" if de is not None else "—"
+    ic_str = f"{ic:.1f}x" if ic is not None else "—"
+    rows_q3 = [
+        ("自己資本比率",          _fmt_pct(er), _q3_eval("er", er)),
+        ("D/E レシオ",            de_str,        _q3_eval("de", de)),
+        ("インタレストカバレッジ", ic_str,        _q3_eval("ic", ic)),
+    ]
+    st.markdown(_build_table(["指標", "値", "評価"], rows_q3), unsafe_allow_html=True)
+
+    # ─ セクター補正（v2互換） ─
     st.markdown("---")
     st.markdown("##### 🧩 セクター補正（任意）")
 
@@ -582,43 +609,110 @@ def render_q_tab(tech):
         if roe is None or roa is None:
             st.error("ROE / ROA データが不足のため補正できません。")
         else:
-            result = apply_q_correction(tech=tech, sector_roe=sect_roe, sector_roa=sect_roa)
-            q_corr = result.get("q_corrected")
+            result   = apply_q_correction(tech=tech, sector_roe=sect_roe, sector_roa=sect_roa)
+            q_corr   = result.get("q_corrected")
             qvt_corr = result.get("qvt_corrected")
             st.session_state["q_correction_result"] = result
-
             c1, c2 = st.columns(2)
             c1.metric("Q（補正前）", f"{q_score:.1f}")
             c2.metric("Q（補正後）", f"{q_corr:.1f}", delta=f"{q_corr - q_score:+.1f}")
             st.caption(f"補正後 QVT: **{qvt_corr:.1f}**")
             st.info("セクター基準を用いて Q を補正した結果です。")
 
+    # ─ Qスコアの見方 ─
     st.markdown("---")
     with st.expander("📚 Qスコアの見方"):
         st.markdown("""
-**ROE** — 目安：10%前後が標準、15%超は高収益。借入依存に注意。  
-**ROA** — 目安：3〜5%が標準、5〜8%超は資産効率が高い。  
-**自己資本比率** — 30%未満は高レバレッジ、40〜60%が健全、60%超は堅固。
+**Q1 収益性**
+- **ROE** — 目安：10%前後が標準、15%超は高収益。借入依存に注意。
+- **ROA** — 目安：3〜5%が標準、5%超は資産効率が高い。
+- **営業利益率** — 5%未満は薄利、10%超は優良、20%超は超優良。
 
-| セクター例 | ROE目安 | ROA目安 |
-|---|---|---|
-| 生活必需品・インフラ | 8〜12% | 3〜6% |
-| テック・成長株 | 10〜20%+ | 5〜10% |
-| 景気敏感（自動車等） | 8〜12% | 3〜6% |
-| 金融 | 8〜12% | 0.5〜2% |
+**Q3 財務健全性**
+- **自己資本比率** — 30%未満は高レバレッジ、40〜60%が健全、60%超は堅固。
+- **D/Eレシオ** — 1.0未満が目安。2.0超は過剰レバレッジ要注意。
+- **インタレストカバレッジ** — 1.5未満は危険圏、5倍超が安全圏の目安。
+
+| セクター例 | ROE目安 | ROA目安 | 営業利益率目安 |
+|---|---|---|---|
+| 生活必需品・インフラ | 8〜12% | 3〜6% | 5〜10% |
+| テック・成長株 | 10〜20%+ | 5〜10% | 15〜30% |
+| 景気敏感（自動車等） | 8〜12% | 3〜6% | 5〜10% |
+| 金融 | 8〜12% | 0.5〜2% | — |
         """)
 
 
 # ─── タブ: V ─────────────────────────────────────────────────
 
 def render_v_tab(tech):
-    v_score = float(tech.get("v_score", 0))
-    per = tech.get("per")
-    per_fwd = tech.get("per_fwd")
-    pbr = tech.get("pbr")
-    dy  = tech.get("dividend_yield")
+    v_score    = float(tech.get("v_score", 0))
+    v1         = float(tech.get("v1", 0))
+    v2         = float(tech.get("v2", 0))
+    v3         = float(tech.get("v3", 0))
+    v4         = tech.get("v4")
+    has_sector = tech.get("has_sector", False)
 
+    per      = tech.get("per")
+    per_fwd  = tech.get("per_fwd")
+    pbr      = tech.get("pbr")
+    dy       = tech.get("dividend_yield")
+    ev_ebitda = tech.get("ev_ebitda")
+
+    ft         = tech.get("financial_type", {})
+    sector_rel = tech.get("sector_rel_scores", {})
+
+    # ─ Vスコア + サブスコア ─
     st.metric("Vスコア（割安度）", f"{v_score:.1f} / 100")
+
+    if has_sector and v4 is not None:
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("V1 割安",  f"{v1:.0f}")
+        col2.metric("V2 CF系",  f"{v2:.0f}")
+        col3.metric("V3 配当",  f"{v3:.0f}")
+        col4.metric("V4 相対",  f"{v4:.0f}")
+    else:
+        col1, col2, col3 = st.columns(3)
+        col1.metric("V1 割安", f"{v1:.0f}")
+        col2.metric("V2 CF系", f"{v2:.0f}")
+        col3.metric("V3 配当", f"{v3:.0f}")
+        if not has_sector:
+            st.caption("ℹ️ セクター相対評価（V4）は日本株DBに収録された銘柄のみ対応。")
+
+    st.markdown("---")
+
+    # ─ 財務タイプバッジ（DB分類済み銘柄のみ） ─
+    if ft.get("matched"):
+        code = ft.get("code", "—")
+        ja   = ft.get("ja", "—")
+        desc = ft.get("description", "")
+        conf = ft.get("confidence", "")
+        conf_badge = {"HIGH": "🟢 HIGH", "MID": "🟡 MID", "NONE": "⚪ NONE"}.get(conf, conf)
+        st.markdown(f"""
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:0.9rem 1.1rem;margin-bottom:0.8rem">
+          <div style="font-size:0.65rem;letter-spacing:1.5px;color:var(--text-2);font-weight:700;text-transform:uppercase">財務タイプ（DB分類）</div>
+          <div style="font-size:1.05rem;font-weight:700;color:var(--text);margin-top:0.3rem">{ja} <span style="font-size:0.7rem;color:var(--text-3)">({code})</span></div>
+          <div style="font-size:0.8rem;color:var(--text-2);margin-top:0.3rem">{desc}</div>
+          <div style="font-size:0.7rem;color:var(--text-3);margin-top:0.3rem">信頼度: {conf_badge}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # ─ セクター相対テーブル ─
+    if has_sector:
+        st.markdown("##### 📊 セクター相対評価（V4）")
+        def _rel_score_str(key):
+            s = sector_rel.get(key)
+            return f"{s:.0f}pt" if s is not None else "—"
+
+        rows_rel = [
+            ("PER（相対）",       sector_rel.get("per_vs_median", "—"),       _rel_score_str("per_rel_score")),
+            ("PBR（相対）",       sector_rel.get("pbr_vs_median", "—"),       _rel_score_str("pbr_rel_score")),
+            ("EV/EBITDA（相対）", sector_rel.get("ev_ebitda_vs_median", "—"), _rel_score_str("ev_ebitda_rel_score")),
+        ]
+        st.markdown(_build_table(["指標", "実測値（vs 中央値）", "相対スコア"], rows_rel), unsafe_allow_html=True)
+        st.caption("スコア目安：100pt＝かなり割安 / 50pt＝中央値水準 / 0pt＝かなり割高")
+
+    # ─ 絶対評価テーブル ─
+    st.markdown("##### 📋 絶対評価（V1〜V3）")
 
     def eval_per(x):
         if x is None: return "—"
@@ -637,35 +731,64 @@ def render_v_tab(tech):
         if x >= 3: return "✓ 高配当"
         return ""
 
+    def eval_ev(x):
+        if x is None: return "—"
+        if x < 8:  return "✓ 割安"
+        if x > 20: return "△ 割高"
+        return ""
+
     rows = [
-        ("PER（実績）", _fmt_x(per), eval_per(per)),
-        ("予想 PER",    _fmt_x(per_fwd), eval_per(per_fwd)),
-        ("PBR",        _fmt_x(pbr), eval_pbr(pbr)),
-        ("配当利回り",  _fmt_pct(dy), eval_dy(dy)),
+        ("PER（実績）",  _fmt_x(per),       eval_per(per)),
+        ("予想 PER",     _fmt_x(per_fwd),   eval_per(per_fwd)),
+        ("PBR",          _fmt_x(pbr),       eval_pbr(pbr)),
+        ("EV/EBITDA",    _fmt_x(ev_ebitda), eval_ev(ev_ebitda)),
+        ("配当利回り",   _fmt_pct(dy),      eval_dy(dy)),
     ]
     table_html = '<table class="cs-table"><thead><tr><th>指標</th><th style="text-align:right">値</th><th style="text-align:right">評価</th></tr></thead><tbody>'
     for label, val, ev in rows:
-        badge = f'<span class="ev-badge">{ev}</span>' if ev and ev not in ("—","") else ""
+        badge = f'<span class="ev-badge">{ev}</span>' if ev and ev not in ("—", "") else ""
         table_html += f'<tr><td>{label}</td><td class="td-right">{val}</td><td style="text-align:right">{badge}</td></tr>'
     table_html += '</tbody></table>'
     st.markdown(table_html, unsafe_allow_html=True)
-    st.caption("Vスコアは PER / PBR / 配当利回りを正規化したざっくり指標。セクター特性と合わせて解釈推奨。")
+    st.caption("Vスコアはバリュエーションの目安。セクター特性と合わせて解釈してください。")
+
+    # ─ 財務タイプ辞典 ─
+    st.markdown("---")
+    with st.expander("📖 財務タイプ辞典（全分類の解説）"):
+        all_types = get_all_types_for_display()
+        if all_types:
+            for t in all_types:
+                if t["sample_count"] == 0:
+                    continue
+                is_this = ft.get("matched") and ft.get("code") == t["code"]
+                highlight = "🔍 **この銘柄の分類**  " if is_this else ""
+                per_m = f"{t['per_median']:.1f}x"   if t["per_median"]              else "—"
+                pbr_m = f"{t['pbr_median']:.2f}x"   if t["pbr_median"]              else "—"
+                roe_m = f"{t['roe_median']*100:.1f}%" if t["roe_median"] is not None else "—"
+                opm_m = f"{t['operating_margin_median']*100:.1f}%" if t["operating_margin_median"] is not None else "—"
+                st.markdown(f"""
+**{highlight}{t['ja']}** `{t['code']}`  
+{t['description']}  
+📊 中央値 — PER {per_m} / PBR {pbr_m} / ROE {roe_m} / 営業利益率 {opm_m} （n={t['sample_count']}）
+""")
+        else:
+            st.info("財務タイプDBが読み込まれていません。`data/pattern_db_latest.csv` を確認してください。")
 
 
 # ─── タブ: QVT ────────────────────────────────────────────────
 
 def render_qvt_tab(tech):
-    q = float(tech["q_score"])
-    v = float(tech["v_score"])
-    t = float(tech["t_score"])
+    q   = float(tech["q_score"])
+    v   = float(tech["v_score"])
+    t   = float(tech["t_score"])
     qvt = float(tech["qvt_score"])
 
     corr = st.session_state.get("q_correction_result")
     if corr:
-        q_show = float(corr.get("q_corrected", q))
+        q_show   = float(corr.get("q_corrected", q))
         qvt_show = float(corr.get("qvt_corrected", qvt))
     else:
-        q_show = q
+        q_show   = q
         qvt_show = qvt
 
     col1, col2, col3 = st.columns(3)
@@ -679,11 +802,10 @@ def render_qvt_tab(tech):
     st.markdown("---")
 
     color = _color_score(qvt_show)
-    msg = ("総合的に非常に魅力的（主力候補）" if qvt_show >= 70
+    msg = ("総合的に非常に魅力的（主力候補）"          if qvt_show >= 70
            else "買い検討レベル。押し目を慎重に狙いたい" if qvt_show >= 60
-           else "悪くないが他候補との比較推奨" if qvt_show >= 50
+           else "悪くないが他候補との比較推奨"           if qvt_show >= 50
            else "テーマ性が強くないなら見送りも選択肢")
-
     star = "⭐⭐⭐" if qvt_show >= 70 else "⭐⭐" if qvt_show >= 60 else "⭐" if qvt_show >= 50 else ""
 
     st.markdown(f"""
@@ -701,8 +823,8 @@ def render_qvt_tab(tech):
 
     with st.expander("📘 QVT フレームワーク"):
         st.markdown("""
-**Q（Quality）** — ビジネスの質。ROE・ROA・自己資本比率から算出。  
-**V（Valuation）** — 割安度。PER・PBR・配当利回りから算出。  
+**Q（Quality）** — ビジネスの質。ROE・ROA・営業利益率（Q1）＋自己資本比率・D/E・インタレストカバレッジ（Q3）。  
+**V（Valuation）** — 割安度。PER・PBR・EV/EBITDA・配当利回り＋セクター相対評価（日本株）。  
 **T（Timing）** — テクニカル的な買いタイミング。RSI・BB・MA・52Wレンジから算出。
 
 | QVT | 目安 |
@@ -720,7 +842,7 @@ def main():
     setup_page()
 
     st.markdown('<div class="cs-title">check<span>SIGNAL</span></div>', unsafe_allow_html=True)
-    st.markdown('<div class="cs-sub">買いシグナルチェッカー v2 — 日本株 / 米国株対応</div>', unsafe_allow_html=True)
+    st.markdown('<div class="cs-sub">買いシグナルチェッカー v3 — 日本株 / 米国株対応</div>', unsafe_allow_html=True)
 
     # ─ APIキー状態チェック ─
     try:
@@ -762,16 +884,46 @@ def main():
             st.error(str(e))
             return
 
+    # ─ 財務タイプ分類（pattern_db） ─
+    with st.spinner("🔍 財務タイプを分類中…"):
+        db             = load_pattern_db()
+        financial_type = classify_ticker(ticker, db)
+
+        # セクター相対スコア計算用に PER/PBR を仮算出
+        _close = base.get("close", 0)
+        _eps   = base.get("eps")
+        _bps   = base.get("bps")
+        _per_tmp = (_close / _eps) if (_eps and _eps != 0 and _close) else None
+        _pbr_tmp = (_close / _bps) if (_bps and _bps != 0 and _close) else None
+
+        sector_rel    = calc_sector_relative_scores(
+            ft=financial_type,
+            per=_per_tmp,
+            pbr=_pbr_tmp,
+            ev_ebitda=base.get("ev_ebitda"),
+        )
+        sector_v_score = sector_rel.get("sector_v_score") if financial_type.get("matched") else None
+
+    # ─ 指標計算 ─
     with st.spinner("🔢 指標を計算中…"):
         try:
             tech = compute_indicators(
                 base["df"], base["close_col"],
                 base["high_52w"], base["low_52w"],
+                # 既存
                 eps=base.get("eps"), bps=base.get("bps"),
                 eps_fwd=base.get("eps_fwd"), per_fwd=base.get("per_fwd"),
                 roe=base.get("roe"), roa=base.get("roa"),
                 equity_ratio=base.get("equity_ratio"),
                 dividend_yield=base.get("dividend_yield"),
+                # v3 追加
+                operating_margin=base.get("operating_margin"),
+                de_ratio=base.get("de_ratio"),
+                interest_coverage=base.get("interest_coverage"),
+                ev_ebitda=base.get("ev_ebitda"),
+                sector_v_score=sector_v_score,
+                sector_rel_scores=sector_rel,
+                financial_type=financial_type,
             )
         except ValueError as e:
             st.error(str(e))
@@ -796,6 +948,5 @@ def main():
     with tab_qvt:
         render_qvt_tab(tech)
 
-    # 配当利回り
     if base.get("dividend_yield"):
         st.caption(f"予想配当利回り: **{base['dividend_yield']:.2f}%**")
