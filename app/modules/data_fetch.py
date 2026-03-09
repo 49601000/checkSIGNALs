@@ -97,6 +97,44 @@ def _safe_get_yf_info(ticker_obj) -> dict:
         return info if isinstance(info, dict) else {}
     except Exception:
         return {}
+# ─── TSE マスター（業種情報） ──────────────────────────────────────────────
+_TSE_MASTER: Optional[dict] = None
+
+def _load_tse_master() -> dict:
+    """tse_master_latest.csv を読み込んで {ticker: {sector, industry}} を返す（1回のみ）。"""
+    global _TSE_MASTER
+    if _TSE_MASTER is not None:
+        return _TSE_MASTER
+    candidates = [
+        os.path.join(os.path.dirname(__file__), "..", "data", "tse_master_latest.csv"),
+        "app/data/tse_master_latest.csv",
+        "data/tse_master_latest.csv",
+    ]
+    for path in candidates:
+        if os.path.exists(path):
+            try:
+                df = pd.read_csv(path, encoding="utf-8-sig")
+                _TSE_MASTER = {
+                    str(row["ticker"]).strip().upper(): {
+                        "sector":   str(row.get("sector",   "") or ""),
+                        "industry": str(row.get("industry", "") or ""),
+                    }
+                    for _, row in df.iterrows()
+                    if pd.notna(row.get("ticker"))
+                }
+                return _TSE_MASTER
+            except Exception:
+                pass
+    _TSE_MASTER = {}
+    return _TSE_MASTER
+
+
+def get_industry_from_master(ticker: str) -> dict:
+    """TSEマスターから sector / industry を返す。未収録は空文字。"""
+    master = _load_tse_master()
+    return master.get(ticker.strip().upper(), {"sector": "", "industry": ""})
+
+
 def _normalize_industry_text(val: str) -> str:
     if not isinstance(val, str):
         return ""
