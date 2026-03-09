@@ -568,6 +568,17 @@ def render_q_tab(tech):
         </div>
         """, unsafe_allow_html=True)
 
+    # ─ 業種別閾値ノート ─
+    industry_cat = tech.get("industry_cat", "other")
+    _er_notes = {
+        "bank":      ("🏦 銀行業", "自己資本比率の閾値を BIS 基準 4% に緩和しています。"),
+        "insurance": ("🛡️ 保険業", "自己資本比率の閾値を 8% に緩和しています。"),
+        "fin_other": ("💹 証券・リース等", "自己資本比率の閾値を 8% に緩和しています。"),
+    }
+    if industry_cat in _er_notes:
+        _label, _note = _er_notes[industry_cat]
+        st.caption(f"{_label} — {_note}")
+
     # ─ ノックアウト警告 ─
     for w in q_warnings:
         st.warning(w)
@@ -958,6 +969,7 @@ def main():
                 sector_rel_scores=sector_rel,
                 financial_type=financial_type,
                 q_rel_scores=q_rel_scores,      # ★v3.2 Q相対評価
+                industry=base.get("industry", ""),  # ★v3.3 業種別閾値
             )
         except ValueError as e:
             st.error(str(e))
