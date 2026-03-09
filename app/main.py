@@ -564,11 +564,20 @@ def render_q_tab(tech):
     de   = tech.get("de_ratio")
     ic   = tech.get("interest_coverage")
 
+    # 業種別閾値（q_logicから伝搬）
+    er_thr = tech.get("er_threshold", 10.0)
+    ic_thr = tech.get("ic_threshold",  1.5)
+    thr_note = tech.get("threshold_note", "標準基準")
+
     # ─ Qスコア + サブスコア ─
     st.metric("Qスコア（ビジネスの質）", f"{q_score:.1f} / 100")
     col1, col2 = st.columns(2)
     col1.metric("Q1 収益性", f"{q1:.1f}")
     col2.metric("Q3 財務健全性", f"{q3:.1f}")
+
+    # ─ 業種別閾値ノート ─
+    if thr_note and thr_note != "標準基準":
+        st.caption(f"📋 {thr_note}｜自己資本比率閾値 **{er_thr:.0f}%** ／ インタレストカバレッジ閾値 **{ic_thr:.1f}x**")
 
     # ─ ノックアウト警告 ─
     for w in q_warnings:
@@ -598,9 +607,16 @@ def render_q_tab(tech):
 
     def _q3_eval(key, val):
         if val is None: return "—"
-        if key == "er": return "✓ 健全" if val >= 40 else ("⚠️ 高レバ" if val < 20 else "")
+        if key == "er":
+            # 業種別閾値を使って評価（固定20%ではなくer_thrを使用）
+            if val >= 40:        return "✓ 健全"
+            elif val < er_thr:   return f"⚠️ 高レバ（{thr_note}）"
+            else:                return ""
         if key == "de": return "✓ 低負債" if val < 0.5 else ("⚠️ 過剰負債" if val > 2.0 else "")
-        if key == "ic": return "✓ 余裕あり" if val >= 5 else ("⚠️ 危険圏" if val < 1.5 else "")
+        if key == "ic":
+            if val >= 5:         return "✓ 余裕あり"
+            elif val < ic_thr:   return "⚠️ 危険圏"
+            else:                return ""
         return ""
 
     de_str = f"{de:.2f}x" if de is not None else "—"
