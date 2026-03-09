@@ -355,23 +355,23 @@ def _score_q3_abs_bank(
     x = equity_ratio
 
     if x < er_thr:
-        return 0.0
+        base_score = 0.0
     elif x < 4.2:
-        return 28.0
+        base_score = 28.0
     elif x < 4.5:
-        return 38.0
+        base_score = 38.0
     elif x < 5.0:
-        return 50.0
+        base_score = 50.0
     elif x < 5.5:
-        return 65.0
+        base_score = 65.0
     elif x < 6.0:
-        return 75.0
+        base_score = 75.0
     elif x < 7.0:
-        return 85.0
+        base_score = 85.0
     elif x < 8.0:
-        return 92.0
+        base_score = 92.0
     else:
-        return 100.0
+        base_score = 100.0
     # 影響度を微調整
     adjusted_score = base_score * weight_factor
 
