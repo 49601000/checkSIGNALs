@@ -237,21 +237,31 @@ def _supplement_from_yfinance(info: dict, current: dict) -> dict:
     _fill("roa",              "returnOnAssets",  100.0)
     _fill("operating_margin", "operatingMargins", 100.0)  # ★新規
 
-    # インタレストカバレッジ：yfinance に直接フィールドなし → 計算
+    # インタレストカバレッジ：yfinance に直接フィールドなし → 複数経路で計算
     if current.get("interest_coverage") is None:
         ebit   = _safe_float(info.get("ebit"))
         int_ex = _safe_float(info.get("interestExpense"))
         if ebit is not None and int_ex not in (None, 0):
-            # interestExpense は通常マイナス表記のことも → abs
-            cov = ebit / abs(int_ex)
-            if cov > 0:
-                current["interest_coverage"] = round(cov, 2)
+            # interestExpense はマイナス表記の場合あり → abs / cov < 0 も許容（赤字企業）
+            current["interest_coverage"] = round(ebit / abs(int_ex), 2)
+        elif current.get("interest_coverage") is None:
+            # 経路②: operatingCashflow / interestExpense
+            op_cf  = _safe_float(info.get("operatingCashflow"))
+            if op_cf is not None and int_ex not in (None, 0):
+                current["interest_coverage"] = round(op_cf / abs(int_ex), 2)
 
-    # D/E レシオ：yfinance から直接 or 計算
+    # D/E レシオ：yfinance から複数経路で取得
     if current.get("de_ratio") is None:
         de = _safe_float(info.get("debtToEquity"))
         if de is not None:
-            current["de_ratio"] = de / 100.0  # yfinance は % 表記なので倍率に変換
+            # yfinance は % 表記（例: 150.0 = D/E 1.50 倍）→ 100 で割って倍率に変換
+            current["de_ratio"] = round(de / 100.0, 3)
+        else:
+            # 経路②: totalDebt / totalStockholderEquity
+            total_debt   = _safe_float(info.get("totalDebt"))
+            total_equity = _safe_float(info.get("totalStockholderEquity"))
+            if total_debt is not None and total_equity not in (None, 0):
+                current["de_ratio"] = round(total_debt / abs(total_equity), 3)
 
     # EV/EBITDA
     if current.get("ev_ebitda") is None:
