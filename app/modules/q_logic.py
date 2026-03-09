@@ -1,60 +1,92 @@
 """
-q_logic.py  (v3.3)
+q_logic.py  (v3.4)
 ────────────────────────────────────────────────────────────────────────────
-Q（ビジネスの質）スコア — 業種別ノックアウト閾値 + 相対評価ブレンド対応版
+Q（ビジネスの質）スコア — 業種別閾値CSV対応版
 
-【v3.3 変更点】
-  - ノックアウト判定に industry（yfinance 業種文字列）を追加
-  - 業種によって自己資本比率の閾値を動的に変更：
-      銀行業  (Banks*)        → 4%   (BIS規制Tier1目安)
-      保険業  (Insurance*)    → 8%
-      証券・リース (Capital Markets / Financial*Leasing 等) → 8%
-      その他                  → 10%  (従来通り)
-  - D/E ノックアウトも金融業では適用しない
-    （銀行・保険は高レバレッジが正常な業態のため）
+【v3.4 変更点】
+  - ノックアウト閾値を industry_thresholds.csv から動的ロード
+  - tse_master_latest.csv → industry_thresholds.csv の2段階で
+    「TSE銘柄 → industry → 閾値」を解決
+  - CSVに未収録の industry はデフォルト閾値（ER:10%, IC:1.5x）を使用
+  - score_quality() に sector 引数も追加（より正確なマッチング用）
 
-【v3.2 からの継続事項】
-  - score_quality() に q_rel_scores を渡すと絶対評価と相対評価をαブレンド
-  - QWeights で絶対評価の重みを外部注入可能（Optuna対応）
+【閾値CSV: app/data/industry_thresholds.csv】
+  列: sector, industry, er_threshold_pct, ic_threshold_x, note
+  銀行(4%), 保険(8%), 証券(8%), REIT(30%), 公益(20%) など38行
+
+【v3.2/v3.3 からの継続事項】
+  - QWeights で絶対評価重みを外部注入（Optuna対応）
+  - q_rel_scores を渡すと絶対評価と相対評価をαブレンド
 """
 
 from __future__ import annotations
+
+import os
 from dataclasses import dataclass
 from typing import Optional, Tuple, List, Dict, Any
 
+import pandas as pd
 
-# ─── 業種判定ヘルパー ─────────────────────────────────────────────────────
 
-def _classify_industry(industry: str) -> str:
+# ─── 閾値DB ────────────────────────────────────────────────────────────────
+
+_THRESHOLD_DB: Optional[Dict[str, Dict]] = None  # key: industry文字列
+
+_DEFAULT_ER_THR = 10.0   # デフォルト自己資本比率閾値
+_DEFAULT_IC_THR = 1.5    # デフォルトインタレストカバレッジ閾値
+
+def _load_threshold_db() -> Dict[str, Dict]:
+    """industry_thresholds.csv を読み込んで {industry: {er, ic, note}} を返す。"""
+    global _THRESHOLD_DB
+    if _THRESHOLD_DB is not None:
+        return _THRESHOLD_DB
+
+    candidates = [
+        os.path.join(os.path.dirname(__file__), "..", "data", "industry_thresholds.csv"),
+        "app/data/industry_thresholds.csv",
+        "data/industry_thresholds.csv",
+        "industry_thresholds.csv",
+    ]
+    for path in candidates:
+        if os.path.exists(path):
+            try:
+                df = pd.read_csv(path, encoding="utf-8-sig")
+                _THRESHOLD_DB = {
+                    str(row["industry"]).strip(): {
+                        "er":   float(row["er_threshold_pct"]),
+                        "ic":   float(row["ic_threshold_x"]),
+                        "note": str(row.get("note", "")),
+                    }
+                    for _, row in df.iterrows()
+                    if pd.notna(row.get("industry"))
+                }
+                return _THRESHOLD_DB
+            except Exception:
+                pass
+
+    _THRESHOLD_DB = {}
+    return _THRESHOLD_DB
+
+
+def get_thresholds(industry: str, sector: str = "") -> Dict[str, Any]:
     """
-    yfinance の industry 文字列から内部カテゴリを返す。
+    industry 文字列から ER/IC のノックアウト閾値を返す。
+    未収録の場合はデフォルト値を返す。
 
-    Returns
-    -------
-    "bank"       : Banks—Regional, Banks—Diversified など
-    "insurance"  : Insurance—Life, Insurance—Property & Casualty など
-    "fin_other"  : Capital Markets, Financial Conglomerates, Financial—Leasing など
-    "other"      : 上記以外
+    Returns: {"er": float, "ic": float, "note": str, "custom": bool}
     """
-    s = (industry or "").lower()
-    if "bank" in s:
-        return "bank"
-    if "insurance" in s:
-        return "insurance"
-    if any(x in s for x in ("capital market", "financial", "leasing", "brokerage", "asset management")):
-        return "fin_other"
-    return "other"
+    db = _load_threshold_db()
+    key = (industry or "").strip()
 
+    if key and key in db:
+        return {**db[key], "custom": True}
 
-def _er_threshold(industry: str) -> float:
-    """業種に応じた自己資本比率のノックアウト閾値（%）を返す。"""
-    cat = _classify_industry(industry)
-    return {"bank": 4.0, "insurance": 8.0, "fin_other": 8.0, "other": 10.0}[cat]
+    # 部分一致フォールバック（"Banks - Regional" → "Banks" など）
+    for db_key, val in db.items():
+        if key and (key.lower() in db_key.lower() or db_key.lower() in key.lower()):
+            return {**val, "custom": True}
 
-
-def _apply_er_knockout(industry: str) -> bool:
-    """D/E ノックアウトを適用するか。金融業は False。"""
-    return _classify_industry(industry) == "other"
+    return {"er": _DEFAULT_ER_THR, "ic": _DEFAULT_IC_THR, "note": "標準基準", "custom": False}
 
 
 # ─── 重みデータクラス ─────────────────────────────────────────────────────
@@ -80,115 +112,69 @@ DEFAULT_WEIGHTS = QWeights()
 
 # ─── Q1: 収益性（絶対評価） ───────────────────────────────────────────────
 
-def _score_q1_abs(
-    roe: Optional[float],
-    roa: Optional[float],
-    operating_margin: Optional[float],
-    w: QWeights,
-) -> float:
+def _score_q1_abs(roe, roa, operating_margin, w: QWeights) -> float:
     raw = 0.0
     if roe is not None:
-        if roe <= 0:    r = 0.00
-        elif roe < 5:   r = 0.20
-        elif roe < 10:  r = 0.40
-        elif roe < 15:  r = 0.60
-        elif roe < 20:  r = 0.80
-        elif roe < 25:  r = 0.90
-        else:           r = 1.00
+        r = (0 if roe<=0 else 0.20 if roe<5 else 0.40 if roe<10 else
+             0.60 if roe<15 else 0.80 if roe<20 else 0.90 if roe<25 else 1.00)
         raw += w.roe_w * r
-
     if roa is not None:
-        if roa <= 0:   r = 0.00
-        elif roa < 2:  r = 0.20
-        elif roa < 4:  r = 0.40
-        elif roa < 6:  r = 0.60
-        elif roa < 8:  r = 0.80
-        else:          r = 1.00
+        r = (0 if roa<=0 else 0.20 if roa<2 else 0.40 if roa<4 else
+             0.60 if roa<6 else 0.80 if roa<8 else 1.00)
         raw += w.roa_w * r
-
     if operating_margin is not None:
-        if operating_margin <= 0:    r = 0.00
-        elif operating_margin < 3:   r = 0.20
-        elif operating_margin < 7:   r = 0.40
-        elif operating_margin < 12:  r = 0.60
-        elif operating_margin < 20:  r = 0.80
-        else:                        r = 1.00
+        r = (0 if operating_margin<=0 else 0.20 if operating_margin<3 else
+             0.40 if operating_margin<7 else 0.60 if operating_margin<12 else
+             0.80 if operating_margin<20 else 1.00)
         raw += w.opm_w * r
-
     max_raw = w.roe_w + w.roa_w + w.opm_w
     return 0.0 if max_raw == 0 else max(0.0, min(100.0, raw / max_raw * 100.0))
 
 
 # ─── Q3: 財務健全性（絶対評価） ──────────────────────────────────────────
 
-def _score_q3_abs(
-    equity_ratio: Optional[float],
-    de_ratio: Optional[float],
-    interest_coverage: Optional[float],
-    w: QWeights,
-) -> float:
+def _score_q3_abs(equity_ratio, de_ratio, interest_coverage, w: QWeights) -> float:
     raw = 0.0
     if equity_ratio is not None:
-        if equity_ratio < 10:    r = 0.000
-        elif equity_ratio < 20:  r = 0.125
-        elif equity_ratio < 30:  r = 0.250
-        elif equity_ratio < 40:  r = 0.500
-        elif equity_ratio < 50:  r = 0.750
-        elif equity_ratio < 60:  r = 0.875
-        else:                    r = 1.000
+        r = (0.000 if equity_ratio<10 else 0.125 if equity_ratio<20 else
+             0.250 if equity_ratio<30 else 0.500 if equity_ratio<40 else
+             0.750 if equity_ratio<50 else 0.875 if equity_ratio<60 else 1.000)
         raw += w.er_w * r
-
     if de_ratio is not None:
-        if de_ratio > 3.0:   r = 0.000
-        elif de_ratio > 2.0: r = 0.167
-        elif de_ratio > 1.5: r = 0.333
-        elif de_ratio > 1.0: r = 0.500
-        elif de_ratio > 0.5: r = 0.733
-        else:                r = 1.000
+        r = (0.000 if de_ratio>3.0 else 0.167 if de_ratio>2.0 else
+             0.333 if de_ratio>1.5 else 0.500 if de_ratio>1.0 else
+             0.733 if de_ratio>0.5 else 1.000)
         raw += w.de_w * r
-
     if interest_coverage is not None:
-        if interest_coverage < 1.5:   r = 0.000
-        elif interest_coverage < 3:   r = 0.267
-        elif interest_coverage < 5:   r = 0.500
-        elif interest_coverage < 10:  r = 0.733
-        elif interest_coverage < 20:  r = 0.900
-        else:                         r = 1.000
+        r = (0.000 if interest_coverage<1.5 else 0.267 if interest_coverage<3 else
+             0.500 if interest_coverage<5 else 0.733 if interest_coverage<10 else
+             0.900 if interest_coverage<20 else 1.000)
         raw += w.ic_w * r
-
     max_raw = w.er_w + w.de_w + w.ic_w
     return 0.0 if max_raw == 0 else max(0.0, min(100.0, raw / max_raw * 100.0))
 
 
-# ─── Q1: 収益性（相対評価） ───────────────────────────────────────────────
+# ─── 相対評価 ─────────────────────────────────────────────────────────────
 
 def _score_q1_rel(q_rel: Dict[str, Any]) -> Optional[float]:
     scores, weights = [], []
     for key, wt in [("roe_rel", 2.0), ("roa_rel", 1.0), ("opm_rel", 1.0)]:
         v = q_rel.get(key)
         if v is not None:
-            scores.append(v * wt)
-            weights.append(wt)
-    if not scores:
-        return None
-    return sum(scores) / sum(weights)
+            scores.append(v * wt); weights.append(wt)
+    return sum(scores) / sum(weights) if scores else None
 
-
-# ─── Q3: 財務健全性（相対評価） ──────────────────────────────────────────
 
 def _score_q3_rel(q_rel: Dict[str, Any]) -> Optional[float]:
     scores, weights = [], []
     for key, wt in [("er_rel", 2.0), ("ic_rel", 1.5)]:
         v = q_rel.get(key)
         if v is not None:
-            scores.append(v * wt)
-            weights.append(wt)
-    if not scores:
-        return None
-    return sum(scores) / sum(weights)
+            scores.append(v * wt); weights.append(wt)
+    return sum(scores) / sum(weights) if scores else None
 
 
-# ─── ノックアウト判定（業種対応） ────────────────────────────────────────
+# ─── ノックアウト判定（業種別閾値CSV対応） ───────────────────────────────
 
 def _knockout_penalty(
     operating_margin: Optional[float],
@@ -196,39 +182,35 @@ def _knockout_penalty(
     interest_coverage: Optional[float],
     w: QWeights,
     industry: str = "",
+    sector: str = "",
 ) -> Tuple[float, List[str]]:
     """
-    業種に応じた閾値でノックアウトペナルティを計算する。
-
-    自己資本比率の閾値:
-      銀行業  → 4%
-      保険業  → 8%
-      証券・リース等 → 8%
-      その他  → 10%（従来通り）
-
-    D/Eノックアウト:
-      金融業全般（bank / insurance / fin_other）では適用しない。
+    industry_thresholds.csv から閾値を取得してノックアウト判定。
+    CSVに未収録の業種はデフォルト値（ER:10%, IC:1.5x）を使用。
     """
     penalty: float = 0.0
     warnings: List[str] = []
+    thr = get_thresholds(industry, sector)
+    er_thr = thr["er"]
+    ic_thr = thr["ic"]
+    note   = thr["note"]
+    custom = thr["custom"]
 
-    # インタレストカバレッジ（業種問わず1.5倍未満は懸念）
-    if interest_coverage is not None and interest_coverage < 1.5:
+    # インタレストカバレッジ
+    if interest_coverage is not None and interest_coverage < ic_thr:
         penalty += w.ko_ic
-        warnings.append(f"⚠️ インタレストカバレッジ {interest_coverage:.1f}x（利払い能力に懸念）")
+        warnings.append(
+            f"⚠️ インタレストカバレッジ {interest_coverage:.1f}x"
+            f"（{'業種基準' if custom else '標準基準'} {ic_thr:.1f}x 未満）"
+        )
 
-    # 自己資本比率（業種別閾値）
-    er_thr = _er_threshold(industry)
+    # 自己資本比率
     if equity_ratio is not None and equity_ratio < er_thr:
         penalty += w.ko_er
-        cat = _classify_industry(industry)
-        thr_note = {
-            "bank":      f"銀行業基準 {er_thr:.0f}%",
-            "insurance": f"保険業基準 {er_thr:.0f}%",
-            "fin_other": f"金融業基準 {er_thr:.0f}%",
-            "other":     f"基準 {er_thr:.0f}%",
-        }[cat]
-        warnings.append(f"⚠️ 自己資本比率 {equity_ratio:.1f}%（{thr_note}未満）")
+        warnings.append(
+            f"⚠️ 自己資本比率 {equity_ratio:.1f}%"
+            f"（{note} {er_thr:.0f}% 未満）"
+        )
 
     # 営業利益率赤字（業種問わず）
     if operating_margin is not None and operating_margin < 0:
@@ -249,82 +231,64 @@ def score_quality(
     interest_coverage: Optional[float] = None,
     weights: Optional[QWeights] = None,
     q_rel_scores: Optional[Dict[str, Any]] = None,
-    industry: str = "",                              # ★v3.3
+    industry: str = "",
+    sector: str = "",
 ) -> dict:
     """
     Q スコアを計算して dict で返す。
 
     Parameters
     ----------
-    industry : str
-        yfinance の industry 文字列。ノックアウト閾値の業種補正に使用。
-        例: "Banks—Regional", "Insurance—Life", "Capital Markets"
+    industry : str  yfinance / TSEマスターの industry 文字列
+    sector   : str  yfinance / TSEマスターの sector 文字列（マッチング補助用）
 
     Returns
     -------
     {
-        "q_score"     : float,
-        "q1"          : float,
-        "q3"          : float,
-        "q1_abs"      : float,
-        "q3_abs"      : float,
-        "q1_rel"      : float or None,
-        "q3_rel"      : float or None,
-        "alpha"       : float,
-        "penalty"     : float,
-        "warnings"    : list[str],
-        "weights"     : QWeights,
-        "industry_cat": str,   # 業種カテゴリ（"bank"/"insurance"/"fin_other"/"other"）
+        "q_score", "q1", "q3",
+        "q1_abs", "q3_abs", "q1_rel", "q3_rel",
+        "alpha", "penalty", "warnings", "weights",
+        "er_threshold", "ic_threshold", "threshold_note",  # ★v3.4
     }
     """
     w = weights if weights is not None else DEFAULT_WEIGHTS
 
-    # ── 絶対評価 ──
     q1_abs = _score_q1_abs(roe, roa, operating_margin, w)
     q3_abs = _score_q3_abs(equity_ratio, de_ratio, interest_coverage, w)
 
-    # ── 相対評価 ──
-    alpha  = 0.0
-    q1_rel = None
-    q3_rel = None
+    alpha, q1_rel, q3_rel = 0.0, None, None
     if q_rel_scores and q_rel_scores.get("available"):
         alpha  = float(q_rel_scores.get("alpha", 0.0))
         q1_rel = _score_q1_rel(q_rel_scores)
         q3_rel = _score_q3_rel(q_rel_scores)
 
-    # ── ブレンド ──
-    def _blend(abs_s: float, rel_s: Optional[float], a: float) -> float:
-        if rel_s is None or a == 0.0:
-            return abs_s
-        return abs_s * (1 - a) + rel_s * a
-
+    def _blend(a, r, al): return a if (r is None or al == 0.0) else a*(1-al)+r*al
     q1 = _blend(q1_abs, q1_rel, alpha)
     q3 = _blend(q3_abs, q3_rel, alpha)
 
-    # ── 合成 ──
     total_w = w.w_q1 + w.w_q3
-    q_raw   = (q1 * w.w_q1 + q3 * w.w_q3) / total_w if total_w > 0 else 0.0
+    q_raw   = (q1*w.w_q1 + q3*w.w_q3) / total_w if total_w > 0 else 0.0
 
-    # ── ノックアウト（業種別閾値） ──
     penalty, warnings = _knockout_penalty(
-        operating_margin, equity_ratio, interest_coverage, w, industry
+        operating_margin, equity_ratio, interest_coverage, w, industry, sector
     )
-
-    # α が高いほどペナルティを割引（最大50%）
     effective_penalty = penalty * (1.0 - alpha * 0.5)
     q_final = max(0.0, min(100.0, q_raw - effective_penalty))
 
+    thr = get_thresholds(industry, sector)
     return {
-        "q_score":      round(q_final, 1),
-        "q1":           round(q1, 1),
-        "q3":           round(q3, 1),
-        "q1_abs":       round(q1_abs, 1),
-        "q3_abs":       round(q3_abs, 1),
-        "q1_rel":       round(q1_rel, 1) if q1_rel is not None else None,
-        "q3_rel":       round(q3_rel, 1) if q3_rel is not None else None,
-        "alpha":        alpha,
-        "penalty":      effective_penalty,
-        "warnings":     warnings,
-        "weights":      w,
-        "industry_cat": _classify_industry(industry),
+        "q_score":        round(q_final, 1),
+        "q1":             round(q1, 1),
+        "q3":             round(q3, 1),
+        "q1_abs":         round(q1_abs, 1),
+        "q3_abs":         round(q3_abs, 1),
+        "q1_rel":         round(q1_rel, 1) if q1_rel is not None else None,
+        "q3_rel":         round(q3_rel, 1) if q3_rel is not None else None,
+        "alpha":          alpha,
+        "penalty":        effective_penalty,
+        "warnings":       warnings,
+        "weights":        w,
+        "er_threshold":   thr["er"],
+        "ic_threshold":   thr["ic"],
+        "threshold_note": thr["note"],
     }
