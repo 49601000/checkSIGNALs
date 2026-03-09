@@ -30,61 +30,91 @@ import pandas as pd
 
 # ─── 閾値DB ────────────────────────────────────────────────────────────────
 
-_THRESHOLD_DB: Optional[Dict[str, Dict]] = None  # key: industry文字列
+_THRESHOLD_DB_TSE: Optional[Dict[str, Dict]] = None  # TSE: industry → 閾値
+_THRESHOLD_DB_US:  Optional[Dict[str, Dict]] = None  # US : sector  → 閾値
 
-_DEFAULT_ER_THR = 10.0   # デフォルト自己資本比率閾値
-_DEFAULT_IC_THR = 1.5    # デフォルトインタレストカバレッジ閾値
-
-def _load_threshold_db() -> Dict[str, Dict]:
-    """industry_thresholds.csv を読み込んで {industry: {er, ic, note}} を返す。"""
-    global _THRESHOLD_DB
-    if _THRESHOLD_DB is not None:
-        return _THRESHOLD_DB
-
-    candidates = [
-        os.path.join(os.path.dirname(__file__), "..", "data", "industry_thresholds.csv"),
-        "app/data/industry_thresholds.csv",
-        "data/industry_thresholds.csv",
-        "industry_thresholds.csv",
-    ]
-    for path in candidates:
-        if os.path.exists(path):
-            try:
-                df = pd.read_csv(path, encoding="utf-8-sig")
-                _THRESHOLD_DB = {
-                    str(row["industry"]).strip(): {
-                        "er":   float(row["er_threshold_pct"]),
-                        "ic":   float(row["ic_threshold_x"]),
-                        "note": str(row.get("note", "")),
-                    }
-                    for _, row in df.iterrows()
-                    if pd.notna(row.get("industry"))
-                }
-                return _THRESHOLD_DB
-            except Exception:
-                pass
-
-    _THRESHOLD_DB = {}
-    return _THRESHOLD_DB
+_DEFAULT_ER_THR = 10.0
+_DEFAULT_IC_THR = 1.5
 
 
-def get_thresholds(industry: str, sector: str = "") -> Dict[str, Any]:
+def _load_csv_to_dict(path: str, key_col: str) -> Dict[str, Dict]:
+    df = pd.read_csv(path, encoding="utf-8-sig")
+    return {
+        str(row[key_col]).strip(): {
+            "er":   float(row["er_threshold_pct"]),
+            "ic":   float(row["ic_threshold_x"]),
+            "note": str(row.get("note", "")),
+        }
+        for _, row in df.iterrows()
+        if pd.notna(row.get(key_col))
+    }
+
+
+def _find_file(filenames: list) -> Optional[str]:
+    base = os.path.dirname(__file__)
+    for name in filenames:
+        for prefix in [os.path.join(base, "..", "data"), "app/data", "data", "."]:
+            p = os.path.join(prefix, name)
+            if os.path.exists(p):
+                return p
+    return None
+
+
+def _load_threshold_db_tse() -> Dict[str, Dict]:
+    """TSE用: industry単位の閾値DB（industry_thresholds.csv）"""
+    global _THRESHOLD_DB_TSE
+    if _THRESHOLD_DB_TSE is not None:
+        return _THRESHOLD_DB_TSE
+    path = _find_file(["industry_thresholds.csv"])
+    try:
+        _THRESHOLD_DB_TSE = _load_csv_to_dict(path, "industry") if path else {}
+    except Exception:
+        _THRESHOLD_DB_TSE = {}
+    return _THRESHOLD_DB_TSE
+
+
+def _load_threshold_db_us() -> Dict[str, Dict]:
+    """US用: sector単位の閾値DB（industry_thresholds_us.csv）"""
+    global _THRESHOLD_DB_US
+    if _THRESHOLD_DB_US is not None:
+        return _THRESHOLD_DB_US
+    path = _find_file(["industry_thresholds_us.csv"])
+    try:
+        _THRESHOLD_DB_US = _load_csv_to_dict(path, "sector") if path else {}
+    except Exception:
+        _THRESHOLD_DB_US = {}
+    return _THRESHOLD_DB_US
+
+
+def get_thresholds(industry: str, sector: str = "", is_us: bool = False) -> Dict[str, Any]:
     """
-    industry 文字列から ER/IC のノックアウト閾値を返す。
-    未収録の場合はデフォルト値を返す。
+    市場に応じた閾値を返す。
+
+    TSE（is_us=False）: industry_thresholds.csv を industry で引く
+    US （is_us=True ）: industry_thresholds_us.csv を sector で引く
 
     Returns: {"er": float, "ic": float, "note": str, "custom": bool}
     """
-    db = _load_threshold_db()
-    key = (industry or "").strip()
-
-    if key and key in db:
-        return {**db[key], "custom": True}
-
-    # 部分一致フォールバック（"Banks - Regional" → "Banks" など）
-    for db_key, val in db.items():
-        if key and (key.lower() in db_key.lower() or db_key.lower() in key.lower()):
-            return {**val, "custom": True}
+    if is_us:
+        db  = _load_threshold_db_us()
+        key = (sector or "").strip()
+        if key and key in db:
+            return {**db[key], "custom": True}
+        # sectorが空ならindustryで部分一致
+        if not key:
+            key = (industry or "").strip()
+            for db_key, val in db.items():
+                if key and db_key.lower() in key.lower():
+                    return {**val, "custom": True}
+    else:
+        db  = _load_threshold_db_tse()
+        key = (industry or "").strip()
+        if key and key in db:
+            return {**db[key], "custom": True}
+        # 部分一致フォールバック
+        for db_key, val in db.items():
+            if key and (key.lower() in db_key.lower() or db_key.lower() in key.lower()):
+                return {**val, "custom": True}
 
     return {"er": _DEFAULT_ER_THR, "ic": _DEFAULT_IC_THR, "note": "標準基準", "custom": False}
 
@@ -183,6 +213,7 @@ def _knockout_penalty(
     w: QWeights,
     industry: str = "",
     sector: str = "",
+    is_us: bool = False,
 ) -> Tuple[float, List[str]]:
     """
     industry_thresholds.csv から閾値を取得してノックアウト判定。
@@ -190,7 +221,7 @@ def _knockout_penalty(
     """
     penalty: float = 0.0
     warnings: List[str] = []
-    thr = get_thresholds(industry, sector)
+    thr = get_thresholds(industry, sector, is_us=is_us)
     er_thr = thr["er"]
     ic_thr = thr["ic"]
     note   = thr["note"]
@@ -233,6 +264,7 @@ def score_quality(
     q_rel_scores: Optional[Dict[str, Any]] = None,
     industry: str = "",
     sector: str = "",
+    is_us: bool = False,   # ★v3.5 US市場フラグ
 ) -> dict:
     """
     Q スコアを計算して dict で返す。
@@ -270,12 +302,12 @@ def score_quality(
     q_raw   = (q1*w.w_q1 + q3*w.w_q3) / total_w if total_w > 0 else 0.0
 
     penalty, warnings = _knockout_penalty(
-        operating_margin, equity_ratio, interest_coverage, w, industry, sector
+        operating_margin, equity_ratio, interest_coverage, w, industry, sector, is_us
     )
     effective_penalty = penalty * (1.0 - alpha * 0.5)
     q_final = max(0.0, min(100.0, q_raw - effective_penalty))
 
-    thr = get_thresholds(industry, sector)
+    thr = get_thresholds(industry, sector, is_us=is_us)
     return {
         "q_score":        round(q_final, 1),
         "q1":             round(q1, 1),
