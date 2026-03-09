@@ -1,70 +1,37 @@
 """
-q_logic.py  (v3.1)
+q_logic.py  (v3.2)
 ────────────────────────────────────────────────────────────────────────────
-Q（ビジネスの質）スコア — サブスコア構造 + 重み外部注入対応
+Q（ビジネスの質）スコア — 相対評価ブレンド対応版
 
-  Q1 収益性   : ROE / ROA / 営業利益率
-  Q3 財務健全性: 自己資本比率 / D/Eレシオ / インタレストカバレッジ
-  最終 Q      : Q1 × w_q1 + Q3 × w_q3  （デフォルト各0.50）
+【v3.2 変更点】
+  - score_quality() に q_rel_scores 引数を追加
+  - q_rel_scores が渡された場合、絶対評価と相対評価をαブレンド
+    Q1_final = Q1_abs × (1-α) + Q1_rel × α
+    Q3_final = Q3_abs × (1-α) + Q3_rel × α
+  - α は財務タイプの confidence から決まる（pattern_db.py が計算）
+    HIGH  → 0.7（相対70%、絶対30%）
+    MID   → 0.4（相対40%、絶対60%）
+    LOW   → 0.1
+    NONE  → 0.0（絶対評価のみ、UNK・未推定銘柄）
 
-【重みの外部注入】
-  score_quality() の引数 weights に QWeights インスタンスを渡すことで
-  Optuna / スライダーチューニングからパラメータを差し込める。
-  weights=None の場合はデフォルト値（v3互換）を使用。
+【表示への影響なし】
+  実測値（ROE 11.5%など）はそのまま表示。採点ロジックだけが変わる。
 
-【QWeights フィールド一覧】
-  Q1サブスコア内の寄与率（各指標の「最大点」）
-    roe_w  : ROE の最大点        （デフォルト 50）
-    roa_w  : ROA の最大点        （デフォルト 25）
-    opm_w  : 営業利益率の最大点   （デフォルト 25）
-  Q3サブスコア内の寄与率
-    er_w   : 自己資本比率の最大点  （デフォルト 40）
-    de_w   : D/E レシオの最大点   （デフォルト 30）
-    ic_w   : インタレストカバレッジの最大点（デフォルト 30）
-  合成ウェイト
-    w_q1   : Q1 のウェイト        （デフォルト 0.50）
-    w_q3   : Q3 のウェイト        （デフォルト 0.50）
-  ノックアウトペナルティ点数
-    ko_ic  : カバレッジ低下時      （デフォルト 15）
-    ko_er  : 自己資本率低下時      （デフォルト 15）
-    ko_opm : 営業赤字時            （デフォルト 15）
-
-【Optuna 最適化の使い方（param_tuning.ipynb 側）】
-  import optuna
-  from modules.q_logic import QWeights, score_quality
-
-  def objective(trial):
-      w = QWeights(
-          roe_w = trial.suggest_float("roe_w", 10, 80),
-          roa_w = trial.suggest_float("roa_w",  5, 50),
-          opm_w = trial.suggest_float("opm_w",  5, 50),
-          er_w  = trial.suggest_float("er_w",  10, 60),
-          de_w  = trial.suggest_float("de_w",   0, 50),
-          ic_w  = trial.suggest_float("ic_w",   0, 50),
-          w_q1  = trial.suggest_float("w_q1", 0.2, 0.8),
-          w_q3  = trial.suggest_float("w_q3", 0.2, 0.8),
-          ko_ic = trial.suggest_float("ko_ic",  0, 30),
-          ko_er = trial.suggest_float("ko_er",  0, 30),
-          ko_opm= trial.suggest_float("ko_opm", 0, 30),
-      )
-      scores = [score_quality(**funda, weights=w)["q_score"] for funda in GOOD_STOCKS]
-      return sum(scores) / len(scores)  # 優良銘柄のQを最大化
-
-  study = optuna.create_study(direction="maximize")
-  study.optimize(objective, n_trials=200)
-  best_w = QWeights(**study.best_params)
+【QWeights】
+  絶対評価部分のステップ関数の重みは QWeights で制御（v3.1互換）。
+  相対評価部分は pattern_db の IQR ベースで自動スケール。
 """
 
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Dict, Any
 
 
-# ─── 重みデータクラス ─────────────────────────────────────────────────────
+# ─── 重みデータクラス（絶対評価部分） ────────────────────────────────────
 
 @dataclass
 class QWeights:
-    """Q スコア計算の全重みパラメータ。Optuna/スライダーから差し込む。"""
+    """絶対評価ステップ関数の重みパラメータ。Optuna/スライダーから差し込む。"""
 
     # Q1 サブスコア内の寄与率（各指標の「最大点」）
     roe_w: float = 50.0
@@ -86,21 +53,18 @@ class QWeights:
     ko_opm: float = 15.0
 
 
-# デフォルト重み（変更しない）
 DEFAULT_WEIGHTS = QWeights()
 
 
-# ─── Q1: 収益性 ──────────────────────────────────────────────────────────
+# ─── Q1: 収益性（絶対評価） ───────────────────────────────────────────────
 
-def _score_q1_profitability(
+def _score_q1_abs(
     roe: Optional[float],
     roa: Optional[float],
     operating_margin: Optional[float],
     w: QWeights,
 ) -> float:
-    """ROE / ROA / 営業利益率 を採点し 0〜100 に正規化して返す。"""
     raw = 0.0
-
     if roe is not None:
         if roe <= 0:    r = 0.00
         elif roe < 5:   r = 0.20
@@ -133,17 +97,15 @@ def _score_q1_profitability(
     return 0.0 if max_raw == 0 else max(0.0, min(100.0, raw / max_raw * 100.0))
 
 
-# ─── Q3: 財務健全性 ──────────────────────────────────────────────────────
+# ─── Q3: 財務健全性（絶対評価） ──────────────────────────────────────────
 
-def _score_q3_financial_health(
+def _score_q3_abs(
     equity_ratio: Optional[float],
     de_ratio: Optional[float],
     interest_coverage: Optional[float],
     w: QWeights,
 ) -> float:
-    """自己資本比率 / D/E / インタレストカバレッジ を採点し 0〜100 に正規化。"""
     raw = 0.0
-
     if equity_ratio is not None:
         if equity_ratio < 10:    r = 0.000
         elif equity_ratio < 20:  r = 0.125
@@ -174,6 +136,44 @@ def _score_q3_financial_health(
 
     max_raw = w.er_w + w.de_w + w.ic_w
     return 0.0 if max_raw == 0 else max(0.0, min(100.0, raw / max_raw * 100.0))
+
+
+# ─── Q1: 収益性（相対評価） ───────────────────────────────────────────────
+
+def _score_q1_rel(q_rel: Dict[str, Any]) -> Optional[float]:
+    """
+    pattern_db から受け取った相対スコアで Q1 を計算。
+    有効な指標の加重平均（ROE:2, ROA:1, OPM:1）。
+    """
+    scores = []
+    weights = []
+    for key, w in [("roe_rel", 2.0), ("roa_rel", 1.0), ("opm_rel", 1.0)]:
+        v = q_rel.get(key)
+        if v is not None:
+            scores.append(v * w)
+            weights.append(w)
+    if not scores:
+        return None
+    return sum(scores) / sum(weights)
+
+
+# ─── Q3: 財務健全性（相対評価） ──────────────────────────────────────────
+
+def _score_q3_rel(q_rel: Dict[str, Any]) -> Optional[float]:
+    """
+    pattern_db から受け取った相対スコアで Q3 を計算。
+    有効な指標の加重平均（ER:2, IC:1.5, D/Eはpattern_dbに中央値なし→スキップ）。
+    """
+    scores = []
+    weights = []
+    for key, w in [("er_rel", 2.0), ("ic_rel", 1.5)]:
+        v = q_rel.get(key)
+        if v is not None:
+            scores.append(v * w)
+            weights.append(w)
+    if not scores:
+        return None
+    return sum(scores) / sum(weights)
 
 
 # ─── ノックアウト判定 ────────────────────────────────────────────────────
@@ -212,43 +212,81 @@ def score_quality(
     de_ratio: Optional[float] = None,
     interest_coverage: Optional[float] = None,
     weights: Optional[QWeights] = None,
+    q_rel_scores: Optional[Dict[str, Any]] = None,  # ★v3.2 pattern_db から注入
 ) -> dict:
     """
     Q スコアを計算して dict で返す。
 
     Parameters
     ----------
-    weights : QWeights or None
-        重みパラメータ。None の場合はデフォルト値を使用。
-        Optuna やスライダーチューニングから差し込む場合はインスタンスを渡す。
+    q_rel_scores : pattern_db.calc_q_relative_scores() の返り値。
+        None の場合は絶対評価のみ（UNK・未収録銘柄）。
+        渡された場合は alpha ブレンドで絶対評価と相対評価を合成。
 
     Returns
     -------
     {
-        "q_score"  : float,       # 最終 Q（0〜100）
-        "q1"       : float,       # 収益性サブスコア（0〜100）
-        "q3"       : float,       # 財務健全性サブスコア（0〜100）
-        "penalty"  : float,       # ノックアウトペナルティ合計
-        "warnings" : list[str],   # 警告メッセージ
-        "weights"  : QWeights,    # 使用した重み（チューニング記録用）
+        "q_score"     : float,
+        "q1"          : float,
+        "q3"          : float,
+        "q1_abs"      : float,   # 絶対評価Q1（デバッグ・表示用）
+        "q3_abs"      : float,
+        "q1_rel"      : float or None,  # 相対評価Q1
+        "q3_rel"      : float or None,
+        "alpha"       : float,   # ブレンド係数
+        "penalty"     : float,
+        "warnings"    : list[str],
+        "weights"     : QWeights,
     }
     """
     w = weights if weights is not None else DEFAULT_WEIGHTS
 
-    q1 = _score_q1_profitability(roe, roa, operating_margin, w)
-    q3 = _score_q3_financial_health(equity_ratio, de_ratio, interest_coverage, w)
+    # ── 絶対評価 ──
+    q1_abs = _score_q1_abs(roe, roa, operating_margin, w)
+    q3_abs = _score_q3_abs(equity_ratio, de_ratio, interest_coverage, w)
 
+    # ── 相対評価（注入された場合のみ） ──
+    alpha  = 0.0
+    q1_rel = None
+    q3_rel = None
+
+    if q_rel_scores and q_rel_scores.get("available"):
+        alpha  = float(q_rel_scores.get("alpha", 0.0))
+        q1_rel = _score_q1_rel(q_rel_scores)
+        q3_rel = _score_q3_rel(q_rel_scores)
+
+    # ── ブレンド ──
+    def _blend(abs_score: float, rel_score: Optional[float], a: float) -> float:
+        if rel_score is None or a == 0.0:
+            return abs_score
+        return abs_score * (1 - a) + rel_score * a
+
+    q1 = _blend(q1_abs, q1_rel, alpha)
+    q3 = _blend(q3_abs, q3_rel, alpha)
+
+    # ── 合成 ──
     total_w = w.w_q1 + w.w_q3
     q_raw   = (q1 * w.w_q1 + q3 * w.w_q3) / total_w if total_w > 0 else 0.0
 
+    # ── ノックアウト ──
     penalty, warnings = _knockout_penalty(operating_margin, equity_ratio, interest_coverage, w)
-    q_final = max(0.0, min(100.0, q_raw - penalty))
+
+    # ノックアウトも相対評価の恩恵で緩和（FINタイプなど高レバが正常な業種）
+    # → alpha が高いほどペナルティを割引（最大50%割引）
+    effective_penalty = penalty * (1.0 - alpha * 0.5)
+
+    q_final = max(0.0, min(100.0, q_raw - effective_penalty))
 
     return {
         "q_score":  round(q_final, 1),
         "q1":       round(q1, 1),
         "q3":       round(q3, 1),
-        "penalty":  penalty,
+        "q1_abs":   round(q1_abs, 1),
+        "q3_abs":   round(q3_abs, 1),
+        "q1_rel":   round(q1_rel, 1) if q1_rel is not None else None,
+        "q3_rel":   round(q3_rel, 1) if q3_rel is not None else None,
+        "alpha":    alpha,
+        "penalty":  effective_penalty,
         "warnings": warnings,
         "weights":  w,
     }
