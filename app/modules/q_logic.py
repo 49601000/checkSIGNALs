@@ -51,38 +51,58 @@ def _load_csv_to_dict(path: str, key_col: str) -> Dict[str, Dict]:
 
 
 def _find_file(filenames: list) -> Optional[str]:
-    base = os.path.dirname(__file__)
+    """
+    CSVを探す。q_logic.py は app/modules/ にあるので ../data/ = app/data/。
+    os.path.abspath(__file__) で Streamlit Cloud でも確実にパスを解決する。
+    """
+    try:
+        base     = os.path.dirname(os.path.abspath(__file__))
+        rel_data = os.path.normpath(os.path.join(base, "..", "data"))
+    except Exception:
+        rel_data = None
+
     for name in filenames:
-        for prefix in [os.path.join(base, "..", "data"), "app/data", "data", "."]:
-            p = os.path.join(prefix, name)
+        candidates = []
+        if rel_data:
+            candidates.append(os.path.join(rel_data, name))   # 最優先: ../data/
+        candidates += [
+            os.path.join("app", "data", name),                 # カレントから app/data/
+            os.path.join("data", name),                        # カレントから data/
+            name,                                              # カレント直下
+        ]
+        for p in candidates:
             if os.path.exists(p):
-                return p
+                return os.path.abspath(p)
     return None
 
 
 def _load_threshold_db_tse() -> Dict[str, Dict]:
-    """TSE用: industry単位の閾値DB（industry_thresholds.csv）"""
+    """TSE用: industry単位の閾値DB（app/data/industry_thresholds.csv）"""
     global _THRESHOLD_DB_TSE
     if _THRESHOLD_DB_TSE is not None:
         return _THRESHOLD_DB_TSE
     path = _find_file(["industry_thresholds.csv"])
-    try:
-        _THRESHOLD_DB_TSE = _load_csv_to_dict(path, "industry") if path else {}
-    except Exception:
-        _THRESHOLD_DB_TSE = {}
+    if path is None:
+        raise FileNotFoundError(
+            "industry_thresholds.csv が見つかりません。"
+            "app/data/industry_thresholds.csv を確認してください。"
+        )
+    _THRESHOLD_DB_TSE = _load_csv_to_dict(path, "industry")
     return _THRESHOLD_DB_TSE
 
 
 def _load_threshold_db_us() -> Dict[str, Dict]:
-    """US用: sector単位の閾値DB（industry_thresholds_us.csv）"""
+    """US用: sector単位の閾値DB（app/data/industry_thresholds_us.csv）"""
     global _THRESHOLD_DB_US
     if _THRESHOLD_DB_US is not None:
         return _THRESHOLD_DB_US
     path = _find_file(["industry_thresholds_us.csv"])
-    try:
-        _THRESHOLD_DB_US = _load_csv_to_dict(path, "sector") if path else {}
-    except Exception:
-        _THRESHOLD_DB_US = {}
+    if path is None:
+        raise FileNotFoundError(
+            "industry_thresholds_us.csv が見つかりません。"
+            "app/data/industry_thresholds_us.csv を確認してください。"
+        )
+    _THRESHOLD_DB_US = _load_csv_to_dict(path, "sector")
     return _THRESHOLD_DB_US
 
 
