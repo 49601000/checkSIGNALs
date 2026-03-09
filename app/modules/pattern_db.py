@@ -38,7 +38,7 @@ import streamlit as st
 # Streamlit Cloud では streamlit_app.py と同じルートに置く想定。
 # ローカル開発では環境変数 PATTERN_DB_PATH で上書き可能。
 _DEFAULT_CSV_PATH = os.path.join(
-    os.path.dirname(__file__), "..", "..", "data", "pattern_db_latest.csv"
+    os.path.dirname(__file__), "..", "data", "pattern_db_latest.csv"
 )
 PATTERN_DB_PATH = os.environ.get("PATTERN_DB_PATH", _DEFAULT_CSV_PATH)
 
