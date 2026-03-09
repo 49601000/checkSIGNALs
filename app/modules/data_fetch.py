@@ -224,15 +224,6 @@ def _supplement_from_yfinance(info: dict, current: dict) -> dict:
     yfinance.info から未取得項目を補完する。
     current は既存の結果 dict（上書きは None のときのみ）。
     """
-    # ← ここに追加
-    import streamlit as st
-    st.write("DEBUG yf.info keys:", {k: info.get(k) for k in [
-        "operatingMargins", "ebit", "interestExpense", 
-        "operatingCashflow", "debtToEquity", "totalDebt", 
-        "totalStockholderEquity"
-    ]})
-    #####
-  
     def _fill(key_current, info_key, scale=1.0):
         if current.get(key_current) is None:
             val = _safe_float(info.get(info_key))
@@ -370,9 +361,11 @@ def get_price_and_meta(ticker: str, period: str = "400d", interval: str = "1d") 
         # yfinance で補完（IRBANK で取れない項目を埋める）
         try:
             info = yf.Ticker(ticker).info or {}
-            fundamentals = _supplement_from_yfinance(info, fundamentals)
-        except Exception:
-            pass
+            _supplement_from_yfinance(info, fundamentals)  # ★ in-place 更新
+        except Exception as e:
+            import traceback
+            print(f"[WARN] yfinance supplement failed for {ticker}: {e}")
+            traceback.print_exc()
 
     else:
         # ── 米国株: Alpha Vantage → yfinance フォールバック ──
@@ -385,9 +378,11 @@ def get_price_and_meta(ticker: str, period: str = "400d", interval: str = "1d") 
 
         try:
             info = yf.Ticker(ticker).info or {}
-            fundamentals = _supplement_from_yfinance(info, fundamentals)
-        except Exception:
-            pass
+            _supplement_from_yfinance(info, fundamentals)  # ★ in-place 更新
+        except Exception as e:
+            import traceback
+            print(f"[WARN] yfinance supplement failed for {ticker}: {e}")
+            traceback.print_exc()
 
     # PER（実績）が未計算なら補完
     if fundamentals["eps"] not in (None, 0) and close > 0 and fundamentals.get("per_fwd") is None:
