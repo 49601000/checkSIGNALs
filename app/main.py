@@ -344,18 +344,27 @@ def render_price_header(ticker, company_name, close, prev_close, industry="", se
     cls = _price_class(change)
     sign = "+" if change >= 0 else ""
     chg_color = "#f05c6e" if change >= 0 else "#3ecf72"
-    # 業種バッジ（industry優先、なければsector）
-    _ind = industry or sector
-    industry_html = (
-        f'<span style="display:inline-block;background:rgba(79,142,247,.15);'
-        f'border:1px solid rgba(79,142,247,.4);border-radius:4px;'
-        f'font-size:0.72rem;padding:1px 7px;margin-left:8px;'
-        f'color:#8ab4f8;vertical-align:middle;">{_ind}</span>'
-    ) if _ind else ""
+
+    # ③ TICKER | INDUSTRY | SECTOR バッジを並べて表示
+    def _badge(text, bg, border, fg):
+        return (
+            f'<span style="display:inline-block;background:{bg};'
+            f'border:1px solid {border};border-radius:4px;'
+            f'font-size:0.72rem;padding:1px 8px;margin-left:6px;'
+            f'color:{fg};vertical-align:middle;">{text}</span>'
+        )
+    badges = ""
+    if industry:
+        # industry: 青系
+        badges += _badge(industry, "rgba(79,142,247,.15)", "rgba(79,142,247,.4)", "#8ab4f8")
+    if sector and sector != industry:
+        # sector: 緑系（industryと同じ場合は非表示）
+        badges += _badge(sector, "rgba(100,180,100,.12)", "rgba(100,180,100,.35)", "#7ecf7e")
+
     st.markdown(f"""
     <div class="price-header">
       <div class="price-company">{company_name}</div>
-      <div class="price-ticker">{ticker}{industry_html}</div>
+      <div class="price-ticker">{ticker}{badges}</div>
       <div class="price-main {cls}">{_fmt(close, d)}</div>
       <div class="price-chg" style="color:{chg_color}">
         前日比 {sign}{_fmt(change, d)} ({sign}{_fmt(change_pct, 2)}%)
@@ -932,6 +941,9 @@ def main():
                 sector_v_score=sector_v_score,
                 sector_rel_scores=sector_rel,
                 financial_type=financial_type,
+                industry=base.get("industry", ""),
+                sector=base.get("sector", ""),
+                is_us=not ticker.upper().endswith(".T"),  # ★v3.5
             )
         except ValueError as e:
             st.error(str(e))
