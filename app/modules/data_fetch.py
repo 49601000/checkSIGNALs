@@ -262,14 +262,6 @@ def _supplement_from_yfinance(info: dict, current: dict) -> dict:
     yfinance.info から未取得項目を補完する。
     current は既存の結果 dict（上書きは None のときのみ）。
     """
-    # ← ここに追加
-    import streamlit as st
-    st.write("DEBUG yf.info keys:", {k: info.get(k) for k in [
-        "operatingMargins", "ebit", "interestExpense", 
-        "operatingCashflow", "debtToEquity", "totalDebt", 
-        "totalStockholderEquity"
-    ]})
-    #####
   
     def _fill(key_current, info_key, scale=1.0):
         if current.get(key_current) is None:
@@ -456,13 +448,16 @@ def get_price_and_meta(ticker: str, period: str = "400d", interval: str = "1d") 
     dividend_yield = _compute_dividend_yield(ticker_obj, close)
 
     # ── 業種分類（ノックアウト閾値補正用） ──
-    industry = _extract_industry_from_info(info)
+    # 日本株: TSEマスター優先（yfinanceの誤分類を防ぐ）
+    # 米国株: yfinance の industry / sector をそのまま使用
+    if is_jpx_ticker(ticker):
+        _master = get_industry_from_master(ticker)
+        industry = _master.get("industry", "")
+        sector   = _master.get("sector",   "")
+    else:
+        industry = _extract_industry_from_info(info)
+        sector   = info.get("sector", "") if isinstance(info, dict) else ""
 
-    "# デバッグコード（後で消すこと！）──────────"
-    import streamlit as st
-    st.write("DEBUG industry:", industry)
-    
-    
     return {
         "df":             df,
         "close_col":      close_col,
@@ -472,7 +467,8 @@ def get_price_and_meta(ticker: str, period: str = "400d", interval: str = "1d") 
         "low_52w":        low_52w,
         "company_name":   company_name,
         "dividend_yield": dividend_yield,
-        "industry": industry,
+        "industry":       industry,
+        "sector":         sector,
         # ファンダメンタル
         **fundamentals,
     }
