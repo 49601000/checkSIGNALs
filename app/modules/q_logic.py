@@ -50,62 +50,6 @@ def _load_csv_to_dict(path: str, key_col: str) -> Dict[str, Dict]:
     }
 
 
-# ── ビルトイン閾値（CSVが見つからない場合のフォールバック） ────────────────
-_BUILTIN_TSE = {
-    "Banks - Regional":                 {"er": 4.0,  "ic": 1.0, "note": "銀行業基準(BIS Tier1)"},
-    "Banks - Diversified":              {"er": 4.0,  "ic": 1.0, "note": "銀行業基準(BIS Tier1)"},
-    "Insurance - Life":                 {"er": 8.0,  "ic": 1.5, "note": "保険業基準"},
-    "Insurance - Diversified":          {"er": 8.0,  "ic": 1.5, "note": "保険業基準"},
-    "Insurance - Property & Casualty":  {"er": 8.0,  "ic": 1.5, "note": "保険業基準"},
-    "Insurance Brokers":                {"er": 8.0,  "ic": 1.5, "note": "保険業基準"},
-    "Capital Markets":                  {"er": 8.0,  "ic": 1.5, "note": "証券・資本市場業基準"},
-    "Asset Management":                 {"er": 8.0,  "ic": 1.5, "note": "資産運用業基準"},
-    "Credit Services":                  {"er": 8.0,  "ic": 1.0, "note": "クレジット・リース業基準"},
-    "Mortgage Finance":                 {"er": 6.0,  "ic": 1.0, "note": "住宅ローン業基準"},
-    "Financial Conglomerates":          {"er": 8.0,  "ic": 1.5, "note": "金融複合企業基準"},
-    "Financial Data & Stock Exchanges": {"er": 15.0, "ic": 3.0, "note": "金融データ・取引所"},
-    "Real Estate Services":             {"er": 20.0, "ic": 1.5, "note": "不動産サービス業基準"},
-    "Real Estate - Diversified":        {"er": 15.0, "ic": 1.5, "note": "不動産業基準"},
-    "Real Estate - Development":        {"er": 15.0, "ic": 1.0, "note": "不動産開発業基準"},
-    "REIT - Diversified":               {"er": 30.0, "ic": 1.5, "note": "REIT基準"},
-    "REIT - Office":                    {"er": 30.0, "ic": 1.5, "note": "REIT基準"},
-    "REIT - Industrial":                {"er": 30.0, "ic": 1.5, "note": "REIT基準"},
-    "REIT - Retail":                    {"er": 30.0, "ic": 1.5, "note": "REIT基準"},
-    "REIT - Residential":               {"er": 30.0, "ic": 1.5, "note": "REIT基準"},
-    "REIT - Hotel & Motel":             {"er": 30.0, "ic": 1.5, "note": "REIT基準"},
-    "REIT - Healthcare Facilities":     {"er": 30.0, "ic": 1.5, "note": "REIT基準"},
-    "REIT - Specialty":                 {"er": 30.0, "ic": 1.5, "note": "REIT基準"},
-    "Utilities - Regulated Electric":   {"er": 20.0, "ic": 2.0, "note": "規制電力業基準"},
-    "Utilities - Regulated Gas":        {"er": 20.0, "ic": 2.0, "note": "規制ガス業基準"},
-    "Utilities - Regulated Water":      {"er": 20.0, "ic": 2.0, "note": "規制水道業基準"},
-    "Utilities - Diversified":          {"er": 20.0, "ic": 2.0, "note": "公益複合企業基準"},
-    "Utilities - Independent Power Producers": {"er": 20.0, "ic": 2.0, "note": "独立系電力業基準"},
-    "Utilities - Renewable":            {"er": 20.0, "ic": 2.0, "note": "再生可能エネルギー基準"},
-    "Airlines":                         {"er": 10.0, "ic": 1.5, "note": "航空業基準"},
-    "Rental & Leasing Services":        {"er": 10.0, "ic": 1.5, "note": "レンタル・リース基準"},
-    "Marine Shipping":                  {"er": 10.0, "ic": 1.5, "note": "海運業基準"},
-    "Auto & Truck Dealerships":         {"er": 10.0, "ic": 1.5, "note": "自動車販売業基準"},
-    "Oil & Gas Integrated":             {"er": 15.0, "ic": 2.0, "note": "石油・ガス総合基準"},
-    "Oil & Gas Refining & Marketing":   {"er": 15.0, "ic": 2.0, "note": "石油精製・販売基準"},
-    "Oil & Gas E&P":                    {"er": 20.0, "ic": 1.5, "note": "石油・ガス探鉱基準"},
-    "Thermal Coal":                     {"er": 20.0, "ic": 2.0, "note": "石炭業基準"},
-}
-
-_BUILTIN_US = {
-    "Financial Services":     {"er": 6.0,  "ic": 1.0, "note": "米国金融業基準"},
-    "Real Estate":            {"er": 30.0, "ic": 1.5, "note": "米国不動産・REIT基準"},
-    "Utilities":              {"er": 20.0, "ic": 2.0, "note": "米国公益事業基準"},
-    "Energy":                 {"er": 20.0, "ic": 2.0, "note": "米国エネルギー業基準"},
-    "Consumer Cyclical":      {"er": 15.0, "ic": 2.0, "note": "米国一般消費財業基準"},
-    "Consumer Defensive":     {"er": 20.0, "ic": 2.5, "note": "米国生活必需品業基準"},
-    "Basic Materials":        {"er": 20.0, "ic": 2.0, "note": "米国素材業基準"},
-    "Communication Services": {"er": 15.0, "ic": 2.0, "note": "米国通信業基準"},
-    "Healthcare":             {"er": 20.0, "ic": 1.5, "note": "米国医療業基準"},
-    "Industrials":            {"er": 20.0, "ic": 2.5, "note": "米国工業基準"},
-    "Technology":             {"er": 25.0, "ic": 3.0, "note": "米国テクノロジー業基準"},
-}
-
-
 def _find_file(filenames: list) -> Optional[str]:
     """
     CSVを探す。q_logic.py は app/modules/ にあるので ../data/ = app/data/。
