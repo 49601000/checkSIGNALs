@@ -232,16 +232,16 @@ def _score_q1_abs_bank(
     w: QWeights,
 ) -> float:
     """
-    銀行Q1（暫定版）
+    銀行Q1（調整版）
       - ROEを主軸
       - ROAは銀行専用レンジ
-      - 営業利益率は補助指標
+      - 営業利益率はさらに軽い補助指標
       - 欠損項目は分母から外す
     """
     raw = 0.0
     max_raw = 0.0
 
-    # ROE: 銀行向けにやや厳しすぎない刻み
+    # ROE: 銀行向け
     if roe is not None:
         r = (
             0.00 if roe <= 0 else
@@ -256,7 +256,7 @@ def _score_q1_abs_bank(
         raw += w.roe_w * r
         max_raw += w.roe_w
 
-    # ROA: 銀行は一般企業より低いので専用レンジ
+    # ROA: 銀行専用レンジ
     if roa is not None:
         r = (
             0.00 if roa <= 0 else
@@ -272,17 +272,17 @@ def _score_q1_abs_bank(
         raw += w.roa_w * r
         max_raw += w.roa_w
 
-    # 営業利益率: 補助指標。定義差が大きいので軽く扱う
-    bank_opm_weight = w.opm_w * 0.50
+    # 営業利益率: さらに軽くする（従来 0.50倍 → 今回 0.25倍）
+    bank_opm_weight = w.opm_w * 0.25
     if operating_margin is not None:
         r = (
             0.00 if operating_margin <= 0 else
-            0.30 if operating_margin < 5 else
-            0.50 if operating_margin < 10 else
-            0.65 if operating_margin < 20 else
-            0.80 if operating_margin < 30 else
-            0.90 if operating_margin < 40 else
-            1.00
+            0.25 if operating_margin < 5 else
+            0.40 if operating_margin < 10 else
+            0.55 if operating_margin < 20 else
+            0.70 if operating_margin < 30 else
+            0.82 if operating_margin < 40 else
+            0.90
         )
         raw += bank_opm_weight * r
         max_raw += bank_opm_weight
@@ -343,25 +343,24 @@ def _score_q3_abs_bank(
     er_thr: float = 4.0,
 ) -> float:
     """
-    銀行Q3（暫定版）
+    銀行Q3（調整版）
       - 自己資本比率のみで100点化
-      - 4%付近の立ち上がりを細かく刻む
-      - 4%未満はかなり厳しめ
+      - 4.0〜5.5%帯を少し滑らかに調整
+      - 4%未満は厳しめ維持
     """
     if equity_ratio is None:
         return 0.0
 
     x = equity_ratio
 
-    # er_thr を将来変える余地は残すが、暫定的には 4% 近辺を重視
     if x < er_thr:
         return 0.0
     elif x < 4.2:
-        return 35.0
+        return 28.0
     elif x < 4.5:
-        return 45.0
+        return 38.0
     elif x < 5.0:
-        return 55.0
+        return 50.0
     elif x < 5.5:
         return 65.0
     elif x < 6.0:
