@@ -420,6 +420,10 @@ def get_price_and_meta(ticker: str, period: str = "400d", interval: str = "1d") 
         industry = _info_for_industry.get("industry", "") or ""
     except Exception:
         pass
+      
+    # ← ここに追加
+    import streamlit as st
+    st.write("DEBUG industry:", industry)
 
     return {
         "df":             df,
