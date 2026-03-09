@@ -341,11 +341,12 @@ def _score_er_financial(
 def _score_q3_abs_bank(
     equity_ratio: Optional[float],
     er_thr: float = 4.0,
+    weight_factor: float = 0.95,  # ← 影響度の微調整係数
 ) -> float:
     """
-    銀行Q3（調整版）
-      - 自己資本比率のみで100点化
-      - 4.0〜5.5%帯を少し滑らかに調整
+    銀行Q3（係数調整版）
+      - 自己資本比率のみで段階評価
+      - 最終スコアに係数を掛けて影響度を微調整
       - 4%未満は厳しめ維持
     """
     if equity_ratio is None:
@@ -371,7 +372,10 @@ def _score_q3_abs_bank(
         return 92.0
     else:
         return 100.0
+    # 影響度を微調整
+    adjusted_score = base_score * weight_factor
 
+    return adjusted_score
 
 def _score_q3_abs(
     equity_ratio: Optional[float],
