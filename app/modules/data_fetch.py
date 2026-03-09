@@ -457,11 +457,11 @@ def get_price_and_meta(ticker: str, period: str = "400d", interval: str = "1d") 
 
     # ── 業種分類（ノックアウト閾値補正用） ──
     industry = _extract_industry_from_info(info)
-  　# デバッグコード（後で消すこと！）──────────
+
+    "# デバッグコード（後で消すこと！）──────────"
     import streamlit as st
     st.write("DEBUG industry:", industry)
-    # ────────────────────────────────────────
-
+    
     
     return {
         "df":             df,
