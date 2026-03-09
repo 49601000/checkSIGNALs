@@ -5,7 +5,7 @@ import streamlit as st
 from modules.data_fetch import convert_ticker, get_price_and_meta
 from modules.indicators import compute_indicators
 from modules.q_correction import apply_q_correction
-from modules.pattern_db import (          # ★v3
+from modules.pattern_db import (
     load_pattern_db,
     classify_ticker,
     calc_sector_relative_scores,
@@ -605,19 +605,30 @@ def render_q_tab(tech):
     with col2:
         sect_roa = st.number_input("セクター平均 ROA (%)", 0.0, 20.0, 4.0, 0.1)
 
-    if st.button("補正する", use_container_width=True):
-        if roe is None or roa is None:
-            st.error("ROE / ROA データが不足のため補正できません。")
-        else:
-            result   = apply_q_correction(tech=tech, sector_roe=sect_roe, sector_roa=sect_roa)
-            q_corr   = result.get("q_corrected")
-            qvt_corr = result.get("qvt_corrected")
-            st.session_state["q_correction_result"] = result
-            c1, c2 = st.columns(2)
-            c1.metric("Q（補正前）", f"{q_score:.1f}")
-            c2.metric("Q（補正後）", f"{q_corr:.1f}", delta=f"{q_corr - q_score:+.1f}")
-            st.caption(f"補正後 QVT: **{qvt_corr:.1f}**")
-            st.info("セクター基準を用いて Q を補正した結果です。")
+    col_btn1, col_btn2 = st.columns(2)
+    with col_btn1:
+        if st.button("補正する", use_container_width=True):
+            if roe is None or roa is None:
+                st.error("ROE / ROA データが不足のため補正できません。")
+            else:
+                result   = apply_q_correction(tech=tech, sector_roe=sect_roe, sector_roa=sect_roa)
+                st.session_state["q_correction_result"] = result
+                st.rerun()
+    with col_btn2:
+        if st.session_state.get("q_correction_result"):
+            if st.button("🔄 リセット", use_container_width=True):
+                del st.session_state["q_correction_result"]
+                st.rerun()
+
+    if st.session_state.get("q_correction_result"):
+        corr_r   = st.session_state["q_correction_result"]
+        q_corr   = corr_r.get("q_corrected")
+        qvt_corr = corr_r.get("qvt_corrected")
+        c1, c2 = st.columns(2)
+        c1.metric("Q（補正前）", f"{q_score:.1f}")
+        c2.metric("Q（補正後）", f"{q_corr:.1f}", delta=f"{q_corr - q_score:+.1f}")
+        st.caption(f"補正後 QVT: **{qvt_corr:.1f}**")
+        st.info("セクター基準を用いて Q を補正した結果です。")
 
     # ─ Qスコアの見方 ─
     st.markdown("---")
