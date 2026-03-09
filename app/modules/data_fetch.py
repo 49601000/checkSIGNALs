@@ -91,6 +91,44 @@ def _clean_jpx_company_name(name: str) -> str:
     return name.strip(" 　-|｜")
 
 
+def _safe_get_yf_info(ticker_obj) -> dict:
+    try:
+        info = ticker_obj.info
+        return info if isinstance(info, dict) else {}
+    except Exception:
+        return {}
+def _normalize_industry_text(val: str) -> str:
+    if not isinstance(val, str):
+        return ""
+    return val.strip()
+
+
+def _extract_industry_from_info(info: dict) -> str:
+    """
+    yfinance の揺れを吸収して業種っぽい文字列を返す。
+    優先順位:
+      1) industry
+      2) industryDisp
+      3) sector
+      4) category
+    """
+    if not isinstance(info, dict):
+        return ""
+
+    candidates = [
+        info.get("industry"),
+        info.get("industryDisp"),
+        info.get("sector"),
+        info.get("category"),
+    ]
+
+    for v in candidates:
+        s = _normalize_industry_text(v)
+        if s:
+            return s
+    return ""
+      
+
 # ─── IRBANK スクレイピング（日本株） ─────────────────────────────────────
 
 def get_jpx_fundamentals_irbank(code: str) -> dict:
@@ -397,29 +435,28 @@ def get_price_and_meta(ticker: str, period: str = "400d", interval: str = "1d") 
     if fundamentals["per_fwd"] not in (None, 0) and close > 0:
         fundamentals["eps_fwd"] = close / fundamentals["per_fwd"]
 
-    # ── 会社名 ──
+    #  ── yfinance オブジェクト / info は 1回だけ取得 ──
     ticker_obj   = yf.Ticker(ticker)
+    info = _safe_get_yf_info(ticker_obj)
+    
+  
+    # ── 会社名 ──
     key          = ticker.strip().upper()
     company_name = COMPANY_NAME_CACHE.get(key)
     if not company_name:
-        try:
-            info = ticker_obj.info or {}
-            if is_jpx_ticker(ticker):
-                company_name = (info.get("shortName") or info.get("longName") or ticker)
-            else:
-                company_name = (info.get("longName") or info.get("shortName") or ticker)
-        except Exception:
-            company_name = ticker
+        if is_jpx_ticker(ticker):
+            company_name = (
+                info.get("shortName")
+                or info.get("longName")
+                or ticker
+            )
+        else:
+            company_name = (info.get("longName") or info.get("shortName") or ticker)
 
     dividend_yield = _compute_dividend_yield(ticker_obj, close)
 
     # ── 業種分類（ノックアウト閾値補正用） ──
-    industry = ""
-    try:
-        _info_for_industry = ticker_obj.info or {}
-        industry = _info_for_industry.get("industry", "") or ""
-    except Exception:
-        pass
+    industry = _extract_industry_from_info(info)
       
     # ← ここに追加
     import streamlit as st
