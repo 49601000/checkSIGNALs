@@ -361,80 +361,98 @@ def render_magi_panel(q, v, t, qvt, ticker, base, tech):
     chg_cls    = "info-val-up" if change >= 0 else "info-val-down"
     d          = 0 if close >= 100 else 2
 
-    rsi     = tech.get("rsi");  bb_icon = tech.get("bb_icon", "—");  bb_text = tech.get("bb_text", "—")
-    ma25    = tech.get("ma_25"); ma50 = tech.get("ma_50"); ma75 = tech.get("ma_75")
-    hi52    = tech.get("high_52w"); lo52 = tech.get("low_52w")
+    rsi     = tech.get("rsi")
+    bb_icon = tech.get("bb_icon", "—")
+    bb_text = tech.get("bb_text", "—")
+    ma25    = tech.get("ma_25")
+    ma50    = tech.get("ma_50")
+    ma75    = tech.get("ma_75")
+    hi52    = tech.get("high_52w")
+    lo52    = tech.get("low_52w")
 
     q_cls, q_verd = _node_verdict(q)
     v_cls, v_verd = _node_verdict(v)
     t_cls, t_verd = _node_verdict(t)
     qvt_color = _color_score(qvt)
-    comment = _magi_comment(qvt)
+    comment   = _magi_comment(qvt)
+    ticker_disp = ticker.replace(".T", "")
 
-    def node_html(label, score, verdict, cls_key):
-        node_cls = "magi-node magi-node-approve" if cls_key == "approve" else "magi-node magi-node-deny"
-        return f"""
-        <div class="{node_cls}">
-          <div class="magi-node-label">{label}</div>
-          <div class="magi-node-verdict">{verdict}</div>
-          <div class="magi-node-score">{score:.1f}pt</div>
-        </div>"""
+    def _node(label, score, verdict, cls_key):
+        nc = "magi-node magi-node-approve" if cls_key == "approve" else "magi-node magi-node-deny"
+        return (
+            '<div class="' + nc + '">' +
+            '<div class="magi-node-label">' + label + '</div>' +
+            '<div class="magi-node-verdict">' + verdict + '</div>' +
+            '<div class="magi-node-score">' + f"{score:.1f}" + 'pt</div>' +
+            '</div>'
+        )
 
-    st.markdown(f"""
-    <div class="magi-container">
-      <div class="magi-header-strip">RESULT OF THE DELIBERATION ■ ACCESS GRANTED — SUPERUSER</div>
-      <div style="padding:0.5rem;background:#000">
+    # ① ヘッダー + 左右情報パネル
+    st.markdown(
+        '<div class="magi-container">' +
+        '<div class="magi-header-strip">RESULT OF THE DELIBERATION &#9632; ACCESS GRANTED &#8212; SUPERUSER</div>' +
+        '<div style="padding:0.5rem;background:#000">' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:6px">' +
+        '<div class="info-panel">' +
+        '<div class="info-panel-title">&#9632; STOCK DATA</div>' +
+        '<div class="info-row"><span>' + ticker_disp + '</span><span class="info-val">' + industry + '</span></div>' +
+        '<div class="info-row"><span>SECTOR</span><span class="info-val" style="font-size:0.55rem">' + sector + '</span></div>' +
+        '<div style="border-top:1px solid var(--text-dark);margin:4px 0"></div>' +
+        '<div style="font-size:1rem;color:#ffaa66;font-weight:700;letter-spacing:1px">' + _fmt(close, d) + '</div>' +
+        '<div class="info-row"><span>前日比</span>' +
+        '<span class="' + chg_cls + '">' + sign + _fmt(change, d) + ' (' + sign + _fmt(change_pct, 2) + '%)</span></div>' +
+        '</div>' +
+        '<div class="info-panel">' +
+        '<div class="info-panel-title">&#9632; TECHNICAL</div>' +
+        '<div class="info-row"><span>RSI (14)</span><span class="info-val">' + _fmt(rsi, 1) + '</span></div>' +
+        '<div class="info-row"><span>BB判定</span><span class="info-val">' + bb_icon + '</span></div>' +
+        '<div style="font-size:0.55rem;color:var(--text-dim)">' + bb_text + '</div>' +
+        '<div style="border-top:1px solid var(--text-dark);margin:4px 0"></div>' +
+        '<div class="info-row"><span>25MA</span><span class="info-val">' + _fmt(ma25, d) + '</span></div>' +
+        '<div class="info-row"><span>50MA</span><span class="info-val">' + _fmt(ma50, d) + '</span></div>' +
+        '<div class="info-row"><span>75MA</span><span class="info-val">' + _fmt(ma75, d) + '</span></div>' +
+        '<div style="border-top:1px solid var(--text-dark);margin:4px 0"></div>' +
+        '<div class="info-row"><span>52W高値</span><span class="info-val">' + _fmt(hi52, d) + '</span></div>' +
+        '<div class="info-row"><span>安値</span><span class="info-val">' + _fmt(lo52, d) + '</span></div>' +
+        '</div></div>',
+        unsafe_allow_html=True
+    )
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:6px">
-          <div class="info-panel">
-            <div class="info-panel-title">■ STOCK DATA</div>
-            <div class="info-row"><span>{ticker.replace(".T","")}</span><span class="info-val">{industry}</span></div>
-            <div class="info-row"><span>SECTOR</span><span class="info-val" style="font-size:0.55rem">{sector}</span></div>
-            <div style="border-top:1px solid var(--text-dark);margin:4px 0"></div>
-            <div style="font-size:1rem;color:#ffaa66;font-weight:700;letter-spacing:1px">{_fmt(close, d)}</div>
-            <div class="info-row">
-              <span>前日比</span>
-              <span class="{chg_cls}">{sign}{_fmt(change, d)} ({sign}{_fmt(change_pct,2)}%)</span>
-            </div>
-          </div>
-          <div class="info-panel">
-            <div class="info-panel-title">■ TECHNICAL</div>
-            <div class="info-row"><span>RSI (14)</span><span class="info-val">{_fmt(rsi,1)}</span></div>
-            <div class="info-row"><span>BB判定</span><span class="info-val">{bb_icon}</span></div>
-            <div style="font-size:0.55rem;color:var(--text-dim)">{bb_text}</div>
-            <div style="border-top:1px solid var(--text-dark);margin:4px 0"></div>
-            <div class="info-row"><span>25MA</span><span class="info-val">{_fmt(ma25,d)}</span></div>
-            <div class="info-row"><span>50MA</span><span class="info-val">{_fmt(ma50,d)}</span></div>
-            <div class="info-row"><span>75MA</span><span class="info-val">{_fmt(ma75,d)}</span></div>
-            <div style="border-top:1px solid var(--text-dark);margin:4px 0"></div>
-            <div class="info-row"><span>52W高値</span><span class="info-val">{_fmt(hi52,d)}</span></div>
-            <div class="info-row"><span>安値</span><span class="info-val">{_fmt(lo52,d)}</span></div>
-          </div>
-        </div>
+    # ② MAGIボックス + BALTHASAR（上段）
+    st.markdown(
+        '<div style="border:1px solid var(--orange);padding:1rem 0.5rem 0.5rem;position:relative;margin-top:6px">' +
+        '<div style="position:absolute;top:-12px;left:50%;transform:translateX(-50%);' +
+        'background:#000;border:1px solid var(--orange);padding:0 10px;' +
+        'font-family:Orbitron,monospace;font-size:0.75rem;font-weight:700;' +
+        'color:var(--orange);letter-spacing:3px;white-space:nowrap">&#9632; MAGI &#9632;</div>' +
+        '<div style="display:flex;justify-content:center;margin-bottom:4px">' +
+        _node("BALTHASAR-2 / VALUATION", v, v_verd, v_cls) +
+        '</div>',
+        unsafe_allow_html=True
+    )
 
-        <div style="border:1px solid var(--orange);padding:1rem 0.5rem 0.5rem;position:relative;margin-top:6px">
-          <div style="position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:#000;border:1px solid var(--orange);padding:0 10px;font-family:Orbitron,monospace;font-size:0.75rem;font-weight:700;color:var(--orange);letter-spacing:3px;white-space:nowrap">&#9632; MAGI &#9632;</div>
+    # ③ 中央MAGIスコア
+    st.markdown(
+        '<div style="display:flex;justify-content:center;margin:0 0 4px">' +
+        '<div class="magi-center-panel">' +
+        '<div class="magi-center-name">MAGI</div>' +
+        '<div style="font-family:Share Tech Mono,monospace;font-size:1.8rem;font-weight:900;color:' + qvt_color + '">' + f"{qvt:.1f}" + '</div>' +
+        '<div class="magi-center-comment">' + comment + '</div>' +
+        '</div></div>',
+        unsafe_allow_html=True
+    )
 
-          <div style="display:flex;justify-content:center;margin-bottom:4px">
-            {node_html("BALTHASAR-2 / VALUATION", v, v_verd, v_cls)}
-          </div>
-
-          <div style="display:flex;justify-content:center;margin:0 0 4px">
-            <div class="magi-center-panel">
-              <div class="magi-center-name">MAGI</div>
-              <div style="font-family:Share Tech Mono,monospace;font-size:1.8rem;font-weight:900;color:{qvt_color}">{qvt:.1f}</div>
-              <div class="magi-center-comment">{comment}</div>
-            </div>
-          </div>
-
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
-            {node_html("CASPER-3 / TIMING", t, t_verd, t_cls)}
-            {node_html("MELCHIOR-1 / QUALITY", q, q_verd, q_cls)}
-          </div>
-        </div>
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
+    # ④ CASPER + MELCHIOR（下段）＋閉じタグ
+    st.markdown(
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">' +
+        _node("CASPER-3 / TIMING", t, t_verd, t_cls) +
+        _node("MELCHIOR-1 / QUALITY", q, q_verd, q_cls) +
+        '</div>' +
+        '</div>' +   # border box
+        '</div>' +   # padding div
+        '</div>',    # magi-container
+        unsafe_allow_html=True
+    )
 
 
 # ─── タブ: T ─────────────────────────────────────────────────
@@ -599,7 +617,7 @@ def render_v_tab(tech):
         code = ft.get("code", "—"); ja = ft.get("ja", "—"); desc = ft.get("description", "")
         st.markdown(f"""
         <div style="background:#000;border:1px solid var(--orange);padding:0.7rem 1rem;margin:0.5rem 0">
-          <div style="font-size:0.55rem;letter-spacing:2px;color:var(--text-dim);font-family:Orbitron,monospace">財務タイプ</div>
+          <div style="font-size:0.55rem;letter-spacing:2px;color:var(--text-dim);font-family:'Orbitron',monospace">財務タイプ</div>
           <div style="font-size:0.95rem;font-weight:700;color:var(--orange);margin-top:0.2rem">{ja} <span style="font-size:0.65rem;color:var(--text-dark)">({code})</span></div>
           <div style="font-size:0.75rem;color:var(--text-dim);margin-top:0.2rem">{desc}</div>
         </div>
@@ -682,7 +700,7 @@ def render_qvt_tab(tech):
       <div class="score-value" style="color:{color};font-size:3.5rem">{qvt_show:.1f}</div>
       <div class="score-max">/ 100</div>
       <div style="font-size:1.2rem;margin-top:.5rem">{star}</div>
-      <div style="font-size:.75rem;color:var(--text-dim);margin-top:.5rem;font-family:Share Tech Mono,monospace">{msg}</div>
+      <div style="font-size:.75rem;color:var(--text-dim);margin-top:.5rem;font-family:'Share Tech Mono'">{msg}</div>
     </div>
     """, unsafe_allow_html=True)
 
