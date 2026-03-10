@@ -638,7 +638,7 @@ def render_v_tab(tech):
             ("PBR（相対）",       sector_rel.get("pbr_vs_median", "—"),       _rel("pbr_rel_score")),
             ("EV/EBITDA（相対）", sector_rel.get("ev_ebitda_vs_median", "—"), _rel("ev_ebitda_rel_score")),
         ]), unsafe_allow_html=True)
-        st.caption("100pt=割安 / 50pt=中央値 / 0pt=割高")
+        st.caption("スコア目安：100pt＝かなり割安 / 50pt＝中央値水準 / 0pt＝かなり割高")
 
     st.markdown("##### 絶対評価（V1〜V3）")
     def eval_per(x):
@@ -721,6 +721,15 @@ def render_qvt_tab(tech):
 | 60〜69 | 慎重に押し目 |
 | 50〜59 | 比較検討 |
 | 50未満 | 見送りも選択肢 |
+
+**セクター別 Q 目安**
+
+| セクター例 | ROE目安 | ROA目安 | 営業利益率目安 |
+|---|---|---|---|
+| 生活必需品・インフラ | 8〜12% | 3〜6% | 5〜10% |
+| テック・成長株 | 10〜20%+ | 5〜10% | 15〜30% |
+| 景気敏感（自動車等） | 8〜12% | 3〜6% | 5〜10% |
+| 金融 | 8〜12% | 0.5〜2% | — |
         """)
 
 
@@ -759,6 +768,8 @@ def _fetch_and_compute(ticker):
         except ValueError as e:
             st.error(str(e)); return base, None
 
+    # is_us を tech に格納しておく（各タブから参照可能に）
+    tech["is_us"] = not ticker.upper().endswith(".T")
     return base, tech
 
 
