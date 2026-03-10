@@ -354,41 +354,28 @@ def _setup_style():
         font-size: 0.72rem !important;
     }
 
-    /* stMarkdown全般 — span/strong/em/a も含む */
-    .stMarkdown *, .element-container .stMarkdown {
-        font-family: 'Noto Serif JP', serif !important;
-        font-weight: 900 !important;
-    }
-    /* ただし数値・英字クラスは除外しない（上書きはしない） */
-
-    /* st.info / st.warning / st.error バナー内テキスト */
-    div[data-testid="stAlert"] *,
-    div[role="alert"] * {
+    /* stMarkdown — p/li/td のみ対象（* は使わない） */
+    .stMarkdown p, .stMarkdown li, .stMarkdown td, .stMarkdown th,
+    .stMarkdown strong, .stMarkdown em {
         font-family: 'Noto Serif JP', serif !important;
         font-weight: 900 !important;
     }
 
-    /* st.number_input ラベル */
-    div[data-testid="stNumberInput"] label,
-    div[data-testid="stNumberInput"] label p {
+    /* st.info / st.warning バナー本文のみ */
+    div[data-testid="stAlert"] p,
+    div[data-testid="stAlert"] li {
         font-family: 'Noto Serif JP', serif !important;
         font-weight: 900 !important;
     }
 
-    /* st.text_input ラベル（入力欄上部） */
-    div[data-testid="stTextInput"] label,
+    /* number_input / text_input ラベル */
+    div[data-testid="stNumberInput"] label p,
     div[data-testid="stTextInput"] label p {
         font-family: 'Noto Serif JP', serif !important;
         font-weight: 900 !important;
     }
 
-    /* タブ内テキスト全般（ボタン以外） */
-    div[data-testid="stTabsContent"] *:not(button):not(input):not(.magi-node-label):not(.magi-center-name):not(.info-panel-title):not(.range-lbl):not(.score-label):not(.cs-table thead th) {
-        font-family: 'Noto Serif JP', serif !important;
-        font-weight: 900 !important;
-    }
-
-    /* Orbitronを明示指定した要素は上書きされないよう再指定 */
+    /* Orbitron を維持すべき要素（再指定で保護） */
     .magi-node-label, .magi-center-name, .info-panel-title,
     .range-lbl, .score-label, .cs-table thead th,
     div[data-testid="stTabs"] button,
@@ -531,7 +518,7 @@ def render_magi_panel(q, v, t, qvt, ticker, base, tech):
         'color:var(--orange);letter-spacing:3px;white-space:nowrap">&#9632; MAGI &#9632;</div>' +
 
         '<div style="display:flex;justify-content:center;margin-bottom:8px">' +
-        _node("BALTHASAR-2/VALUATION", v, v_verd, v_cls) +
+        _node("BALTHASAR-2 / VALUATION", v, v_verd, v_cls) +
         '</div>' +
 
         '<div style="display:flex;justify-content:center;margin:0 0 8px">' +
@@ -542,8 +529,8 @@ def render_magi_panel(q, v, t, qvt, ticker, base, tech):
         '</div></div>' +
 
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">' +
-        _node("CASPER-3/TIMING", t, t_verd, t_cls) +
-        _node("MELCHIOR-1/QUALITY", q, q_verd, q_cls) +
+        _node("CASPER-3 / TIMING", t, t_verd, t_cls) +
+        _node("MELCHIOR-1 / QUALITY", q, q_verd, q_cls) +
         '</div>' +
 
         '</div>' +
@@ -920,7 +907,7 @@ def run():
         "⏰ TIMING / CASPER",
         "🏢 QUALITY / MELCHIOR",
         "💰 VALUATION / BALTHASAR",
-        "🧮 QVT / MAGI",
+        "🧮 QVT 総合",
     ])
     with tab_t:   render_t_tab(tech)
     with tab_q:   render_q_tab(tech)
