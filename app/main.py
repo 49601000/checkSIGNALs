@@ -49,14 +49,14 @@ UI_REGISTRY = [
         "name":   "checkSIGNAL",
         "icon":   "📡",
         "desc":   "シンプルモダンUI。スコアカード・テーブル・メトリクスで視認性重視。",
-        "module": "ui_classic_main.py",
+        "module": "ui.classic.main",
     },
     {
         "key":    "magi",
         "name":   "MAGI SYSTEM",
         "icon":   "🔴",
         "desc":   "マギシステム。六角形判定パネル・スキャンライン・オレンジCRT。",
-        "module": "ui_magi_main.py",
+        "module": "ui.magi.main",
     },
     # ── 将来UIの追加例（コメントアウト） ──────────────────────
     # {
