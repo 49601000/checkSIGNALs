@@ -8,10 +8,10 @@ app/
 │   ├── __init__.py
 │   ├── classic/          ← 従来UI (checkSIGNAL)
 │   │   ├── __init__.py
-│   │   └── ui_classic_main.py
+│   │   └── main.py
 │   └── magi/             ← MAGIシステムUI
 │       ├── __init__.py
-│       └── ui_magi_main.py
+│       └── main.py
 ├── modules/              ← 共通モジュール（変更不要）
 ├── data/                 ← 共通データ（変更不要）
 └── __init__.py
@@ -32,6 +32,32 @@ import streamlit as st
 _APP_DIR = os.path.dirname(os.path.abspath(__file__))
 if _APP_DIR not in sys.path:
     sys.path.insert(0, _APP_DIR)
+
+
+# ─── UI設定の永続化（ファイルベース） ───────────────────────
+# app/ と同ディレクトリに .ui_preference を保存する
+# Streamlit Cloud / ローカル両方で動作する
+_PREF_FILE = os.path.join(_APP_DIR, ".ui_preference")
+
+def _load_ui_preference():
+    """保存済みのUI設定を読み込む。未保存 or 無効なら None。"""
+    try:
+        if os.path.exists(_PREF_FILE):
+            with open(_PREF_FILE, "r") as f:
+                key = f.read().strip()
+            # _UI_MAP はこの後に定義されるので遅延参照
+            return key
+    except Exception:
+        pass
+    return None
+
+def _save_ui_preference(key):
+    """UI設定をファイルに永続保存する。"""
+    try:
+        with open(_PREF_FILE, "w") as f:
+            f.write(key)
+    except Exception:
+        pass  # 書き込み失敗しても動作継続
 
 
 # ─── UI レジストリ ───────────────────────────────────────────
@@ -55,7 +81,7 @@ UI_REGISTRY = [
         "key":    "magi",
         "name":   "MAGI SYSTEM",
         "icon":   "🔴",
-        "desc":   "マギシステム。六角形判定パネル・スキャンライン・オレンジCRT。",
+        "desc":   "新世紀エヴァンゲリオン風。六角形判定パネル・スキャンライン・オレンジCRT。",
         "module": "ui.magi.main",
     },
     # ── 将来UIの追加例（コメントアウト） ──────────────────────
@@ -199,9 +225,11 @@ def render_selector():
 
 
 def main():
-    # ── セッション: 選択済みUIキーを保持 ──
+    # ── セッション: 選択済みUIキーを保持（初回は保存済み設定を読み込む） ──
     if "ui_key" not in st.session_state:
-        st.session_state["ui_key"] = None
+        saved = _load_ui_preference()
+        # 保存済みキーが有効なUIか確認してからセット
+        st.session_state["ui_key"] = saved if (saved and saved in _UI_MAP) else None
 
     # ── URLクエリパラメータによる直接指定（?ui=magi など） ──
     try:
@@ -219,6 +247,7 @@ def main():
         chosen = render_selector()
         if chosen:
             st.session_state["ui_key"] = chosen
+            _save_ui_preference(chosen)  # ← 選択を永続保存
             st.rerun()
         return
 
@@ -248,10 +277,12 @@ def main():
                 continue  # 現在選択中は表示しない
             if st.button(f"{ui['icon']} {ui['name']}", key=f"sw_{ui['key']}", use_container_width=True):
                 st.session_state["ui_key"] = ui["key"]
+                _save_ui_preference(ui["key"])  # ← 切り替えを永続保存
                 st.rerun()
         st.markdown("---")
         if st.button("🏠 セレクターに戻る", use_container_width=True):
             st.session_state["ui_key"] = None
+            _save_ui_preference("")   # ← 保存済み設定をクリア
             st.rerun()
 
     # ── 実際のUIを実行 ──
