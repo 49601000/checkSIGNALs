@@ -132,8 +132,8 @@ def _setup_style():
     .magi-node-approve .magi-node-label { color: #aaccff; }
     .magi-node-deny   .magi-node-label { color: #ffaaaa; }
     .magi-node-verdict {
-        font-family: 'Orbitron', monospace;
-        font-size: 1rem; font-weight: 900; letter-spacing: 2px;
+        font-family: 'Noto Serif JP', 'Orbitron', serif;
+        font-size: 1.05rem; font-weight: 900; letter-spacing: 2px;
     }
     .magi-node-approve .magi-node-verdict { color: #fff; text-shadow: 0 0 12px #4477ff; }
     .magi-node-deny    .magi-node-verdict { color: #fff; text-shadow: 0 0 12px #ff4444; }
@@ -153,7 +153,7 @@ def _setup_style():
         font-size: 0.85rem; font-weight: 900; color: var(--orange);
         letter-spacing: 4px; text-shadow: 0 0 10px rgba(255,102,0,0.7);
     }
-    .magi-center-comment { font-size: 0.65rem; color: var(--orange); letter-spacing: 0.5px; line-height: 1.4; font-family: var(--jp-mincho); font-weight: 900; }
+    .magi-center-comment { font-size: 0.65rem; color: var(--orange); letter-spacing: 0.5px; line-height: 1.4; font-family: 'Noto Serif JP', serif !important; font-weight: 900 !important; }
 
     /* 情報パネル */
     .info-panel {
@@ -272,8 +272,8 @@ def _setup_style():
         display: flex; align-items: center; gap: 0.8rem;
     }
     .signal-icon { font-size: 1.6rem; }
-    .signal-text { font-family: 'Orbitron', monospace; font-size: 0.9rem; font-weight: 700; color: var(--orange); }
-    .signal-sub  { font-size: 0.7rem; color: var(--text-dim); margin-top: 0.1rem; }
+    .signal-text { font-family: 'Noto Serif JP', 'Orbitron', serif; font-size: 0.9rem; font-weight: 900; color: var(--orange); }
+    .signal-sub  { font-size: 0.7rem; color: var(--text-dim); margin-top: 0.1rem; font-family: 'Noto Serif JP', serif; font-weight: 900; }
 
     /* レンジグリッド */
     .range-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; }
@@ -291,7 +291,7 @@ def _setup_style():
         color: var(--text-dim); font-weight: 700; margin-bottom: 0.3rem;
     }
     .score-value { font-family: 'Share Tech Mono', monospace; font-size: 2rem; font-weight: 700; line-height: 1; }
-    .score-max   { font-size: 0.6rem; color: var(--text-dark); margin-top: 0.2rem; }
+    .score-max   { font-size: 0.6rem; color: var(--text-dark); margin-top: 0.2rem; font-family: 'Noto Serif JP', serif; font-weight: 900; }
 
     hr { border-color: rgba(255,102,0,0.3) !important; }
     div[data-testid="stExpander"] {
@@ -308,17 +308,100 @@ def _setup_style():
     }
     .stCaption { color: var(--text-dim) !important; font-size: 0.65rem !important; }
     /* Streamlit本文テキスト（caption, info, markdownなど） */
-    .stMarkdown p, .stMarkdown li, .stMarkdown td,
+    .stMarkdown p, .stMarkdown li, .stMarkdown td, .stMarkdown span,
     div[data-testid="stCaptionContainer"],
-    div[data-testid="stAlert"] {
-        font-family: var(--jp-mincho) !important;
+    div[data-testid="stCaptionContainer"] p,
+    div[data-testid="stAlert"],
+    div[data-testid="stAlert"] p,
+    .stWarning p, .stInfo p {
+        font-family: 'Noto Serif JP', serif !important;
         font-weight: 900 !important;
     }
 
     /* expanderラベル */
-    details summary p {
-        font-family: var(--jp-mincho) !important;
+    details summary p, details summary span,
+    div[data-testid="stExpander"] summary p,
+    div[data-testid="stExpander"] summary span {
+        font-family: 'Noto Serif JP', serif !important;
         font-weight: 900 !important;
+    }
+
+    /* st.metricのdelta値など */
+    div[data-testid="stMetricDelta"],
+    div[data-testid="stMetricDelta"] p,
+    div[data-testid="stMetricDelta"] span {
+        font-family: 'Noto Serif JP', serif !important;
+        font-weight: 900 !important;
+    }
+
+    /* st.caption */
+    .stCaption, .stCaption p, .stCaption span,
+    div[data-testid="stCaptionContainer"] *,
+    small { 
+        font-family: 'Noto Serif JP', serif !important;
+        font-weight: 900 !important;
+    }
+
+    /* signal-banner内テキスト（明朝+!important強制） */
+    .signal-text {
+        font-family: 'Noto Serif JP', serif !important;
+        font-weight: 900 !important;
+        font-size: 0.95rem !important;
+    }
+    .signal-sub {
+        font-family: 'Noto Serif JP', serif !important;
+        font-weight: 900 !important;
+        font-size: 0.72rem !important;
+    }
+
+    /* stMarkdown全般 — span/strong/em/a も含む */
+    .stMarkdown *, .element-container .stMarkdown {
+        font-family: 'Noto Serif JP', serif !important;
+        font-weight: 900 !important;
+    }
+    /* ただし数値・英字クラスは除外しない（上書きはしない） */
+
+    /* st.info / st.warning / st.error バナー内テキスト */
+    div[data-testid="stAlert"] *,
+    div[role="alert"] * {
+        font-family: 'Noto Serif JP', serif !important;
+        font-weight: 900 !important;
+    }
+
+    /* st.number_input ラベル */
+    div[data-testid="stNumberInput"] label,
+    div[data-testid="stNumberInput"] label p {
+        font-family: 'Noto Serif JP', serif !important;
+        font-weight: 900 !important;
+    }
+
+    /* st.text_input ラベル（入力欄上部） */
+    div[data-testid="stTextInput"] label,
+    div[data-testid="stTextInput"] label p {
+        font-family: 'Noto Serif JP', serif !important;
+        font-weight: 900 !important;
+    }
+
+    /* タブ内テキスト全般（ボタン以外） */
+    div[data-testid="stTabsContent"] *:not(button):not(input):not(.magi-node-label):not(.magi-center-name):not(.info-panel-title):not(.range-lbl):not(.score-label):not(.cs-table thead th) {
+        font-family: 'Noto Serif JP', serif !important;
+        font-weight: 900 !important;
+    }
+
+    /* Orbitronを明示指定した要素は上書きされないよう再指定 */
+    .magi-node-label, .magi-center-name, .info-panel-title,
+    .range-lbl, .score-label, .cs-table thead th,
+    div[data-testid="stTabs"] button,
+    div[data-testid="stButton"] > button,
+    .magi-banner, .magi-banner-title, .magi-header-strip {
+        font-family: 'Orbitron', monospace !important;
+    }
+    /* Share Tech Mono を維持すべき要素 */
+    .magi-node-score, .range-val, .score-value,
+    div[data-testid="stTextInput"] input,
+    div[data-testid="stNumberInput"] input,
+    div[data-testid="metric-container"] [data-testid="stMetricValue"] {
+        font-family: 'Share Tech Mono', monospace !important;
     }
 
     </style>
