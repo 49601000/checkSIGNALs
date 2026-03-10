@@ -351,15 +351,16 @@ def _magi_comment(qvt):
 # ─── MAGIパネル ───────────────────────────────────────────────
 
 def render_magi_panel(q, v, t, qvt, ticker, base, tech):
-    close      = base["close"]
-    prev       = base["previous_close"]
-    industry   = base.get("industry", "")
-    sector     = base.get("sector", "")
-    change     = close - prev
-    change_pct = (change / prev * 100) if prev else 0
-    sign       = "+" if change >= 0 else ""
-    chg_cls    = "info-val-up" if change >= 0 else "info-val-down"
-    d          = 0 if close >= 100 else 2
+    close        = base["close"]
+    prev         = base["previous_close"]
+    company_name = base.get("company_name", "").rstrip("の").strip()  # ②③ 銘柄名・末尾"の"除去
+    industry     = base.get("industry", "")
+    sector       = base.get("sector", "")
+    change       = close - prev
+    change_pct   = (change / prev * 100) if prev else 0
+    sign         = "+" if change >= 0 else ""
+    chg_cls      = "info-val-up" if change >= 0 else "info-val-down"
+    d            = 0 if close >= 100 else 2
 
     rsi     = tech.get("rsi")
     bb_icon = tech.get("bb_icon", "—")
@@ -373,9 +374,9 @@ def render_magi_panel(q, v, t, qvt, ticker, base, tech):
     q_cls, q_verd = _node_verdict(q)
     v_cls, v_verd = _node_verdict(v)
     t_cls, t_verd = _node_verdict(t)
-    qvt_color = _color_score(qvt)
-    comment   = _magi_comment(qvt)
-    ticker_disp = ticker.replace(".T", "")
+    qvt_color     = _color_score(qvt)
+    comment       = _magi_comment(qvt)
+    ticker_disp   = ticker.replace(".T", "")
 
     def _node(label, score, verdict, cls_key):
         nc = "magi-node magi-node-approve" if cls_key == "approve" else "magi-node magi-node-deny"
@@ -387,14 +388,16 @@ def render_magi_panel(q, v, t, qvt, ticker, base, tech):
             '</div>'
         )
 
-    # ① ヘッダー + 左右情報パネル
+    # ① ヘッダー + 左右情報パネル（② 銘柄名を company_name 行に追加）
     st.markdown(
         '<div class="magi-container">' +
         '<div class="magi-header-strip">RESULT OF THE DELIBERATION &#9632; ACCESS GRANTED &#8212; SUPERUSER</div>' +
         '<div style="padding:0.5rem;background:#000">' +
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:6px">' +
+
         '<div class="info-panel">' +
         '<div class="info-panel-title">&#9632; STOCK DATA</div>' +
+        '<div style="font-size:0.75rem;color:#ffcc88;font-weight:700;margin-bottom:3px;letter-spacing:0.5px">' + company_name + '</div>' +
         '<div class="info-row"><span>' + ticker_disp + '</span><span class="info-val">' + industry + '</span></div>' +
         '<div class="info-row"><span>SECTOR</span><span class="info-val" style="font-size:0.55rem">' + sector + '</span></div>' +
         '<div style="border-top:1px solid var(--text-dark);margin:4px 0"></div>' +
@@ -402,6 +405,7 @@ def render_magi_panel(q, v, t, qvt, ticker, base, tech):
         '<div class="info-row"><span>前日比</span>' +
         '<span class="' + chg_cls + '">' + sign + _fmt(change, d) + ' (' + sign + _fmt(change_pct, 2) + '%)</span></div>' +
         '</div>' +
+
         '<div class="info-panel">' +
         '<div class="info-panel-title">&#9632; TECHNICAL</div>' +
         '<div class="info-row"><span>RSI (14)</span><span class="info-val">' + _fmt(rsi, 1) + '</span></div>' +
@@ -448,9 +452,9 @@ def render_magi_panel(q, v, t, qvt, ticker, base, tech):
         _node("CASPER-3 / TIMING", t, t_verd, t_cls) +
         _node("MELCHIOR-1 / QUALITY", q, q_verd, q_cls) +
         '</div>' +
-        '</div>' +   # border box
-        '</div>' +   # padding div
-        '</div>',    # magi-container
+        '</div>' +
+        '</div>' +
+        '</div>',
         unsafe_allow_html=True
     )
 
