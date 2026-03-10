@@ -531,7 +531,7 @@ def render_magi_panel(q, v, t, qvt, ticker, base, tech):
         'color:var(--orange);letter-spacing:3px;white-space:nowrap">&#9632; MAGI &#9632;</div>' +
 
         '<div style="display:flex;justify-content:center;margin-bottom:8px">' +
-        _node("BALTHASAR-2 / VALUATION", v, v_verd, v_cls) +
+        _node("BALTHASAR-2/VALUATION", v, v_verd, v_cls) +
         '</div>' +
 
         '<div style="display:flex;justify-content:center;margin:0 0 8px">' +
@@ -542,8 +542,8 @@ def render_magi_panel(q, v, t, qvt, ticker, base, tech):
         '</div></div>' +
 
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">' +
-        _node("CASPER-3 / TIMING", t, t_verd, t_cls) +
-        _node("MELCHIOR-1 / QUALITY", q, q_verd, q_cls) +
+        _node("CASPER-3/TIMING", t, t_verd, t_cls) +
+        _node("MELCHIOR-1/QUALITY", q, q_verd, q_cls) +
         '</div>' +
 
         '</div>' +
