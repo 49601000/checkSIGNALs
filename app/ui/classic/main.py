@@ -406,6 +406,7 @@ def render_t_tab(tech):
     price = tech["close"]
     ma25  = tech["ma_25"]
     ma50  = tech["ma_50"]
+    ma75  = tech["ma_75"]
     rsi   = tech["rsi"]
     slope = tech.get("slope_25", 0)
     low52 = tech["low_52w"]
@@ -564,14 +565,21 @@ def render_q_tab(tech):
     with st.expander("📚 Qスコアの見方"):
         st.markdown("""
 **Q1 収益性**
-- **ROE** — 目安：10%前後が標準、15%超は高収益。
+- **ROE** — 目安：10%前後が標準、15%超は高収益。借入依存に注意。
 - **ROA** — 目安：3〜5%が標準、5%超は資産効率が高い。
-- **営業利益率** — 5%未満は薄利、10%超は優良。
+- **営業利益率** — 5%未満は薄利、10%超は優良、20%超は超優良。
 
 **Q3 財務健全性**
-- **自己資本比率** — 30%未満は高レバレッジ、40〜60%が健全。
+- **自己資本比率** — 30%未満は高レバレッジ、40〜60%が健全、60%超は堅固。
 - **D/Eレシオ** — 1.0未満が目安。2.0超は過剰レバレッジ要注意。
-- **インタレストカバレッジ** — 1.5未満は危険圏、5倍超が安全圏。
+- **インタレストカバレッジ** — 1.5未満は危険圏、5倍超が安全圏の目安。
+
+| セクター例 | ROE目安 | ROA目安 | 営業利益率目安 |
+|---|---|---|---|
+| 生活必需品・インフラ | 8〜12% | 3〜6% | 5〜10% |
+| テック・成長株 | 10〜20%+ | 5〜10% | 15〜30% |
+| 景気敏感（自動車等） | 8〜12% | 3〜6% | 5〜10% |
+| 金融 | 8〜12% | 0.5〜2% | — |
         """)
 
 
@@ -626,7 +634,7 @@ def render_v_tab(tech):
             ("PBR（相対）",       sector_rel.get("pbr_vs_median", "—"),       _rel("pbr_rel_score")),
             ("EV/EBITDA（相対）", sector_rel.get("ev_ebitda_vs_median", "—"), _rel("ev_ebitda_rel_score")),
         ]), unsafe_allow_html=True)
-        st.caption("100pt＝割安 / 50pt＝中央値水準 / 0pt＝割高")
+        st.caption("スコア目安：100pt＝かなり割安 / 50pt＝中央値水準 / 0pt＝かなり割高")
 
     st.markdown("##### 📋 絶対評価（V1〜V3）")
 
@@ -669,7 +677,11 @@ def render_v_tab(tech):
                 pbr_m = f"{t['pbr_median']:.2f}x"    if t["pbr_median"]             else "—"
                 roe_m = f"{t['roe_median']*100:.1f}%" if t["roe_median"] is not None else "—"
                 opm_m = f"{t['operating_margin_median']*100:.1f}%" if t["operating_margin_median"] is not None else "—"
-                st.markdown(f"**{highlight}{t['ja']}** `{t['code']}`  \n{t['description']}  \n📊 中央値 — PER {per_m} / PBR {pbr_m} / ROE {roe_m} / 営業利益率 {opm_m} （n={t['sample_count']}）")
+                st.markdown(f"""
+**{highlight}{t['ja']}** `{t['code']}`  
+{t['description']}  
+📊 中央値 — PER {per_m} / PBR {pbr_m} / ROE {roe_m} / 営業利益率 {opm_m} （n={t['sample_count']}）
+""")
         else:
             st.info("財務タイプDBが読み込まれていません。`data/pattern_db_latest.csv` を確認してください。")
 
@@ -778,6 +790,8 @@ def _fetch_and_compute(ticker):
         except ValueError as e:
             st.error(str(e)); return base, None
 
+    # is_us を tech に格納しておく（各タブから参照可能に）
+    tech["is_us"] = not ticker.upper().endswith(".T")
     return base, tech
 
 
