@@ -318,10 +318,26 @@ def _setup_style():
         font-weight: 900 !important;
     }
 
-    /* expanderラベル — summaryへの指定は矢印アイコンに干渉するため廃止 */
+    /* expander：矢印アイコンを非表示 */
+    div[data-testid="stExpander"] summary svg,
+    div[data-testid="stExpander"] summary [data-testid="stExpanderToggleIcon"] {
+        display: none !important;
+    }
+
+    /* expanderラベル（summary直下のテキストノードを持つp）を明朝体に */
+    div[data-testid="stExpander"] summary p {
+        font-family: 'Noto Serif JP', serif !important;
+        font-weight: 900 !important;
+        font-size: 0.85rem !important;
+        letter-spacing: 0.05em !important;
+        padding-left: 0 !important;
+    }
+
+    /* expanderコンテンツ内テキスト */
     div[data-testid="stExpander"] div[data-testid="stExpanderDetails"] p,
     div[data-testid="stExpander"] div[data-testid="stExpanderDetails"] li,
-    div[data-testid="stExpander"] div[data-testid="stExpanderDetails"] td {
+    div[data-testid="stExpander"] div[data-testid="stExpanderDetails"] td,
+    div[data-testid="stExpander"] div[data-testid="stExpanderDetails"] th {
         font-family: 'Noto Serif JP', serif !important;
         font-weight: 900 !important;
     }
@@ -745,7 +761,7 @@ def render_v_tab(tech):
     st.markdown(table_html + '</tbody></table>', unsafe_allow_html=True)
 
     st.markdown("---")
-    with st.expander("📖 財務タイプ辞典"):
+    with st.expander("財務タイプ辞典"):
         all_types = get_all_types_for_display()
         if all_types:
             for t in all_types:
@@ -790,7 +806,7 @@ def render_qvt_tab(tech):
     """, unsafe_allow_html=True)
 
     if corr: st.caption("※ コメントは補正後QVTスコアをもとに判定。")
-    with st.expander("📘 QVT フレームワーク"):
+    with st.expander("QVT フレームワーク"):
         st.markdown("""
 **Q（Quality）** — ビジネスの質。ROE・ROA・営業利益率（Q1）＋自己資本比率・D/E・インタレストカバレッジ（Q3）。  
 **V（Valuation）** — 割安度。PER・PBR・EV/EBITDA・配当利回り＋セクター相対評価（日本株）。  
