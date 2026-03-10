@@ -920,7 +920,7 @@ def run():
         "⏰ TIMING / CASPER",
         "🏢 QUALITY / MELCHIOR",
         "💰 VALUATION / BALTHASAR",
-        "🧮 QVT 総合",
+        "🧮 QVT / MAGI",
     ])
     with tab_t:   render_t_tab(tech)
     with tab_q:   render_q_tab(tech)
