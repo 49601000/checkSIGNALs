@@ -422,36 +422,31 @@ def render_magi_panel(q, v, t, qvt, ticker, base, tech):
         unsafe_allow_html=True
     )
 
-    # ② MAGIボックス + BALTHASAR（上段）
+    # ②③④ MAGIボックス全体（BALTHASAR + 中央スコア + CASPER/MELCHIOR）を1つのdivで囲む
     st.markdown(
-        '<div style="border:1px solid var(--orange);padding:1rem 0.5rem 0.5rem;position:relative;margin-top:6px">' +
+        '<div style="border:1px solid var(--orange);padding:1rem 0.5rem 0.8rem;position:relative;margin-top:6px">' +
+
         '<div style="position:absolute;top:-12px;left:50%;transform:translateX(-50%);' +
         'background:#000;border:1px solid var(--orange);padding:0 10px;' +
         'font-family:Orbitron,monospace;font-size:0.75rem;font-weight:700;' +
         'color:var(--orange);letter-spacing:3px;white-space:nowrap">&#9632; MAGI &#9632;</div>' +
-        '<div style="display:flex;justify-content:center;margin-bottom:4px">' +
-        _node("BALTHASAR-2 / VALUATION", v, v_verd, v_cls) +
-        '</div>',
-        unsafe_allow_html=True
-    )
 
-    # ③ 中央MAGIスコア
-    st.markdown(
-        '<div style="display:flex;justify-content:center;margin:0 0 4px">' +
+        '<div style="display:flex;justify-content:center;margin-bottom:8px">' +
+        _node("BALTHASAR-2 / VALUATION", v, v_verd, v_cls) +
+        '</div>' +
+
+        '<div style="display:flex;justify-content:center;margin:0 0 8px">' +
         '<div class="magi-center-panel">' +
         '<div class="magi-center-name">MAGI</div>' +
         '<div style="font-family:Share Tech Mono,monospace;font-size:1.8rem;font-weight:900;color:' + qvt_color + '">' + f"{qvt:.1f}" + '</div>' +
         '<div class="magi-center-comment">' + comment + '</div>' +
-        '</div></div>',
-        unsafe_allow_html=True
-    )
+        '</div></div>' +
 
-    # ④ CASPER + MELCHIOR（下段）＋閉じタグ
-    st.markdown(
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">' +
         _node("CASPER-3 / TIMING", t, t_verd, t_cls) +
         _node("MELCHIOR-1 / QUALITY", q, q_verd, q_cls) +
         '</div>' +
+
         '</div>' +
         '</div>' +
         '</div>',
