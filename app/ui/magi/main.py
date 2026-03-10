@@ -388,7 +388,7 @@ def render_magi_panel(q, v, t, qvt, ticker, base, tech):
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:6px">
           <div class="info-panel">
             <div class="info-panel-title">■ STOCK DATA</div>
-            <div class="info-row"><span>{ticker.replace('.T','')}</span><span class="info-val">{industry}</span></div>
+            <div class="info-row"><span>{ticker.replace(".T","")}</span><span class="info-val">{industry}</span></div>
             <div class="info-row"><span>SECTOR</span><span class="info-val" style="font-size:0.55rem">{sector}</span></div>
             <div style="border-top:1px solid var(--text-dark);margin:4px 0"></div>
             <div style="font-size:1rem;color:#ffaa66;font-weight:700;letter-spacing:1px">{_fmt(close, d)}</div>
@@ -413,7 +413,7 @@ def render_magi_panel(q, v, t, qvt, ticker, base, tech):
         </div>
 
         <div style="border:1px solid var(--orange);padding:1rem 0.5rem 0.5rem;position:relative;margin-top:6px">
-          <div style="position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:#000;border:1px solid var(--orange);padding:0 10px;font-family:'Orbitron',monospace;font-size:0.75rem;font-weight:700;color:var(--orange);letter-spacing:3px;white-space:nowrap">■ MAGI ■</div>
+          <div style="position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:#000;border:1px solid var(--orange);padding:0 10px;font-family:Orbitron,monospace;font-size:0.75rem;font-weight:700;color:var(--orange);letter-spacing:3px;white-space:nowrap">&#9632; MAGI &#9632;</div>
 
           <div style="display:flex;justify-content:center;margin-bottom:4px">
             {node_html("BALTHASAR-2 / VALUATION", v, v_verd, v_cls)}
@@ -422,7 +422,7 @@ def render_magi_panel(q, v, t, qvt, ticker, base, tech):
           <div style="display:flex;justify-content:center;margin:0 0 4px">
             <div class="magi-center-panel">
               <div class="magi-center-name">MAGI</div>
-              <div style="font-family:'Share Tech Mono',monospace;font-size:1.8rem;font-weight:900;color:{qvt_color}">{qvt:.1f}</div>
+              <div style="font-family:Share Tech Mono,monospace;font-size:1.8rem;font-weight:900;color:{qvt_color}">{qvt:.1f}</div>
               <div class="magi-center-comment">{comment}</div>
             </div>
           </div>
@@ -599,7 +599,7 @@ def render_v_tab(tech):
         code = ft.get("code", "—"); ja = ft.get("ja", "—"); desc = ft.get("description", "")
         st.markdown(f"""
         <div style="background:#000;border:1px solid var(--orange);padding:0.7rem 1rem;margin:0.5rem 0">
-          <div style="font-size:0.55rem;letter-spacing:2px;color:var(--text-dim);font-family:'Orbitron',monospace">財務タイプ</div>
+          <div style="font-size:0.55rem;letter-spacing:2px;color:var(--text-dim);font-family:Orbitron,monospace">財務タイプ</div>
           <div style="font-size:0.95rem;font-weight:700;color:var(--orange);margin-top:0.2rem">{ja} <span style="font-size:0.65rem;color:var(--text-dark)">({code})</span></div>
           <div style="font-size:0.75rem;color:var(--text-dim);margin-top:0.2rem">{desc}</div>
         </div>
@@ -682,7 +682,7 @@ def render_qvt_tab(tech):
       <div class="score-value" style="color:{color};font-size:3.5rem">{qvt_show:.1f}</div>
       <div class="score-max">/ 100</div>
       <div style="font-size:1.2rem;margin-top:.5rem">{star}</div>
-      <div style="font-size:.75rem;color:var(--text-dim);margin-top:.5rem;font-family:'Share Tech Mono'">{msg}</div>
+      <div style="font-size:.75rem;color:var(--text-dim);margin-top:.5rem;font-family:Share Tech Mono,monospace">{msg}</div>
     </div>
     """, unsafe_allow_html=True)
 
