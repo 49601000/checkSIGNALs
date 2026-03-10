@@ -787,8 +787,8 @@ def render_qvt_tab(tech):
 
     col1, col2, col3 = st.columns(3)
     if corr: col1.metric("Q（補正後）", f"{q_show:.1f}", delta=f"{q_show - q:+.1f}")
-    else:    col1.metric("QUALITY", f"{q:.1f}")
-    col2.metric("VALUATION", f"{v:.1f}"); col3.metric("TIMING", f"{t:.1f}")
+    else:    col1.metric("  QUALITY", f"{q:.1f}")
+    col2.metric("  VALUATION", f"{v:.1f}"); col3.metric("  TIMING", f"{t:.1f}")
 
     st.markdown("---")
     color = _color_score(qvt_show)
@@ -797,7 +797,7 @@ def render_qvt_tab(tech):
 
     st.markdown(f"""
     <div class="score-card" style="padding:1.5rem;border:2px solid var(--orange)">
-      <div class="score-label">QVT(total score)</div>
+      <div class="score-label">QVT [total score]</div>
       <div class="score-value" style="color:{color};font-size:3.5rem">{qvt_show:.1f}</div>
       <div class="score-max">/ 100</div>
       <div style="font-size:1.2rem;margin-top:.5rem">{star}</div>
