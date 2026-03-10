@@ -22,7 +22,7 @@ from modules.pattern_db import (
 def _setup_style():
     st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Noto+Sans+JP:wght@400;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Noto+Sans+JP:wght@400;700&family=Noto+Serif+JP:wght@900&display=swap');
 
     :root {
         --bg:         #0a0a0a;
@@ -36,10 +36,11 @@ def _setup_style():
         --red-bright: #ff2222;
         --red-glow:   #ff4444;
         --orange:     #ff6600;
+        --jp-mincho:  'Noto Serif JP', 'Hiragino Mincho ProN', 'Yu Mincho', serif;
     }
 
     html, body, [class*="css"] {
-        font-family: 'Share Tech Mono', monospace;
+        font-family: 'Share Tech Mono', var(--jp-mincho), monospace;
         background-color: var(--bg) !important;
         color: var(--text) !important;
     }
@@ -152,14 +153,15 @@ def _setup_style():
         font-size: 0.85rem; font-weight: 900; color: var(--orange);
         letter-spacing: 4px; text-shadow: 0 0 10px rgba(255,102,0,0.7);
     }
-    .magi-center-comment { font-size: 0.6rem; color: var(--orange); letter-spacing: 0.5px; line-height: 1.4; }
+    .magi-center-comment { font-size: 0.65rem; color: var(--orange); letter-spacing: 0.5px; line-height: 1.4; font-family: var(--jp-mincho); font-weight: 900; }
 
     /* 情報パネル */
     .info-panel {
         background: #000; border: 1px solid var(--orange);
         padding: 0.5rem 0.7rem;
-        font-family: 'Share Tech Mono', monospace;
+        font-family: var(--jp-mincho);
         font-size: 0.62rem; color: var(--orange); line-height: 1.8;
+        font-weight: 900;
     }
     .info-panel-title {
         font-family: 'Orbitron', monospace;
@@ -221,8 +223,8 @@ def _setup_style():
         border-radius: 0 !important; padding: 0.6rem !important;
     }
     div[data-testid="metric-container"] [data-testid="stMetricValue"] {
-        font-family: 'Share Tech Mono', monospace !important;
-        font-size: 1.4rem !important; font-weight: 700 !important; color: var(--orange) !important;
+        font-family: 'Share Tech Mono', var(--jp-mincho), monospace !important;
+        font-size: 1.4rem !important; font-weight: 900 !important; color: var(--orange) !important;
     }
     div[data-testid="metric-container"] label {
         font-family: 'Orbitron', monospace !important;
@@ -244,7 +246,7 @@ def _setup_style():
     .cs-table tbody tr { border-bottom: 1px solid rgba(255,102,0,0.15); }
     .cs-table tbody tr:nth-child(odd)  { background: rgba(255,102,0,0.03); }
     .cs-table tbody tr:nth-child(even) { background: transparent; }
-    .cs-table tbody td { padding: 7px 10px; color: var(--orange); }
+    .cs-table tbody td { padding: 7px 10px; color: var(--orange); font-family: var(--jp-mincho); font-weight: 900; }
     .td-ok {
         display: inline-flex; align-items: center; justify-content: center;
         width: 22px; height: 22px;
@@ -305,6 +307,20 @@ def _setup_style():
         border: 1px solid var(--orange) !important; border-radius: 0 !important;
     }
     .stCaption { color: var(--text-dim) !important; font-size: 0.65rem !important; }
+    /* Streamlit本文テキスト（caption, info, markdownなど） */
+    .stMarkdown p, .stMarkdown li, .stMarkdown td,
+    div[data-testid="stCaptionContainer"],
+    div[data-testid="stAlert"] {
+        font-family: var(--jp-mincho) !important;
+        font-weight: 900 !important;
+    }
+
+    /* expanderラベル */
+    details summary p {
+        font-family: var(--jp-mincho) !important;
+        font-weight: 900 !important;
+    }
+
     </style>
     """, unsafe_allow_html=True)
 
