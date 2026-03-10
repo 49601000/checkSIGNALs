@@ -295,6 +295,8 @@ def _build_table(headers, rows):
 # ─── UI パーツ ───────────────────────────────────────────────
 
 def render_price_header(ticker, company_name, close, prev_close, industry="", sector=""):
+    # データソースが「三菱UFJ FG（8306）の」のように末尾に"の"を付けて返す場合があるので除去
+    company_name = company_name.rstrip("の").strip()
     change = close - prev_close
     change_pct = (change / prev_close * 100) if prev_close else 0
     d = 0 if close >= 100 else 2
