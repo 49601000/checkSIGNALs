@@ -8,10 +8,10 @@ app/
 │   ├── __init__.py
 │   ├── classic/          ← 従来UI (checkSIGNAL)
 │   │   ├── __init__.py
-│   │   └── main.py
+│   │   └── ui_classic_main.py
 │   └── magi/             ← MAGIシステムUI
 │       ├── __init__.py
-│       └── main.py
+│       └── ui_magi_main.py
 ├── modules/              ← 共通モジュール（変更不要）
 ├── data/                 ← 共通データ（変更不要）
 └── __init__.py
@@ -49,14 +49,14 @@ UI_REGISTRY = [
         "name":   "checkSIGNAL",
         "icon":   "📡",
         "desc":   "シンプルモダンUI。スコアカード・テーブル・メトリクスで視認性重視。",
-        "module": "ui_classic_main",
+        "module": "ui_classic_main.py",
     },
     {
         "key":    "magi",
         "name":   "MAGI SYSTEM",
         "icon":   "🔴",
         "desc":   "マギシステム。六角形判定パネル・スキャンライン・オレンジCRT。",
-        "module": "ui_magi_main",
+        "module": "ui_magi_main.py",
     },
     # ── 将来UIの追加例（コメントアウト） ──────────────────────
     # {
