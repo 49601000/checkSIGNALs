@@ -712,7 +712,7 @@ def render_v_tab(tech):
     col1.metric("V1 伝統的割安度", f"{v1:.0f}")
     col2.metric("V2 企業価値割安度", f"{v2:.0f}")
     col3.metric("V3 株主還元度", f"{v3:.0f}")
-    col4.metric("V4 財務タイプ別診断", f"{v4:.0f}" if (has_sector and v4 is not None) else "—")
+    col4.metric("V4 セクター内診断", f"{v4:.0f}" if (has_sector and v4 is not None) else "—")
     ft_code = ft.get("code", "")
     ft_ja   = ft.get("ja",   "")
     v4_note = f"財務タイプ: {ft_code}（{ft_ja}）" if ft_code and ft_code != "UNK" else "財務タイプ: DB未収録"
@@ -748,11 +748,11 @@ def render_v_tab(tech):
         ev_rel  = sector_rel.get("ev_ebitda_rel_score")
         ft_ja   = ft.get("ja", "")
         if sv is not None:
-            if sv >= 80:   diag = f"セクター内でかなり割安。{ft_ja}として見ても買いやすい水準。"
-            elif sv >= 65: diag = f"セクター内でやや割安。{ft_ja}の中央値を下回っており妥当圏。"
-            elif sv >= 50: diag = f"セクター内で中央値水準。{ft_ja}として特段割安でも割高でもない。"
-            elif sv >= 35: diag = f"セクター内でやや割高。{ft_ja}の中央値を上回っており注意が必要。"
-            else:          diag = f"セクター内でかなり割高。{ft_ja}として見ると割高圏にある。"
+            if sv >= 80:   diag =  f"{sector_name}セクター内でかなり割安。買いやすい水準。"
+            elif sv >= 65: diag =  f"{sector_name}セクター内でやや割安。中央値を下回っており妥当圏。"
+            elif sv >= 50: diag =  f"{sector_name}セクター内で中央値水準。特段割安でも割高でもない。"
+            elif sv >= 35: diag =  f"{sector_name}セクター内でやや割高。中央値を上回っており注意が必要。"
+            else:          diag =  f"{sector_name}セクター内でかなり割高。割高圏にある。"
             notes = []
             if per_rel is not None and per_rel >= 75: notes.append("PERは割安")
             if pbr_rel is not None and pbr_rel >= 75: notes.append("PBRは割安")
