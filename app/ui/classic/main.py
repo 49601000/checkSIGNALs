@@ -12,7 +12,9 @@ from modules.q_correction import apply_q_correction
 from modules.pattern_db import (
     load_pattern_db,
     classify_ticker,
-    calc_sector_relative_scores,
+    calc_sector_relative_scores,            # 財務タイプ表示用（旧・変更なし）
+    calc_sector_relative_scores_from_db,    # V4 計算用（sector_db ベース・新方式）
+    load_sector_db,                         # sector_db_latest.csv ローダー
     get_all_types_for_display,
 )
 
@@ -797,9 +799,13 @@ def _fetch_and_compute(ticker):
         _eps    = base.get("eps");  _bps = base.get("bps")
         _per_tmp = (_close / _eps) if (_eps and _eps != 0 and _close) else None
         _pbr_tmp = (_close / _bps) if (_bps and _bps != 0 and _close) else None
-        sector_rel    = calc_sector_relative_scores(
-            ft=financial_type, per=_per_tmp, pbr=_pbr_tmp, ev_ebitda=base.get("ev_ebitda"))
-        sector_v_score = sector_rel.get("sector_v_score") if financial_type.get("code", "UNK") != "UNK" else None
+        # V4: sector_db ベースで計算（financial_type は表示ラベルに限定）
+        _sector_name = base.get("sector", "")
+        sector_rel    = calc_sector_relative_scores_from_db(
+            sector=_sector_name, per=_per_tmp, pbr=_pbr_tmp, ev_ebitda=base.get("ev_ebitda"))
+        sector_v_score = sector_rel.get("sector_v_score") if (
+            _sector_name and sector_rel.get("sector_matched", False)
+        ) else None
 
     with st.spinner("🔢 指標を計算中…"):
         try:
@@ -830,11 +836,12 @@ def _fetch_and_compute(ticker):
     _pbr_final = tech.get("pbr")
     _ev_final  = tech.get("ev_ebitda")
     if _per_final or _pbr_final or _ev_final:
-        sector_rel_final = calc_sector_relative_scores(
-            ft=financial_type, per=_per_final, pbr=_pbr_final, ev_ebitda=_ev_final)
+        # compute_indicators 後に確定した値で sector_rel を再計算（sector_db ベース）
+        sector_rel_final = calc_sector_relative_scores_from_db(
+            sector=_sector_name, per=_per_final, pbr=_pbr_final, ev_ebitda=_ev_final)
         tech["sector_rel_scores"] = sector_rel_final
-        # sector_v_score も再計算
-        if financial_type.get("code", "UNK") != "UNK":
+        # sector_matched = True のときのみ V4 を有効化
+        if sector_rel_final.get("sector_matched", False):
             tech["sector_v_score"] = sector_rel_final.get("sector_v_score")
 
     # is_us を tech に格納しておく（各タブから参照可能に）
