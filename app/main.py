@@ -81,7 +81,7 @@ UI_REGISTRY = [
         "key":    "magi",
         "name":   "MAGI SYSTEM",
         "icon":   "🔴",
-        "desc":   "新世紀エヴァンゲリオン風。六角形判定パネル・スキャンライン・オレンジCRT。",
+        "desc":   "MAGI風UI。六角形判定パネル・スキャンライン・オレンジCRT。",
         "module": "ui.magi.main",
     },
     # ── 将来UIの追加例（コメントアウト） ──────────────────────
