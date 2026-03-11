@@ -705,6 +705,7 @@ def render_v_tab(tech):
     v3 = float(tech.get("v3", 0)); v4 = tech.get("v4"); has_sector = tech.get("has_sector", False)
     per = tech.get("per"); per_fwd = tech.get("per_fwd"); pbr = tech.get("pbr")
     dy = tech.get("dividend_yield"); ev_ebitda = tech.get("ev_ebitda")
+    sector_name = tech.get("sector")
     ft = tech.get("financial_type", {}); sector_rel = tech.get("sector_rel_scores", {})
 
     st.metric("VALUATION SCORE", f"{v_score:.1f} / 100")
