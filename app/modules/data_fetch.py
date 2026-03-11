@@ -316,6 +316,29 @@ def _supplement_from_yfinance(info: dict, current: dict, ticker_obj=None) -> dic
     _fill("roa",              "returnOnAssets",  100.0)
     _fill("operating_margin", "operatingMargins", 100.0)  # ★新規
 
+    # operating_margin 経路②: financials から operatingIncome / totalRevenue で計算
+    # （日本株の場合 operatingMargins が None のケースが多いため）
+    if current.get("operating_margin") is None and ticker_obj is not None:
+        try:
+            fin = ticker_obj.financials
+            if fin is not None and not fin.empty:
+                col = fin.columns[0]
+                def _get_fin_row(keys):
+                    for k in keys:
+                        for idx in fin.index:
+                            if k.lower() in str(idx).lower():
+                                v = fin.loc[idx, col]
+                                if v is not None and str(v) not in ("nan", "None"):
+                                    return float(v)
+                    return None
+                op_inc = _get_fin_row(["Operating Income", "Operating Profit",
+                                       "Total Operating Income As Reported"])
+                rev    = _get_fin_row(["Total Revenue", "Net Sales", "Revenue"])
+                if op_inc is not None and rev not in (None, 0):
+                    current["operating_margin"] = round(op_inc / abs(rev) * 100.0, 2)
+        except Exception:
+            pass
+
     # インタレストカバレッジ：複数経路で計算
     if current.get("interest_coverage") is None:
         ebit   = _safe_float(info.get("ebit"))
@@ -361,18 +384,77 @@ def _supplement_from_yfinance(info: dict, current: dict, ticker_obj=None) -> dic
             # yfinance は % 表記（例: 150.0 = D/E 1.50 倍）→ 100 で割って倍率に変換
             current["de_ratio"] = round(de / 100.0, 3)
         else:
-            # 経路②: totalDebt / totalStockholderEquity
+            # 経路②: totalDebt / totalStockholderEquity（info直接）
             total_debt   = _safe_float(info.get("totalDebt"))
             total_equity = _safe_float(info.get("totalStockholderEquity"))
             if total_debt is not None and total_equity not in (None, 0):
                 current["de_ratio"] = round(total_debt / abs(total_equity), 3)
 
+    # D/E レシオ 経路③: balance_sheet から LongTermDebt + ShortTermDebt / StockholdersEquity
+    if current.get("de_ratio") is None and ticker_obj is not None:
+        try:
+            bs = ticker_obj.balance_sheet
+            if bs is not None and not bs.empty:
+                col = bs.columns[0]
+                def _get_bs_row(keys):
+                    for k in keys:
+                        for idx in bs.index:
+                            if k.lower() in str(idx).lower():
+                                v = bs.loc[idx, col]
+                                if v is not None and str(v) not in ("nan", "None"):
+                                    return float(v)
+                    return None
+                # 有利子負債 = 長期借入 + 短期借入
+                long_debt  = _get_bs_row(["Long Term Debt", "LongTermDebt", "長期借入"])
+                short_debt = _get_bs_row(["Short Term Debt", "ShortTermDebt", "短期借入",
+                                          "Current Debt", "CurrentPortionOfLongTermDebt"])
+                equity_bs  = _get_bs_row(["Stockholders Equity", "StockholdersEquity",
+                                          "Common Stock Equity", "株主資本", "純資産"])
+                total_d    = (long_debt or 0.0) + (short_debt or 0.0)
+                if total_d > 0 and equity_bs not in (None, 0):
+                    current["de_ratio"] = round(total_d / abs(equity_bs), 3)
+        except Exception:
+            pass
+
     # EV/EBITDA
     if current.get("ev_ebitda") is None:
+        # 経路①: yfinance info の enterpriseToEbitda（直接倍率）
+        ev_ebitda_direct = _safe_float(info.get("enterpriseToEbitda"))
+        if ev_ebitda_direct is not None and ev_ebitda_direct > 0:
+            current["ev_ebitda"] = round(ev_ebitda_direct, 2)
+
+    if current.get("ev_ebitda") is None:
+        # 経路②: enterpriseValue / ebitda
         ev_val     = _safe_float(info.get("enterpriseValue"))
         ebitda_val = _safe_float(info.get("ebitda"))
         if ev_val and ebitda_val and ebitda_val > 0:
             current["ev_ebitda"] = round(ev_val / ebitda_val, 2)
+
+    if current.get("ev_ebitda") is None and ticker_obj is not None:
+        # 経路③: financials から EBITDA（EBIT + D&A）を計算して EV/EBITDA を算出
+        try:
+            fin = ticker_obj.financials
+            bs  = ticker_obj.balance_sheet
+            if fin is not None and not fin.empty:
+                col = fin.columns[0]
+                def _get_fin_ev(keys):
+                    for k in keys:
+                        for idx in fin.index:
+                            if k.lower() in str(idx).lower():
+                                v = fin.loc[idx, col]
+                                if v is not None and str(v) not in ("nan", "None"):
+                                    return float(v)
+                    return None
+                ebit_val = _get_fin_ev(["EBIT", "Operating Income", "Operating Profit", "営業利益"])
+                da_val   = _get_fin_ev(["Depreciation", "D&A", "Amortization",
+                                        "Depreciation And Amortization", "減価償却"])
+                ev_info  = _safe_float(info.get("enterpriseValue"))
+                if ebit_val is not None and da_val is not None and ev_info is not None:
+                    ebitda_calc = ebit_val + abs(da_val)
+                    if ebitda_calc > 0:
+                        current["ev_ebitda"] = round(ev_info / ebitda_calc, 2)
+        except Exception:
+            pass
 
     # 自己資本比率の補完
     if current.get("equity_ratio") is None:
