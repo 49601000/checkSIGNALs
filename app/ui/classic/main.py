@@ -609,9 +609,9 @@ def render_v_tab(tech):
         col1.metric("V1 割安", f"{v1:.0f}"); col2.metric("V2 CF系", f"{v2:.0f}")
         col3.metric("V3 配当", f"{v3:.0f}")
         if not has_sector:
-            st.caption("ℹ️ セクター相対評価（V4）はデータ不足銘柄（UNK）を除き動的分類で対応。")
+            st.caption("ℹ️ セクター相対評価（V4）は日本株DBに収録された銘柄のみ対応。")
 
-    if ft.get("matched"):
+    if ft.get("code"):
         code = ft.get("code", "—"); ja = ft.get("ja", "—"); desc = ft.get("description", "")
         conf = {"HIGH": "🟢 HIGH", "MID": "🟡 MID", "NONE": "⚪ NONE"}.get(ft.get("confidence", ""), "")
         st.markdown(f"""
@@ -635,6 +635,34 @@ def render_v_tab(tech):
             ("EV/EBITDA（相対）", sector_rel.get("ev_ebitda_vs_median", "—"), _rel("ev_ebitda_rel_score")),
         ]), unsafe_allow_html=True)
         st.caption("スコア目安：100pt＝かなり割安 / 50pt＝中央値水準 / 0pt＝かなり割高")
+
+        # セクター診断コメント
+        sv = sector_rel.get("sector_v_score")
+        per_rel = sector_rel.get("per_rel_score")
+        pbr_rel = sector_rel.get("pbr_rel_score")
+        ev_rel  = sector_rel.get("ev_ebitda_rel_score")
+        ft_ja   = ft.get("ja", "")
+        if sv is not None:
+            if sv >= 80:
+                diag = f"セクター内でかなり割安。{ft_ja}として見ても買いやすい水準。"
+            elif sv >= 65:
+                diag = f"セクター内でやや割安。{ft_ja}の中央値を下回っており妥当圏。"
+            elif sv >= 50:
+                diag = f"セクター内で中央値水準。{ft_ja}として特段割安でも割高でもない。"
+            elif sv >= 35:
+                diag = f"セクター内でやや割高。{ft_ja}の中央値を上回っており注意が必要。"
+            else:
+                diag = f"セクター内でかなり割高。{ft_ja}として見ると割高圏にある。"
+            # 特定指標が突出している場合に補足
+            notes = []
+            if per_rel is not None and per_rel >= 75: notes.append("PERは割安")
+            if pbr_rel is not None and pbr_rel >= 75: notes.append("PBRは割安")
+            if ev_rel  is not None and ev_rel  >= 75: notes.append("EV/EBITDAは割安")
+            if per_rel is not None and per_rel <= 25: notes.append("PERは割高圏")
+            if pbr_rel is not None and pbr_rel <= 25: notes.append("PBRは割高圏")
+            if notes:
+                diag += f"（{' / '.join(notes)}）"
+            st.info(f"📊 セクター診断　{diag}")
 
     st.markdown("##### 📋 絶対評価（V1〜V3）")
 
@@ -771,7 +799,6 @@ def _fetch_and_compute(ticker):
         _pbr_tmp = (_close / _bps) if (_bps and _bps != 0 and _close) else None
         sector_rel    = calc_sector_relative_scores(
             ft=financial_type, per=_per_tmp, pbr=_pbr_tmp, ev_ebitda=base.get("ev_ebitda"))
-        # matched=Falseでも動的推定済み(estimated=True)ならV4を使う。UNKのみ除外
         sector_v_score = sector_rel.get("sector_v_score") if financial_type.get("code", "UNK") != "UNK" else None
 
     with st.spinner("🔢 指標を計算中…"):
@@ -797,6 +824,18 @@ def _fetch_and_compute(ticker):
             )
         except ValueError as e:
             st.error(str(e)); return base, None
+
+    # compute_indicators 後に ev_ebitda が確定するので sector_rel を再計算して上書き
+    _per_final = tech.get("per")
+    _pbr_final = tech.get("pbr")
+    _ev_final  = tech.get("ev_ebitda")
+    if _per_final or _pbr_final or _ev_final:
+        sector_rel_final = calc_sector_relative_scores(
+            ft=financial_type, per=_per_final, pbr=_pbr_final, ev_ebitda=_ev_final)
+        tech["sector_rel_scores"] = sector_rel_final
+        # sector_v_score も再計算
+        if financial_type.get("code", "UNK") != "UNK":
+            tech["sector_v_score"] = sector_rel_final.get("sector_v_score")
 
     # is_us を tech に格納しておく（各タブから参照可能に）
     tech["is_us"] = not ticker.upper().endswith(".T")
