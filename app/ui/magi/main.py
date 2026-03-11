@@ -708,8 +708,8 @@ def render_v_tab(tech):
     st.metric("VALUATION SCORE", f"{v_score:.1f} / 100")
     if has_sector and v4 is not None:
         col1, col2, col3, col4 = st.columns(4)
-        col1.metric("V1 割安", f"{v1:.0f}"); col2.metric("V2 CF系", f"{v2:.0f}")
-        col3.metric("V3 配当", f"{v3:.0f}"); col4.metric("V4 相対", f"{v4:.0f}")
+        col1.metric("V1 市場全体から見た割安度（PER・PBR）", f"{v1:.0f}"); col2.metric("V2 企業価値ベース割安度（EV/EBITDA）", f"{v2:.0f}")
+        col3.metric("V3 株主還元度（配当利回り）", f"{v3:.0f}"); col4.metric("V4 同業他社との比較", f"{v4:.0f}")
     else:
         col1, col2, col3 = st.columns(3)
         col1.metric("V1 割安", f"{v1:.0f}"); col2.metric("V2 CF系", f"{v2:.0f}"); col3.metric("V3 配当", f"{v3:.0f}")
