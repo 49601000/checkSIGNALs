@@ -611,7 +611,7 @@ def render_v_tab(tech):
         if not has_sector:
             st.caption("ℹ️ セクター相対評価（V4）は日本株DBに収録された銘柄のみ対応。")
 
-    if ft.get("matched"):
+    if ft.get("code"):
         code = ft.get("code", "—"); ja = ft.get("ja", "—"); desc = ft.get("description", "")
         conf = {"HIGH": "🟢 HIGH", "MID": "🟡 MID", "NONE": "⚪ NONE"}.get(ft.get("confidence", ""), "")
         st.markdown(f"""
