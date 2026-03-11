@@ -446,8 +446,8 @@ def _node_verdict(score, threshold=60):
 def _magi_comment(qvt):
     if qvt >= 70: return "主力候補 — 全システム承認"
     if qvt >= 60: return "買い検討 — 押し目を慎重に"
-    if qvt >= 50: return "比較検討推奨 — 他候補と比較せよ"
-    return "見送り推奨 — テーマ性を要確認"
+    if qvt >= 50: return "比較推奨 — 他候補と比較を"
+    return "見送推奨 — テーマ性を要確認"
 
 
 # ─── MAGIパネル ───────────────────────────────────────────────
