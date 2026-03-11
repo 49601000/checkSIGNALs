@@ -493,7 +493,7 @@ def render_magi_panel(q, v, t, qvt, ticker, base, tech):
     # ① ヘッダー + 左右情報パネル（② 銘柄名を company_name 行に追加）
     st.markdown(
         '<div class="magi-container">' +
-        '<div class="magi-header-strip">RESULT OF THE DELIBERATION &#9632; ACCESS GRANTED &#8212; SUPERUSER</div>' +
+        '<div class="magi-header-strip">RESULT OF THE DELIBERATION</div>' +
         '<div style="padding:0.5rem;background:#000">' +
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:6px">' +
 
@@ -879,7 +879,7 @@ def run():
     st.markdown("""
     <div class="magi-banner">DIRECT BUS CONNECTION MAGI-47 &nbsp;■&nbsp; ACCESS AUTHORIZED — SUPERUSER</div>
     <div class="magi-banner-title">▶ MOTION : BUY THE DIP ◀</div>
-    <div class="magi-banner">RESULT OF THE DELIBERATION — MAGI SYSTEM v3 — 日本株 / 米国株対応</div>
+    <div class="magi-banner">MAGI SYSTEM v3 — 日本株 / 米国株対応</div>
     """, unsafe_allow_html=True)
 
     col_input, col_btn = st.columns([4, 1])
