@@ -609,9 +609,9 @@ def render_v_tab(tech):
         col1.metric("V1 割安", f"{v1:.0f}"); col2.metric("V2 CF系", f"{v2:.0f}")
         col3.metric("V3 配当", f"{v3:.0f}")
         if not has_sector:
-            st.caption("ℹ️ セクター相対評価（V4）は日本株DBに収録された銘柄のみ対応。")
+            st.caption("ℹ️ セクター相対評価（V4）はデータ不足銘柄（UNK）を除き動的分類で対応。")
 
-    if ft.get("code"):
+    if ft.get("matched"):
         code = ft.get("code", "—"); ja = ft.get("ja", "—"); desc = ft.get("description", "")
         conf = {"HIGH": "🟢 HIGH", "MID": "🟡 MID", "NONE": "⚪ NONE"}.get(ft.get("confidence", ""), "")
         st.markdown(f"""
@@ -763,14 +763,16 @@ def _fetch_and_compute(ticker):
             roa=base.get("roa"),
             equity_ratio=base.get("equity_ratio"),
             interest_coverage=base.get("interest_coverage"),
-            operating_margin=base.get("operating_margin"))
+            operating_margin=base.get("operating_margin"),
+        )
         _close  = base.get("close", 0)
         _eps    = base.get("eps");  _bps = base.get("bps")
         _per_tmp = (_close / _eps) if (_eps and _eps != 0 and _close) else None
         _pbr_tmp = (_close / _bps) if (_bps and _bps != 0 and _close) else None
         sector_rel    = calc_sector_relative_scores(
             ft=financial_type, per=_per_tmp, pbr=_pbr_tmp, ev_ebitda=base.get("ev_ebitda"))
-        sector_v_score = sector_rel.get("sector_v_score") if financial_type.get("matched") else None
+        # matched=Falseでも動的推定済み(estimated=True)ならV4を使う。UNKのみ除外
+        sector_v_score = sector_rel.get("sector_v_score") if financial_type.get("code", "UNK") != "UNK" else None
 
     with st.spinner("🔢 指標を計算中…"):
         try:
