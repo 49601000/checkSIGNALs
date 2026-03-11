@@ -417,42 +417,73 @@ def _supplement_from_yfinance(info: dict, current: dict, ticker_obj=None) -> dic
             pass
 
     # EV/EBITDA
+    # 経路①: info["enterpriseToEbitda"]（直接倍率・最優先）
     if current.get("ev_ebitda") is None:
-        # 経路①: yfinance info の enterpriseToEbitda（直接倍率）
         ev_ebitda_direct = _safe_float(info.get("enterpriseToEbitda"))
         if ev_ebitda_direct is not None and ev_ebitda_direct > 0:
             current["ev_ebitda"] = round(ev_ebitda_direct, 2)
 
+    # 経路②: info["enterpriseValue"] / info["ebitda"]
     if current.get("ev_ebitda") is None:
-        # 経路②: enterpriseValue / ebitda
         ev_val     = _safe_float(info.get("enterpriseValue"))
         ebitda_val = _safe_float(info.get("ebitda"))
         if ev_val and ebitda_val and ebitda_val > 0:
             current["ev_ebitda"] = round(ev_val / ebitda_val, 2)
 
+    # 経路③: 財務諸表から自前計算（日本株で①②が取れない場合の主経路）
+    #   EBITDA = Operating Income (financials) + Depreciation (cashflow)
+    #   EV     = 時価総額 + 有利子負債 - 現金  ← info["enterpriseValue"]が取れない場合に自前計算
     if current.get("ev_ebitda") is None and ticker_obj is not None:
-        # 経路③: financials から EBITDA（EBIT + D&A）を計算して EV/EBITDA を算出
         try:
-            fin = ticker_obj.financials
+            fin = ticker_obj.financials   # 損益計算書
+            cf  = ticker_obj.cashflow     # キャッシュフロー計算書（D&Aはこちら）
             bs  = ticker_obj.balance_sheet
-            if fin is not None and not fin.empty:
-                col = fin.columns[0]
-                def _get_fin_ev(keys):
-                    for k in keys:
-                        for idx in fin.index:
-                            if k.lower() in str(idx).lower():
-                                v = fin.loc[idx, col]
-                                if v is not None and str(v) not in ("nan", "None"):
-                                    return float(v)
+
+            def _get_stmt_val(stmt, keys):
+                if stmt is None or stmt.empty:
                     return None
-                ebit_val = _get_fin_ev(["EBIT", "Operating Income", "Operating Profit", "営業利益"])
-                da_val   = _get_fin_ev(["Depreciation", "D&A", "Amortization",
-                                        "Depreciation And Amortization", "減価償却"])
-                ev_info  = _safe_float(info.get("enterpriseValue"))
-                if ebit_val is not None and da_val is not None and ev_info is not None:
-                    ebitda_calc = ebit_val + abs(da_val)
-                    if ebitda_calc > 0:
-                        current["ev_ebitda"] = round(ev_info / ebitda_calc, 2)
+                col = stmt.columns[0]
+                for k in keys:
+                    for idx in stmt.index:
+                        if k.lower() in str(idx).lower():
+                            v = stmt.loc[idx, col]
+                            if v is not None and str(v) not in ("nan", "None", "NaN"):
+                                return float(v)
+                return None
+
+            op_income = _get_stmt_val(fin, [
+                "Operating Income", "Operating Profit", "EBIT",
+                "Total Operating Income As Reported",
+            ])
+            dep_amor  = _get_stmt_val(cf, [
+                "Depreciation", "Depreciation And Amortization",
+                "Depreciation Amortization Depletion",
+                "DepreciationAndAmortization",
+            ])
+
+            if op_income is not None and dep_amor is not None:
+                ebitda_calc = op_income + abs(dep_amor)
+
+                # EV: info から取れなければ BS から自前計算
+                ev_use = _safe_float(info.get("enterpriseValue"))
+                if ev_use is None:
+                    mktcap     = _safe_float(info.get("marketCap"))
+                    cash_val   = _get_stmt_val(bs, [
+                        "Cash And Cash Equivalents",
+                        "Cash Cash Equivalents And Short Term Investments",
+                        "Cash And Short Term Investments",
+                    ])
+                    debt_long  = _get_stmt_val(bs, ["Long Term Debt", "LongTermDebt"])
+                    debt_short = _get_stmt_val(bs, [
+                        "Short Term Debt", "Current Debt",
+                        "Current Portion Of Long Term Debt",
+                    ])
+                    total_debt = (debt_long or 0.0) + (debt_short or 0.0)
+                    if mktcap is not None and total_debt > 0:
+                        ev_use = mktcap + total_debt - (cash_val or 0.0)
+
+                if ev_use is not None and ebitda_calc > 0:
+                    current["ev_ebitda"] = round(ev_use / ebitda_calc, 2)
         except Exception:
             pass
 
