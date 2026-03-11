@@ -707,10 +707,11 @@ def render_v_tab(tech):
 
     st.metric("VALUATION SCORE", f"{v_score:.1f} / 100")
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("V1 市場全体から見た割安度（PER・PBR）", f"{v1:.0f}")
-    col2.metric("V2 企業価値ベース割安度（EV/EBITDA）",  f"{v2:.0f}")
-    col3.metric("V3 株主還元度（配当利回り）",            f"{v3:.0f}")
+    col1.metric("V1 伝統的割安度", f"{v1:.0f}")
+    col2.metric("V2 企業価値割安度", f"{v2:.0f}")
+    col3.metric("V3 株主還元度", f"{v3:.0f}")
     col4.metric("V4 財務タイプ別診断", f"{v4:.0f}" if (has_sector and v4 is not None) else "—")
+    st.caption("V1: PER・PBR ／ V2: EV/EBITDA ／ V3: 配当利回り ／ V4: 財務タイプ別セクター相対評価（日本株DBのみ）")
 
     if ft.get("matched"):
         code = ft.get("code", "—"); ja = ft.get("ja", "—"); desc = ft.get("description", "")
