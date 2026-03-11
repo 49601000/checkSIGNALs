@@ -757,7 +757,13 @@ def _fetch_and_compute(ticker):
 
     with st.spinner("🔍 財務タイプを分類中…"):
         db             = load_pattern_db()
-        financial_type = classify_ticker(ticker, db)
+        financial_type = classify_ticker(
+            ticker, db,
+            roe=base.get("roe"),
+            roa=base.get("roa"),
+            equity_ratio=base.get("equity_ratio"),
+            interest_coverage=base.get("interest_coverage"),
+            operating_margin=base.get("operating_margin"))
         _close  = base.get("close", 0)
         _eps    = base.get("eps");  _bps = base.get("bps")
         _per_tmp = (_close / _eps) if (_eps and _eps != 0 and _close) else None
