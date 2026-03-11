@@ -238,6 +238,10 @@ def compute_indicators(
         # セクター相対（UI表示用）
         "sector_rel_scores": sector_rel_scores or {},  # ★v3
         "financial_type": financial_type or {},        # ★v3
+        
+        # 業種分類（UI表示用）
+        "industry": industry,
+        "sector": sector,
 
         # T / QVT
         "t_score": t_score,
