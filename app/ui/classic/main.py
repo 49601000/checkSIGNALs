@@ -597,6 +597,7 @@ def render_v_tab(tech):
     per        = tech.get("per");  per_fwd = tech.get("per_fwd")
     pbr        = tech.get("pbr");  dy      = tech.get("dividend_yield")
     ev_ebitda  = tech.get("ev_ebitda")
+    sector_name = tech.get("sector")
     ft         = tech.get("financial_type", {})
     sector_rel = tech.get("sector_rel_scores", {})
 
