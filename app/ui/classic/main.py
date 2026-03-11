@@ -604,14 +604,14 @@ def render_v_tab(tech):
 
     if has_sector and v4 is not None:
         col1, col2, col3, col4 = st.columns(4)
-        col1.metric("V1 割安", f"{v1:.0f}"); col2.metric("V2 CF系", f"{v2:.0f}")
-        col3.metric("V3 配当", f"{v3:.0f}"); col4.metric("V4 相対", f"{v4:.0f}")
+        col1.metric("V1 伝統的割安度", f"{v1:.0f}"); col2.metric("V2 企業価値割安度", f"{v2:.0f}")
+        col3.metric("V3 株主還元度", f"{v3:.0f}"); col4.metric("V4 セクター内診断", f"{v4:.0f}")
     else:
         col1, col2, col3 = st.columns(3)
-        col1.metric("V1 割安", f"{v1:.0f}"); col2.metric("V2 CF系", f"{v2:.0f}")
-        col3.metric("V3 配当", f"{v3:.0f}")
+        col1.metric("V1 伝統的割安度", f"{v1:.0f}"); col2.metric("V2 企業価値割安度", f"{v2:.0f}")
+        col3.metric("V3 株主還元度", f"{v3:.0f}")
         if not has_sector:
-            st.caption("ℹ️ セクター相対評価（V4）は日本株DBに収録された銘柄のみ対応。")
+            st.caption("ℹ️ V4 セクター内診断は日本株DBに収録された銘柄のみ対応。")
 
     if ft.get("code"):
         code = ft.get("code", "—"); ja = ft.get("ja", "—"); desc = ft.get("description", "")
@@ -646,15 +646,15 @@ def render_v_tab(tech):
         ft_ja   = ft.get("ja", "")
         if sv is not None:
             if sv >= 80:
-                diag = f"セクター内でかなり割安。{ft_ja}として見ても買いやすい水準。"
+                diag =  f"{sector_name}セクター内でかなり割安。買いやすい水準。"
             elif sv >= 65:
-                diag = f"セクター内でやや割安。{ft_ja}の中央値を下回っており妥当圏。"
+                diag =  f"{sector_name}セクター内でやや割安。中央値を下回っており妥当圏。"
             elif sv >= 50:
-                diag = f"セクター内で中央値水準。{ft_ja}として特段割安でも割高でもない。"
+                diag =  f"{sector_name}セクター内で中央値水準。特段割安でも割高でもない。"
             elif sv >= 35:
-                diag = f"セクター内でやや割高。{ft_ja}の中央値を上回っており注意が必要。"
+                diag =  f"{sector_name}セクター内でやや割高。中央値を上回っており注意が必要。"
             else:
-                diag = f"セクター内でかなり割高。{ft_ja}として見ると割高圏にある。"
+                diag =  f"{sector_name}セクター内でかなり割高。割高圏にある。"
             # 特定指標が突出している場合に補足
             notes = []
             if per_rel is not None and per_rel >= 75: notes.append("PERは割安")
