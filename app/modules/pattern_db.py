@@ -420,3 +420,154 @@ def get_all_types_for_display(db: Optional[pd.DataFrame] = None) -> List[Dict[st
             "interest_coverage_median": _f(row, "interest_coverage_median"),
         })
     return result
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# sector_db ベースの相対評価（V4 新方式）
+# ──────────────────────────────────────────────────────────────────────────────
+# 設計の分離：
+#   calc_sector_relative_scores     → 財務タイプ(financial_type)の表示ラベル用（旧・変更なし）
+#   calc_sector_relative_scores_from_db → V4 計算用。sector_db_latest.csv を母集団とする（新）
+#
+# この分離により：
+#   - 「収益構造の記述ラベル」= financial_type（pattern_db ベース）
+#   - 「市場の値付け比較の母集団」= sector（sector_db ベース）
+#   の2つが完全に独立する
+# ══════════════════════════════════════════════════════════════════════════════
+
+import functools
+from pathlib import Path as _Path
+
+
+@functools.lru_cache(maxsize=1)
+def load_sector_db(path: str = None) -> "pd.DataFrame":
+    """
+    sector_db_latest.csv を読み込んでキャッシュする（1プロセス1回のみI/O）。
+
+    探索順:
+      1. 引数 path が指定されていればそれを使う
+      2. このファイルの2階層上の data/ ディレクトリ
+      3. このファイルと同じディレクトリ
+      4. カレントディレクトリの data/
+      5. カレントディレクトリ直下
+    """
+    if path is None:
+        candidates = [
+            _Path(__file__).resolve().parent.parent / "data" / "sector_db_latest.csv",
+            _Path(__file__).resolve().parent / "sector_db_latest.csv",
+            _Path("data") / "sector_db_latest.csv",
+            _Path("sector_db_latest.csv"),
+        ]
+        for p in candidates:
+            if p.exists():
+                path = str(p)
+                break
+        if path is None:
+            raise FileNotFoundError(
+                "sector_db_latest.csv が見つかりません。\n"
+                "app/data/sector_db_latest.csv に配置するか、\n"
+                "load_sector_db(path='...') でパスを指定してください。"
+            )
+    return pd.read_csv(path, encoding="utf-8-sig")
+
+
+def calc_sector_relative_scores_from_db(
+    sector:    str,
+    per:       "float | None",
+    pbr:       "float | None",
+    ev_ebitda: "float | None",
+    sector_db: "pd.DataFrame | None" = None,
+) -> dict:
+    """
+    sector_db_latest.csv を母集団として V4 相対スコアを計算する。
+
+    financial_type（収益構造の記述ラベル）には一切依存しない。
+    sector は yfinance が返す英語名（例: "Consumer Cyclical"）をそのまま渡す。
+
+    Returns  ── calc_sector_relative_scores と同一キー構造（UI側変更なし）
+    -------
+    {
+        "per_rel_score":       float | None,   # 0〜100
+        "pbr_rel_score":       float | None,
+        "ev_ebitda_rel_score": float | None,
+        "per_vs_median":       str,            # "9.7x（中央値 13.5x / -28%）" 等
+        "pbr_vs_median":       str,
+        "ev_ebitda_vs_median": str,
+        "sector_v_score":      float,          # 0〜100（V4 の値）
+        "sector_name":         str,            # マッチしたsector名（デバッグ用）
+        "sector_matched":      bool,           # sector_db にヒットしたか
+    }
+    """
+    if sector_db is None:
+        sector_db = load_sector_db()
+
+    # ── sector マッチング（完全一致 → 大文字小文字無視）──────────
+    row = sector_db[sector_db["sector"] == sector]
+    if row.empty:
+        row = sector_db[sector_db["sector"].str.lower() == str(sector).lower()]
+
+    if row.empty:
+        # DB未収録（sector 空文字、米国株のマイナーセクター等）
+        return {
+            "per_rel_score":       None,
+            "pbr_rel_score":       None,
+            "ev_ebitda_rel_score": None,
+            "per_vs_median":       "—",
+            "pbr_vs_median":       "—",
+            "ev_ebitda_vs_median": "—",
+            "sector_v_score":      50.0,
+            "sector_name":         sector,
+            "sector_matched":      False,
+        }
+
+    row = row.iloc[0]
+
+    # ── スコア関数（低いほど割安な指標用）──────────────────────
+    def _score_lower_better(actual, median):
+        """actual / median 比で 0〜100 点化。中央値=50点。"""
+        if actual is None or median is None or float(median) == 0:
+            return None
+        rel   = float(actual) / float(median) - 1.0
+        score = 50.0 - rel * 50.0
+        return max(0.0, min(100.0, score))
+
+    def _vs_text(actual, median, unit="x"):
+        if actual is None:
+            return "—"
+        if median is None or float(median) == 0:
+            return f"{actual:.1f}{unit}"
+        diff_pct = (float(actual) / float(median) - 1) * 100
+        sign = "+" if diff_pct >= 0 else ""
+        return (f"{actual:.1f}{unit}"
+                f"（中央値 {float(median):.1f}{unit} / {sign}{diff_pct:.0f}%）")
+
+    # ── 各指標の中央値を sector_db から取得してスコア化 ─────────
+    per_med = row.get("per_median")
+    pbr_med = row.get("pbr_median")
+    ev_med  = row.get("ev_ebitda_median")
+
+    per_rel = _score_lower_better(per,       per_med)
+    pbr_rel = _score_lower_better(pbr,       pbr_med)
+    ev_rel  = _score_lower_better(ev_ebitda, ev_med)
+
+    # ── V4 総合スコア（有効指標の加重平均）──────────────────────
+    # PER/PBR を重視（各 40%）、EV/EBITDA は補助（20%）
+    scored = [(per_rel, 0.40), (pbr_rel, 0.40), (ev_rel, 0.20)]
+    valid  = [(s, w) for s, w in scored if s is not None]
+    if valid:
+        total_w       = sum(w for _, w in valid)
+        sector_v_score = sum(s * w for s, w in valid) / total_w
+    else:
+        sector_v_score = 50.0
+
+    return {
+        "per_rel_score":       round(per_rel, 1) if per_rel is not None else None,
+        "pbr_rel_score":       round(pbr_rel, 1) if pbr_rel is not None else None,
+        "ev_ebitda_rel_score": round(ev_rel,  1) if ev_rel  is not None else None,
+        "per_vs_median":       _vs_text(per,       per_med),
+        "pbr_vs_median":       _vs_text(pbr,       pbr_med),
+        "ev_ebitda_vs_median": _vs_text(ev_ebitda, ev_med),
+        "sector_v_score":      round(sector_v_score, 1),
+        "sector_name":         str(row.get("sector", sector)),
+        "sector_matched":      True,
+    }
