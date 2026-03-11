@@ -711,12 +711,13 @@ def render_v_tab(tech):
     col2.metric("V2 企業価値割安度", f"{v2:.0f}")
     col3.metric("V3 株主還元度", f"{v3:.0f}")
     col4.metric("V4 財務タイプ別診断", f"{v4:.0f}" if (has_sector and v4 is not None) else "—")
-    ft_code = ft.get("code", "") if ft.get("matched") else ""
-    ft_ja   = ft.get("ja",   "") if ft.get("matched") else ""
-    v4_note = f"財務タイプ: {ft_code}（{ft_ja}）" if ft_code else "財務タイプ: DB未収録"
+    ft_code = ft.get("code", "")
+    ft_ja   = ft.get("ja",   "")
+    v4_note = f"財務タイプ: {ft_code}（{ft_ja}）" if ft_code and ft_code != "UNK" else "財務タイプ: DB未収録"
     st.caption(f"V1: PER・PBR ／ V2: EV/EBITDA ／ V3: 配当利回り ／ V4: {v4_note}")
 
-    if ft.get("matched"):
+
+    if ft.get("code"):
         code = ft.get("code", "—"); ja = ft.get("ja", "—"); desc = ft.get("description", "")
         st.markdown(f"""
         <div style="background:#000;border:1px solid var(--orange);padding:0.7rem 1rem;margin:0.5rem 0">
@@ -738,6 +739,26 @@ def render_v_tab(tech):
             ("EV/EBITDA（相対）", sector_rel.get("ev_ebitda_vs_median", "—"), _rel("ev_ebitda_rel_score")),
         ]), unsafe_allow_html=True)
         st.caption("スコア目安：100pt＝かなり割安 / 50pt＝中央値水準 / 0pt＝かなり割高")
+
+        sv = sector_rel.get("sector_v_score")
+        per_rel = sector_rel.get("per_rel_score")
+        pbr_rel = sector_rel.get("pbr_rel_score")
+        ev_rel  = sector_rel.get("ev_ebitda_rel_score")
+        ft_ja   = ft.get("ja", "")
+        if sv is not None:
+            if sv >= 80:   diag = f"セクター内でかなり割安。{ft_ja}として見ても買いやすい水準。"
+            elif sv >= 65: diag = f"セクター内でやや割安。{ft_ja}の中央値を下回っており妥当圏。"
+            elif sv >= 50: diag = f"セクター内で中央値水準。{ft_ja}として特段割安でも割高でもない。"
+            elif sv >= 35: diag = f"セクター内でやや割高。{ft_ja}の中央値を上回っており注意が必要。"
+            else:          diag = f"セクター内でかなり割高。{ft_ja}として見ると割高圏にある。"
+            notes = []
+            if per_rel is not None and per_rel >= 75: notes.append("PERは割安")
+            if pbr_rel is not None and pbr_rel >= 75: notes.append("PBRは割安")
+            if ev_rel  is not None and ev_rel  >= 75: notes.append("EV/EBITDAは割安")
+            if per_rel is not None and per_rel <= 25: notes.append("PERは割高圏")
+            if pbr_rel is not None and pbr_rel <= 25: notes.append("PBRは割高圏")
+            if notes: diag += f"（{' / '.join(notes)}）"
+            st.info(f"📊 セクター診断　{diag}")
 
     st.markdown("##### 絶対評価（V1〜V3）")
     def eval_per(x):
@@ -768,7 +789,7 @@ def render_v_tab(tech):
         if all_types:
             for t in all_types:
                 if t["sample_count"] == 0: continue
-                is_this = ft.get("matched") and ft.get("code") == t["code"]
+                is_this = ft.get("code") and ft.get("code") == t["code"]
                 highlight = "🔍 **この銘柄の分類**  " if is_this else ""
                 per_m = f"{t['per_median']:.1f}x"    if t["per_median"]             else "—"
                 pbr_m = f"{t['pbr_median']:.2f}x"    if t["pbr_median"]             else "—"
@@ -842,19 +863,21 @@ def _fetch_and_compute(ticker):
             st.error(str(e)); return None, None
 
     with st.spinner("■ 財務タイプ分類中…"):
-        db = load_pattern_db(); 
+        db = load_pattern_db()
         financial_type = classify_ticker(
-           ticker, db,
-           roe=base.get("roe"),
-           roa=base.get("roa"),
-           equity_ratio=base.get("equity_ratio"),
-           interest_coverage=base.get("interest_coverage"),
-           operating_margin=base.get("operating_margin"))
+            ticker, db,
+            roe=base.get("roe"),
+            roa=base.get("roa"),
+            equity_ratio=base.get("equity_ratio"),
+            interest_coverage=base.get("interest_coverage"),
+            operating_margin=base.get("operating_margin"),
+        )
         _close = base.get("close", 0); _eps = base.get("eps"); _bps = base.get("bps")
         _per_tmp = (_close / _eps) if (_eps and _eps != 0 and _close) else None
         _pbr_tmp = (_close / _bps) if (_bps and _bps != 0 and _close) else None
         sector_rel = calc_sector_relative_scores(ft=financial_type, per=_per_tmp, pbr=_pbr_tmp, ev_ebitda=base.get("ev_ebitda"))
-        sector_v_score = sector_rel.get("sector_v_score") if financial_type.get("matched") else None
+        # matched=Falseでも動的推定済み(estimated=True)ならV4を使う。UNKのみ除外
+        sector_v_score = sector_rel.get("sector_v_score") if financial_type.get("code", "UNK") != "UNK" else None
 
     with st.spinner("■ 指標計算中…"):
         try:
@@ -873,6 +896,17 @@ def _fetch_and_compute(ticker):
             )
         except ValueError as e:
             st.error(str(e)); return base, None
+
+    # compute_indicators 後に ev_ebitda が確定するので sector_rel を再計算して上書き
+    _per_final = tech.get("per")
+    _pbr_final = tech.get("pbr")
+    _ev_final  = tech.get("ev_ebitda")
+    if _per_final or _pbr_final or _ev_final:
+        sector_rel_final = calc_sector_relative_scores(
+            ft=financial_type, per=_per_final, pbr=_pbr_final, ev_ebitda=_ev_final)
+        tech["sector_rel_scores"] = sector_rel_final
+        if financial_type.get("code", "UNK") != "UNK":
+            tech["sector_v_score"] = sector_rel_final.get("sector_v_score")
 
     # is_us を tech に格納しておく（各タブから参照可能に）
     tech["is_us"] = not ticker.upper().endswith(".T")
