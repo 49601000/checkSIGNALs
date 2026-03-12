@@ -707,6 +707,16 @@ def render_v_tab(tech):
     dy = tech.get("dividend_yield"); ev_ebitda = tech.get("ev_ebitda")
     is_us = tech.get("is_us", False)
     sector_name = tech.get("sector")
+    # sector_name が None や英語名の場合は日本語表示名に変換
+    _SECTOR_JA = {
+        "Financial Services": "金融", "Technology": "テクノロジー",
+        "Healthcare": "ヘルスケア", "Consumer Cyclical": "景気循環消費財",
+        "Consumer Defensive": "生活必需品", "Industrials": "資本財",
+        "Basic Materials": "素材", "Energy": "エネルギー",
+        "Real Estate": "不動産", "Communication Services": "通信サービス",
+        "Utilities": "公益",
+    }
+    sector_display = _SECTOR_JA.get(sector_name, sector_name) if sector_name else "不明"
     ft = tech.get("financial_type", {}); sector_rel = tech.get("sector_rel_scores", {})
 
     st.metric("VALUATION SCORE", f"{v_score:.1f} / 100")
@@ -750,11 +760,11 @@ def render_v_tab(tech):
         ev_rel  = sector_rel.get("ev_ebitda_rel_score")
         ft_ja   = ft.get("ja", "")
         if sv is not None:
-            if sv >= 80:   diag =  f"{sector_name}セクター内でかなり割安。買いやすい水準。"
-            elif sv >= 65: diag =  f"{sector_name}セクター内でやや割安。中央値を下回っており妥当圏。"
-            elif sv >= 50: diag =  f"{sector_name}セクター内で中央値水準。特段割安でも割高でもない。"
-            elif sv >= 35: diag =  f"{sector_name}セクター内でやや割高。中央値を上回っており注意が必要。"
-            else:          diag =  f"{sector_name}セクター内でかなり割高。割高圏にある。"
+            if sv >= 80:   diag =  f"{sector_display}セクター内でかなり割安。買いやすい水準。"
+            elif sv >= 65: diag =  f"{sector_display}セクター内でやや割安。中央値を下回っており妥当圏。"
+            elif sv >= 50: diag =  f"{sector_display}セクター内で中央値水準。特段割安でも割高でもない。"
+            elif sv >= 35: diag =  f"{sector_display}セクター内でやや割高。中央値を上回っており注意が必要。"
+            else:          diag =  f"{sector_display}セクター内でかなり割高。割高圏にある。"
             notes = []
             if per_rel is not None and per_rel >= 75: notes.append("PERは割安")
             if pbr_rel is not None and pbr_rel >= 75: notes.append("PBRは割安")
