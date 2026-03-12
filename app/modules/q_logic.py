@@ -386,6 +386,7 @@ def _score_q3_abs(
     ic_thr: float = 1.5,
     industry: str = "",
     sector: str = "",
+    roe: Optional[float] = None,
 ) -> float:
     """
     一般業種:
@@ -394,9 +395,21 @@ def _score_q3_abs(
       - 自己資本比率のみで採点
     その他金融:
       - ERは金融向け、D/E / ICは従来どおり
+    超高収益企業（ROE >= 50%）:
+      - 自己資本比率の閾値を緩和（積極的自社株買いによる資本圧縮を考慮）
     """
     if _is_bank_industry(industry, sector):
         return _score_q3_abs_bank(equity_ratio=equity_ratio, er_thr=er_thr)
+
+    # 超高収益企業は自己資本比率閾値を緩和してスコアリング
+    # ROE >= 100%: er_thrを0.4倍に縮小（閾値を大幅緩和）
+    # ROE >= 50% : er_thrを0.6倍に縮小（閾値を中程度緩和）
+    effective_er_thr = er_thr
+    if equity_ratio is not None and roe is not None:
+        if roe >= 100.0:
+            effective_er_thr = er_thr * 0.4
+        elif roe >= 50.0:
+            effective_er_thr = er_thr * 0.6
 
     raw = 0.0
 
@@ -404,9 +417,9 @@ def _score_q3_abs(
 
     if equity_ratio is not None:
         if is_financial:
-            r = _score_er_financial(equity_ratio, er_thr, industry=industry, sector=sector)
+            r = _score_er_financial(equity_ratio, effective_er_thr, industry=industry, sector=sector)
         else:
-            r = _score_er_general(equity_ratio, er_thr)
+            r = _score_er_general(equity_ratio, effective_er_thr)
         raw += w.er_w * r
 
     if de_ratio is not None:
@@ -468,6 +481,7 @@ def _knockout_penalty(
     industry: str = "",
     sector: str = "",
     is_us: bool = False,
+    roe: Optional[float] = None,
 ) -> Tuple[float, List[str]]:
     penalty: float = 0.0
     warnings: List[str] = []
@@ -489,11 +503,33 @@ def _knockout_penalty(
         )
 
     if equity_ratio is not None and equity_ratio < er_thr:
-        penalty += w.ko_er
-        warnings.append(
-            f"⚠️ 自己資本比率 {equity_ratio:.1f}%"
-            f"（{note} {er_thr:.0f}% 未満）"
-        )
+        # ROEが高い超高収益企業（積極的な自社株買いによる資本圧縮）は
+        # 財務的脆弱性ではなくレバレッジ活用と判断し、警告・ペナルティを軽減する
+        _HIGH_ROE_THRESHOLD = 50.0   # ROE ≥ 50%：高収益レバレッジとみなす基準
+        _VERY_HIGH_ROE_THRESHOLD = 100.0  # ROE ≥ 100%：超高収益（Apple等）
+
+        if roe is not None and roe >= _VERY_HIGH_ROE_THRESHOLD:
+            # ペナルティなし、情報提供のみ（警告アイコンなし）
+            warnings.append(
+                f"ℹ️ 自己資本比率 {equity_ratio:.1f}%"
+                f"（{note} {er_thr:.0f}% 未満）"
+                f" ／ ROE {roe:.0f}% — 高収益による資本効率化レバレッジ（財務リスクは低い）"
+            )
+        elif roe is not None and roe >= _HIGH_ROE_THRESHOLD:
+            # ペナルティ半減、補足コメント付き警告
+            penalty += w.ko_er * 0.5
+            warnings.append(
+                f"⚠️ 自己資本比率 {equity_ratio:.1f}%"
+                f"（{note} {er_thr:.0f}% 未満）"
+                f" ／ ROE {roe:.0f}% — 高収益構造によるレバレッジの可能性あり"
+            )
+        else:
+            # 通常の警告・ペナルティ
+            penalty += w.ko_er
+            warnings.append(
+                f"⚠️ 自己資本比率 {equity_ratio:.1f}%"
+                f"（{note} {er_thr:.0f}% 未満）"
+            )
 
     # 銀行では営業利益率のノックアウトは使わない
     if (not is_bank) and operating_margin is not None and operating_margin < 0:
@@ -542,6 +578,7 @@ def score_quality(
         ic_thr=thr["ic"],
         industry=industry,
         sector=sector,
+        roe=roe,
     )
 
     alpha, q1_rel, q3_rel = 0.0, None, None
@@ -567,6 +604,7 @@ def score_quality(
         industry=industry,
         sector=sector,
         is_us=is_us,
+        roe=roe,
     )
 
     effective_penalty = penalty * (1.0 - alpha * 0.5)
