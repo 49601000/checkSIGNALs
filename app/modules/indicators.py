@@ -184,6 +184,7 @@ def compute_indicators(
         per=per, pbr=pbr, dividend_yield=dividend_yield,
         ev_ebitda=ev_ebitda,
         sector_v_score=sector_v_score,
+        is_us=is_us,                   # ★ JP/US 閾値切り替え
     )
     v_score = v_result["v_score"]
 
@@ -238,10 +239,6 @@ def compute_indicators(
         # セクター相対（UI表示用）
         "sector_rel_scores": sector_rel_scores or {},  # ★v3
         "financial_type": financial_type or {},        # ★v3
-        
-        # 業種分類（UI表示用）
-        "industry": industry,
-        "sector": sector,
 
         # T / QVT
         "t_score": t_score,
