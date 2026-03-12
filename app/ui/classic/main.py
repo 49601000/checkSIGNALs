@@ -599,6 +599,16 @@ def render_v_tab(tech):
     pbr        = tech.get("pbr");  dy      = tech.get("dividend_yield")
     ev_ebitda  = tech.get("ev_ebitda")
     sector_name = tech.get("sector")
+    # sector_name が None や英語名の場合は日本語表示名に変換
+    _SECTOR_JA = {
+        "Financial Services": "金融", "Technology": "テクノロジー",
+        "Healthcare": "ヘルスケア", "Consumer Cyclical": "景気循環消費財",
+        "Consumer Defensive": "生活必需品", "Industrials": "資本財",
+        "Basic Materials": "素材", "Energy": "エネルギー",
+        "Real Estate": "不動産", "Communication Services": "通信サービス",
+        "Utilities": "公益",
+    }
+    sector_display = _SECTOR_JA.get(sector_name, sector_name) if sector_name else "不明"
     ft         = tech.get("financial_type", {})
     sector_rel = tech.get("sector_rel_scores", {})
 
@@ -615,7 +625,15 @@ def render_v_tab(tech):
         if not has_sector:
             st.caption("ℹ️ V4 セクター内診断は日本株DBに収録された銘柄のみ対応。")
 
-    if ft.get("code"):
+    if is_us:
+        st.markdown("""
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:0.9rem 1.1rem;margin-bottom:0.8rem">
+          <div style="font-size:0.65rem;letter-spacing:1.5px;color:var(--text-2);font-weight:700;text-transform:uppercase">財務タイプ（DB分類）</div>
+          <div style="font-size:1.05rem;font-weight:700;color:var(--text);margin-top:0.3rem">米国株（分類対象外）</div>
+          <div style="font-size:0.8rem;color:var(--text-2);margin-top:0.3rem">財務タイプ診断は東証上場銘柄を対象としています。米国株には適用されません。</div>
+        </div>
+        """, unsafe_allow_html=True)
+    elif ft.get("code"):
         code = ft.get("code", "—"); ja = ft.get("ja", "—"); desc = ft.get("description", "")
         conf = {"HIGH": "🟢 HIGH", "MID": "🟡 MID", "NONE": "⚪ NONE"}.get(ft.get("confidence", ""), "")
         st.markdown(f"""
@@ -648,15 +666,15 @@ def render_v_tab(tech):
         ft_ja   = ft.get("ja", "")
         if sv is not None:
             if sv >= 80:
-                diag =  f"{sector_name}セクター内でかなり割安。買いやすい水準。"
+                diag =  f"{sector_display}セクター内でかなり割安。買いやすい水準。"
             elif sv >= 65:
-                diag =  f"{sector_name}セクター内でやや割安。中央値を下回っており妥当圏。"
+                diag =  f"{sector_display}セクター内でやや割安。中央値を下回っており妥当圏。"
             elif sv >= 50:
-                diag =  f"{sector_name}セクター内で中央値水準。特段割安でも割高でもない。"
+                diag =  f"{sector_display}セクター内で中央値水準。特段割安でも割高でもない。"
             elif sv >= 35:
-                diag =  f"{sector_name}セクター内でやや割高。中央値を上回っており注意が必要。"
+                diag =  f"{sector_display}セクター内でやや割高。中央値を上回っており注意が必要。"
             else:
-                diag =  f"{sector_name}セクター内でかなり割高。割高圏にある。"
+                diag =  f"{sector_display}セクター内でかなり割高。割高圏にある。"
             # 特定指標が突出している場合に補足
             notes = []
             if per_rel is not None and per_rel >= 75: notes.append("PERは割安")
@@ -854,7 +872,10 @@ def _fetch_and_compute(ticker):
             tech["sector_v_score"] = sector_rel_final.get("sector_v_score")
 
     # is_us を tech に格納しておく（各タブから参照可能に）
-    tech["is_us"] = not ticker.upper().endswith(".T")
+    tech["is_us"]     = not ticker.upper().endswith(".T")
+    # sector / industry が indicators から返らない場合の保険
+    if not tech.get("sector"):   tech["sector"]   = base.get("sector", "")
+    if not tech.get("industry"): tech["industry"] = base.get("industry", "")
     return base, tech
 
 
