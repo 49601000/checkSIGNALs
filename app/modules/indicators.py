@@ -184,7 +184,6 @@ def compute_indicators(
         per=per, pbr=pbr, dividend_yield=dividend_yield,
         ev_ebitda=ev_ebitda,
         sector_v_score=sector_v_score,
-        is_us=is_us,                   # ★ JP/US 閾値切り替え
     )
     v_score = v_result["v_score"]
 
@@ -239,6 +238,11 @@ def compute_indicators(
         # セクター相対（UI表示用）
         "sector_rel_scores": sector_rel_scores or {},  # ★v3
         "financial_type": financial_type or {},        # ★v3
+
+        # 市場・セクター情報（render_v_tab で sector_display に使用）
+        "sector":   sector   or "",   # ★v4 yfinance英語名をそのまま保持
+        "industry": industry or "",   # ★v4
+        "is_us":    is_us,            # ★v4
 
         # T / QVT
         "t_score": t_score,
