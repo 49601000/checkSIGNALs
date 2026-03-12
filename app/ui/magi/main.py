@@ -705,6 +705,7 @@ def render_v_tab(tech):
     v3 = float(tech.get("v3", 0)); v4 = tech.get("v4"); has_sector = tech.get("has_sector", False)
     per = tech.get("per"); per_fwd = tech.get("per_fwd"); pbr = tech.get("pbr")
     dy = tech.get("dividend_yield"); ev_ebitda = tech.get("ev_ebitda")
+    is_us = tech.get("is_us", False)
     sector_name = tech.get("sector")
     ft = tech.get("financial_type", {}); sector_rel = tech.get("sector_rel_scores", {})
 
@@ -764,14 +765,23 @@ def render_v_tab(tech):
             st.info(f"📊 セクター診断　{diag}")
 
     st.markdown("##### 絶対評価（V1〜V3）")
+    # JP/US で評価基準を切り替え
     def eval_per(x):
-        return "—" if x is None else ("✓ 割安" if x < 12 else ("△ 割高" if x > 30 else ""))
+        if x is None: return "—"
+        lo, hi = (18, 40) if is_us else (12, 30)
+        return "✓ 割安" if x < lo else ("△ 割高" if x > hi else "")
     def eval_pbr(x):
-        return "—" if x is None else ("✓ 資産割安" if x < 1 else ("△ 割高" if x > 3 else ""))
+        if x is None: return "—"
+        lo, hi = (2.0, 8.0) if is_us else (1.0, 3.0)
+        return "✓ 資産割安" if x < lo else ("△ 割高" if x > hi else "")
     def eval_dy(x):
-        return "—" if x is None else ("✓ 高配当" if x >= 3 else "")
+        if x is None: return "—"
+        lo = 2.0 if is_us else 3.0
+        return "✓ 高配当" if x >= lo else ""
     def eval_ev(x):
-        return "—" if x is None else ("✓ 割安" if x < 8 else ("△ 割高" if x > 20 else ""))
+        if x is None: return "—"
+        lo, hi = (12, 30) if is_us else (8, 20)
+        return "✓ 割安" if x < lo else ("△ 割高" if x > hi else "")
 
     rows = [
         ("PER（実績）",  _fmt_x(per),       eval_per(per)),
