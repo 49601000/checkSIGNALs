@@ -727,11 +727,24 @@ def render_v_tab(tech):
     col4.metric("V4 セクター内診断", f"{v4:.0f}" if (has_sector and v4 is not None) else "—")
     ft_code = ft.get("code", "")
     ft_ja   = ft.get("ja",   "")
-    v4_note = f"財務タイプ: {ft_code}（{ft_ja}）" if ft_code and ft_code != "UNK" else "財務タイプ: DB未収録"
+    if is_us:
+        v4_note = "財務タイプ: 米国株（対象外）"
+    elif ft_code and ft_code != "UNK":
+        v4_note = f"財務タイプ: {ft_code}（{ft_ja}）"
+    else:
+        v4_note = "財務タイプ: DB未収録"
     st.caption(f"V1: PER・PBR ／ V2: EV/EBITDA ／ V3: 配当利回り ／ V4: {v4_note}")
 
 
-    if ft.get("code"):
+    if is_us:
+        st.markdown("""
+        <div style="background:#000;border:1px solid var(--orange);padding:0.7rem 1rem;margin:0.5rem 0">
+          <div style="font-size:0.55rem;letter-spacing:2px;color:var(--text-dim);font-family:'Orbitron',monospace">財務タイプ</div>
+          <div style="font-size:0.95rem;font-weight:700;color:var(--orange);margin-top:0.2rem">米国株（分類対象外）</div>
+          <div style="font-size:0.75rem;color:var(--text-dim);margin-top:0.2rem">財務タイプ診断は東証上場銘柄を対象としています。米国株には適用されません。</div>
+        </div>
+        """, unsafe_allow_html=True)
+    elif ft.get("code"):
         code = ft.get("code", "—"); ja = ft.get("ja", "—"); desc = ft.get("description", "")
         st.markdown(f"""
         <div style="background:#000;border:1px solid var(--orange);padding:0.7rem 1rem;margin:0.5rem 0">
@@ -938,7 +951,10 @@ def _fetch_and_compute(ticker):
             tech["sector_v_score"] = sector_rel_final.get("sector_v_score")
 
     # is_us を tech に格納しておく（各タブから参照可能に）
-    tech["is_us"] = not ticker.upper().endswith(".T")
+    tech["is_us"]     = not ticker.upper().endswith(".T")
+    # sector / industry が indicators から返らない場合の保険
+    if not tech.get("sector"):   tech["sector"]   = base.get("sector", "")
+    if not tech.get("industry"): tech["industry"] = base.get("industry", "")
     return base, tech
 
 
