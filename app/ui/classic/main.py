@@ -593,6 +593,7 @@ def render_v_tab(tech):
     v2         = float(tech.get("v2", 0))
     v3         = float(tech.get("v3", 0))
     v4         = tech.get("v4")
+    is_us      = tech.get("is_us", False)
     has_sector = tech.get("has_sector", False)
     per        = tech.get("per");  per_fwd = tech.get("per_fwd")
     pbr        = tech.get("pbr");  dy      = tech.get("dividend_yield")
@@ -669,17 +670,23 @@ def render_v_tab(tech):
 
     st.markdown("##### 📋 絶対評価（V1〜V3）")
 
+    # JP/US で評価基準を切り替え
     def eval_per(x):
         if x is None: return "—"
-        return "✓ 割安" if x < 12 else ("△ 割高" if x > 30 else "")
+        lo, hi = (18, 40) if is_us else (12, 30)
+        return "✓ 割安" if x < lo else ("△ 割高" if x > hi else "")
     def eval_pbr(x):
         if x is None: return "—"
-        return "✓ 資産割安" if x < 1 else ("△ 割高" if x > 3 else "")
+        lo, hi = (2.0, 8.0) if is_us else (1.0, 3.0)
+        return "✓ 資産割安" if x < lo else ("△ 割高" if x > hi else "")
     def eval_dy(x):
-        return "—" if x is None else ("✓ 高配当" if x >= 3 else "")
+        if x is None: return "—"
+        lo = 2.0 if is_us else 3.0
+        return "✓ 高配当" if x >= lo else ""
     def eval_ev(x):
         if x is None: return "—"
-        return "✓ 割安" if x < 8 else ("△ 割高" if x > 20 else "")
+        lo, hi = (12, 30) if is_us else (8, 20)
+        return "✓ 割安" if x < lo else ("△ 割高" if x > hi else "")
 
     rows = [
         ("PER（実績）", _fmt_x(per),     eval_per(per)),
@@ -694,7 +701,8 @@ def render_v_tab(tech):
         table_html += f'<tr><td>{label}</td><td class="td-right">{val}</td><td style="text-align:right">{badge}</td></tr>'
     table_html += '</tbody></table>'
     st.markdown(table_html, unsafe_allow_html=True)
-    st.caption("Vスコアはバリュエーションの目安。セクター特性と合わせて解釈してください。")
+    mkt_note = "米国株基準（S&P500水準）" if is_us else "日本株基準（東証水準）"
+    st.caption(f"Vスコアはバリュエーションの目安。{mkt_note}で評価。セクター特性と合わせて解釈してください。")
 
     st.markdown("---")
     with st.expander("📖 財務タイプ辞典（全分類の解説）"):
