@@ -188,7 +188,20 @@ def compute_indicators(
     v_score = v_result["v_score"]
 
     # ── QVT 総合 ──
-    qvt_score = round((q_score + v_score + t_score) / 3.0, 1)
+    #qvt_score = round((q_score + v_score + t_score) / 3.0, 1)
+    # ── QVT 重み設定 ──
+    WEIGHT_Q = 0.447
+    WEIGHT_V = 0.260
+    WEIGHT_T = 0.293
+
+    # ── QVT 総合スコア（加重平均） ──
+    qvt_score = round(
+        (q_score * WEIGHT_Q) +
+        (v_score * WEIGHT_V) +
+        (t_score * WEIGHT_T),
+        1
+    )
+  
 
     # ── 返却 dict ──
     result: Dict[str, Any] = {
