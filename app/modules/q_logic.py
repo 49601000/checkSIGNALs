@@ -129,15 +129,66 @@ class QWeights:
     er_w: float = 40.0
     de_w: float = 30.0
     ic_w: float = 30.0
-    w_q1: float = 0.1164   #q1の重みづけ
-    w_q3: float = 0.8836   #q3の重みづけ
+    w_q1: float = 0.50
+    w_q3: float = 0.50
     ko_ic: float = 15.0
     ko_er: float = 15.0
     ko_opm: float = 15.0
 
 
-w_q1: float = QWeights()
+DEFAULT_WEIGHTS = QWeights()
 
+DEFAULT_Q_WEIGHTS = {
+    "w_q1": 0.50,
+    "w_q3": 0.50,
+}
+
+CUSTOM_Q_WEIGHTS_BT = {
+    "w_q1": 0.1164,
+    "w_q3": 0.8836,
+}
+
+
+def _build_qweights(
+    base: Optional[QWeights] = None,
+    custom_q_weights: Optional[Dict[str, float]] = None,
+) -> QWeights:
+    """
+    QWeights を生成する。
+    - base があればそれをベースに使う
+    - custom_q_weights があれば w_q1 / w_q3 を上書き
+    - 合計が1でなくても内部で正規化する
+    """
+    src = base if base is not None else DEFAULT_WEIGHTS
+
+    w = QWeights(
+        roe_w=src.roe_w,
+        roa_w=src.roa_w,
+        opm_w=src.opm_w,
+        er_w=src.er_w,
+        de_w=src.de_w,
+        ic_w=src.ic_w,
+        w_q1=src.w_q1,
+        w_q3=src.w_q3,
+        ko_ic=src.ko_ic,
+        ko_er=src.ko_er,
+        ko_opm=src.ko_opm,
+    )
+
+    if custom_q_weights is None:
+        return w
+
+    q1 = float(custom_q_weights.get("w_q1", w.w_q1))
+    q3 = float(custom_q_weights.get("w_q3", w.w_q3))
+
+    total = q1 + q3
+    if total <= 0:
+        raise ValueError(f"Invalid Q weights: w_q1 + w_q3 must be > 0, got {total}")
+
+    w.w_q1 = q1 / total
+    w.w_q3 = q3 / total
+
+    return w
 
 # ─── 業種判定 ──────────────────────────────────────────────────────────────
 
