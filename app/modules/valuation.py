@@ -182,5 +182,7 @@ def score_valuation(
         "v2": round(v2, 1),
         "v3": round(v3, 1),
         "v4": round(float(sector_v_score), 1) if sector_v_score is not None else None,
+        "has_sector": sector_v_score is not None,
+        "is_us": is_us,
         "v_weights_used": weights,
     }
