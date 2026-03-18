@@ -190,9 +190,9 @@ def compute_indicators(
     # ── QVT 総合 ──
     #qvt_score = round((q_score + v_score + t_score) / 3.0, 1)
     # ── QVT 重み設定 ──
-    WEIGHT_Q = 0.447
-    WEIGHT_V = 0.260
-    WEIGHT_T = 0.293
+    WEIGHT_Q = 0.2621
+    WEIGHT_V = 0.3258
+    WEIGHT_T = 0.4122
 
     # ── QVT 総合スコア（加重平均） ──
     qvt_score = round(
