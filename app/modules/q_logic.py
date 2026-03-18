@@ -129,14 +129,14 @@ class QWeights:
     er_w: float = 40.0
     de_w: float = 30.0
     ic_w: float = 30.0
-    w_q1: float = 0.50
-    w_q3: float = 0.50
+    w_q1: float = 0.1164   #q1の重みづけ
+    w_q3: float = 0.8836   #q3の重みづけ
     ko_ic: float = 15.0
     ko_er: float = 15.0
     ko_opm: float = 15.0
 
 
-DEFAULT_WEIGHTS = QWeights()
+w_q1: float = QWeights()
 
 
 # ─── 業種判定 ──────────────────────────────────────────────────────────────
@@ -557,7 +557,7 @@ def score_quality(
     """
     Q スコアを計算して dict で返す。
     """
-    w = weights if weights is not None else DEFAULT_WEIGHTS
+    w = weights if weights is not None else w_q1: float
 
     q1_abs = _score_q1_abs(
         roe=roe,
