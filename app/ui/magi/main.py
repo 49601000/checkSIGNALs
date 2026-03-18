@@ -852,7 +852,7 @@ def render_qvt_tab(tech):
     st.markdown("---")
     color = _color_score(qvt_show)
     msg   = _magi_comment(qvt_show)
-    star  = "⭐⭐⭐" if qvt_show >= 70 else "⭐⭐" if qvt_show >= 60 else "⭐" if qvt_show >= 50 else ""
+    star  = "⭐⭐⭐" if qvt_show >= 71.05 else "⭐⭐" if qvt_show >= 65.35 else "⭐" if qvt_show >= 59.64 else ""
 
     st.markdown(f"""
     <div class="score-card" style="padding:1.5rem;border:2px solid var(--orange)">
