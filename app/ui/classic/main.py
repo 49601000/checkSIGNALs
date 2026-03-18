@@ -772,7 +772,7 @@ def render_qvt_tab(tech):
            else "買い検討レベル。押し目を慎重に狙いたい" if qvt_show >= 60
            else "悪くないが他候補との比較推奨"           if qvt_show >= 50
            else "テーマ性が強くないなら見送りも選択肢")
-    star = "⭐⭐⭐" if qvt_show >= 70 else "⭐⭐" if qvt_show >= 60 else "⭐" if qvt_show >= 50 else ""
+    star = "⭐⭐⭐" if qvt_show >= 71.05 else "⭐⭐" if qvt_show >= 65.35 else "⭐" if qvt_show >= 59.64 else ""
 
     st.markdown(f"""
     <div class="score-card" style="padding:1.5rem">
