@@ -553,11 +553,22 @@ def score_quality(
     industry: str = "",
     sector: str = "",
     is_us: bool = False,
+    custom_q_weights: Optional[Dict[str, float]] = None,
 ) -> dict:
     """
     Q スコアを計算して dict で返す。
+
+    Parameters
+    ----------
+    weights : Optional[QWeights]
+        Q全体の基礎ウェイト。未指定なら DEFAULT_WEIGHTS。
+    custom_q_weights : Optional[Dict[str, float]]
+        Q内部の q1 / q3 の重みだけ上書きしたいときに使う。
+        例:
+            {"w_q1": 0.50, "w_q3": 0.50}      # default相当
+            {"w_q1": 0.1164, "w_q3": 0.8836}  # バックテスト結果
     """
-    w = weights if weights is not None else w_q1: float
+    w = _build_qweights(base=weights, custom_q_weights=custom_q_weights)
 
     q1_abs = _score_q1_abs(
         roe=roe,
@@ -622,6 +633,10 @@ def score_quality(
         "penalty": effective_penalty,
         "warnings": warnings,
         "weights": w,
+        "q_weights_used": {
+            "w_q1": round(w.w_q1, 6),
+            "w_q3": round(w.w_q3, 6),
+        },
         "er_threshold": thr["er"],
         "ic_threshold": thr["ic"],
         "threshold_note": thr["note"],
