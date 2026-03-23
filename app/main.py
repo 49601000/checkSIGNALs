@@ -6,20 +6,21 @@ app/
 ├── main.py               ← このファイル（エントリーポイント）
 ├── ui/
 │   ├── __init__.py
-│   ├── classic/          ← 従来UI (checkSIGNAL)
+│   ├── output_structure.py  ← 共通の分析出力構造を生成
+│   ├── classic/             ← classic skin（描画担当）
 │   │   ├── __init__.py
 │   │   └── main.py
-│   └── magi/             ← MAGIシステムUI
+│   └── magi/                ← MAGI skin（描画担当）
 │       ├── __init__.py
 │       └── main.py
-├── modules/              ← 共通モジュール（変更不要）
-├── data/                 ← 共通データ（変更不要）
+├── modules/              ← データ取得・判定ロジック
+├── data/                 ← 共通データ
 └── __init__.py
 
 将来UIを追加する手順:
   1. app/ui/ 配下に新ディレクトリを作成（例: app/ui/neo/）
   2. __init__.py と main.py を追加
-  3. main.py に run() 関数を実装（シグネチャは既存に倣う）
+  3. main.py では ui.output_structure が返す共通出力を描画する
   4. 下記 UI_REGISTRY にエントリを1行追加するだけで切り替え画面に反映される
 """
 
@@ -61,12 +62,12 @@ def _save_ui_preference(key):
 
 
 # ─── UI レジストリ ───────────────────────────────────────────
-# 新しいUIを追加するときはここに1行追加するだけでOK
+# 新しいUI skin を追加するときはここに1行追加するだけでOK
 #
 # キー      : URLクエリパラメータ (?ui=<key>) およびセッション管理に使用
 # name      : 選択画面に表示する名前
 # icon      : 選択画面に表示する絵文字
-# desc      : 選択画面に表示する説明文
+# desc      : 共通出力をどう見せるかの説明文
 # module    : インポートするモジュールパス（app/ からの相対）
 # ─────────────────────────────────────────────────────────────
 UI_REGISTRY = [
@@ -74,14 +75,14 @@ UI_REGISTRY = [
         "key":    "classic",
         "name":   "checkSIGNAL",
         "icon":   "📡",
-        "desc":   "シンプルモダンUI。スコアカード・テーブル・メトリクスで視認性重視。",
+        "desc":   "共通分析出力をシンプルモダンに見せる classic skin。視認性重視。",
         "module": "ui.classic.main",
     },
     {
         "key":    "magi",
         "name":   "MAGI SYSTEM",
         "icon":   "🔴",
-        "desc":   "MAGI風UI。六角形判定パネル・スキャンライン・オレンジCRT。",
+        "desc":   "共通分析出力をMAGI風に見せる skin。六角形判定パネル・CRT演出。",
         "module": "ui.magi.main",
     },
     # ── 将来UIの追加例（コメントアウト） ──────────────────────
@@ -107,88 +108,11 @@ _SELECTOR_CSS = """
     --surface: #141414;
     --border:  #2a2a2a;
     --accent:  #ff6600;
-    --text:    #e0e0e0;
-    --dim:     #888;
+@@ -189,105 +190,105 @@ div[data-testid="stButton"] > button {
+     white-space: pre-wrap !important;
+     transition: background 0.2s !important;
 }
 
-html, body, [class*="css"] {
-    background-color: var(--bg) !important;
-    color: var(--text) !important;
-    font-family: 'IBM Plex Mono', monospace;
-}
-.stApp, section.main, .block-container {
-    background-color: var(--bg) !important;
-}
-section[data-testid="stSidebar"] { display: none; }
-
-.sel-header {
-    font-family: 'Orbitron', monospace;
-    font-size: 1.05rem;
-    font-weight: 900;
-    color: var(--accent);
-    letter-spacing: 4px;
-    text-align: center;
-    padding: 8px;
-    border: 2px solid var(--accent);
-    background: rgba(255,102,0,0.07);
-    margin-bottom: 1.2rem;
-    text-shadow: 0 0 12px rgba(255,102,0,0.5);
-}
-.sel-sub {
-    font-size: 0.6rem;
-    color: var(--dim);
-    letter-spacing: 3px;
-    text-align: center;
-    margin-bottom: 1.5rem;
-}
-.sel-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-left: 3px solid var(--accent);
-    padding: 1rem 1.1rem;
-    margin-bottom: 0.6rem;
-    cursor: pointer;
-    transition: border-color 0.2s, background 0.2s;
-}
-.sel-card:hover {
-    border-color: var(--accent);
-    background: rgba(255,102,0,0.06);
-}
-.sel-card-name {
-    font-family: 'Orbitron', monospace;
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: var(--accent);
-    letter-spacing: 2px;
-    margin-bottom: 0.3rem;
-}
-.sel-card-desc {
-    font-size: 0.7rem;
-    color: var(--dim);
-    line-height: 1.5;
-}
-.sel-footer {
-    font-size: 0.58rem;
-    color: #444;
-    text-align: center;
-    letter-spacing: 2px;
-    margin-top: 1.5rem;
-}
-div[data-testid="stButton"] > button {
-    background: transparent !important;
-    border: 1px solid var(--border) !important;
-    border-left: 3px solid var(--accent) !important;
-    color: var(--text) !important;
-    border-radius: 0 !important;
-    font-family: 'IBM Plex Mono', monospace !important;
-    font-size: 0.85rem !important;
-    text-align: left !important;
-    padding: 0.8rem 1rem !important;
-    height: auto !important;
-    line-height: 1.5 !important;
-    white-space: pre-wrap !important;
-    transition: background 0.2s !important;
-}
 div[data-testid="stButton"] > button:hover {
     background: rgba(255,102,0,0.08) !important;
     border-left-color: var(--accent) !important;
@@ -211,8 +135,8 @@ def _load_ui_module(module_path: str):
 def render_selector():
     """UI選択画面を描画し、選択されたキーを返す（未選択時は None）。"""
     st.markdown(_SELECTOR_CSS, unsafe_allow_html=True)
-    st.markdown('<div class="sel-header">▶ SELECT INTERFACE ◀</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sel-sub">CHECKSIGNAL — UI SYSTEM v3 — SELECT YOUR VIEW MODE</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sel-header">▶ SELECT SKIN ◀</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sel-sub">CHECKSIGNAL — SHARED ANALYSIS OUTPUT + SELECTABLE UI SKINS</div>', unsafe_allow_html=True)
 
     selected_key = None
     for ui in UI_REGISTRY:
@@ -220,7 +144,7 @@ def render_selector():
         if st.button(label, key=f"sel_{ui['key']}", use_container_width=True):
             selected_key = ui["key"]
 
-    st.markdown('<div class="sel-footer">■ MORE UI MODULES CAN BE ADDED TO app/ui/ ■</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sel-footer">■ MORE UI SKINS CAN BE ADDED TO app/ui/ ■</div>', unsafe_allow_html=True)
     return selected_key
 
 
@@ -269,9 +193,9 @@ def main():
 
     # ── サイドバーにUI切り替えボタンを追加（折りたたみ可） ──
     with st.sidebar:
-        st.markdown(f"**現在: {ui_entry['icon']} {ui_entry['name']}**")
+        st.markdown(f"**現在のskin: {ui_entry['icon']} {ui_entry['name']}**")
         st.markdown("---")
-        st.markdown("**UIを切り替える**")
+        st.markdown("**skin を切り替える**")
         for ui in UI_REGISTRY:
             if ui["key"] == current_key:
                 continue  # 現在選択中は表示しない
