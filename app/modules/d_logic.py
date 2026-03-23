@@ -334,7 +334,20 @@ def get_base_rank(score: float) -> str:
             return rank
     return "E"
 
+PRESSURE_RANK_BOUNDS = [
+    ("E",      0.80, 1.01),
+    ("D",  0.65, 0.80),
+    ("C",    0.50, 0.65),
+    ("B",  0.35, 0.50),
+    ("A",      0.00, 0.35),
+]
 
+def get_pressure_rank(score: float) -> str:
+    for rank, lo, hi in PRESSURE_RANK_BOUNDS:
+        if lo <= score < hi:
+            return rank
+    return "A"
+  
 def _get_rank_center(rank: str) -> float:
     """ランクの中央値を返す"""
     for r, lo, hi in RANK_BOUNDS:
@@ -509,6 +522,8 @@ def score_defense(
         "⑤_downside_vol":   round(1.0 - norm_scores["⑤_downside_vol"], 4),
         "⑥_vol_pressure":   round(norm_scores["⑥_vol_pressure"], 4),   # ← ここだけ非反転
     }
+    vp_score = round(norm_scores["⑥_vol_pressure"], 4)
+    vp_rank  = get_pressure_rank(vp_score)
     return {
         # ── メインスコア ──
         "d_score":         round(d_index, 4),
@@ -523,7 +538,9 @@ def score_defense(
         "d4": round(norm_scores["④_max_drawdown"],   4),
         "d5": round(norm_scores["⑤_downside_vol"],   4),
         "d6": round(norm_scores["⑥_vol_pressure"],   4),
-
+        "vp_score": vp_score,
+        "vp_rank":  vp_rank,
+      
         # ── サブスコア（defensive 方向）──
         "def1": def_scores["①_below_ma_ratio"],
         "def2": def_scores["②_max_neg_dev"],
