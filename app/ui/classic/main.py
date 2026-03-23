@@ -1150,7 +1150,7 @@ def run():
     render_qvt_cards(scores["q"], scores["v"], scores["t"], scores["qvt"])
     st.markdown("---")
 
-    tab_t, tab_q, tab_v, tab_qvt, tab_d = st.tabs(["⏰ タイミング", "🏢 質", "💰 値札", "🧮 総合", "🛡️ Defensive"])
+    tab_t, tab_q, tab_v, tab_qvt, tab_d = st.tabs(["⏰ タイミング", "🏢 質", "💰 値札", "🧮 総合", "🛡️ 価格耐性"])
     with tab_t:   render_t_tab(tech)
     with tab_q:   render_q_tab(tech)
     with tab_v:   render_v_tab(tech)
