@@ -1063,7 +1063,7 @@ def render_defensive_tab(tech):
         _render_defensive_radar(tech)
     with c2:
         st.markdown("##### 指標別 Defensive スコア")
-        chart_df = metric_df.set_index("指標")[["Defensive"]]
+        chart_df = metric_df.set_index("パラメータ")[["Defensive"]]
         st.bar_chart(chart_df, use_container_width=True)
 
     st.markdown("##### 終値 vs 200MA")
