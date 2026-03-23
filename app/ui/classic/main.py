@@ -832,8 +832,12 @@ def _build_defensive_metric_frame(tech):
     rows = []
     raw = tech.get("d_raw") or {}
     for idx, label in enumerate(_DEFENSIVE_METRIC_LABELS, start=1):
-        def_val = tech.get(f"def{idx}")
-        rank = tech.get(f"def{idx}_rank")
+        if idx == 6:
+            def_val = tech.get(f"def{idx}")
+            rank = tech.get(f"def{idx}_rank")
+        else:
+            def_val = tech.get(f"def{idx}")
+            rank = tech.get(f"def{idx}_rank")
         raw_key = [
             "①_below_ma_ratio",
             "②_max_neg_dev",
@@ -857,7 +861,14 @@ def _build_defensive_metric_frame(tech):
 
 
 def _render_defensive_radar(tech):
-    values = [tech.get(f"def{i}") for i in range(1, 7)]
+    values = [
+        tech.get("def1"),
+        tech.get("def2"),
+        tech.get("def3"),
+        tech.get("def4"),
+        tech.get("def5"),
+        tech.get("vp_score"), 
+    ]
     if any(v is None for v in values):
         st.info("Dスコアのレーダーチャートに必要なデータが不足しています。")
         return
