@@ -1043,6 +1043,7 @@ def _render_volume_pressure_histogram(tech):
 
 
 def render_defensive_tab(tech):
+    defensive_score = tech.get("defensive_score")
     bm_label = tech.get("bm_label") or "—"
     bm_ticker = tech.get("bm_ticker") or "—"
     grade = tech.get("d_grade") or "—"
