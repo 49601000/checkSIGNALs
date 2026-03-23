@@ -225,6 +225,7 @@ def fetch_all_for_d_index(
         "benchmark_ticker": benchmark["ticker"],
         "base": base,
         "benchmark": benchmark,
+        "bm_raw_vals": benchmark,
     }
 # ─── TSE マスター（業種情報） ──────────────────────────────────────────────
 _TSE_MASTER: Optional[dict] = None

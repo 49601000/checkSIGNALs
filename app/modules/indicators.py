@@ -17,6 +17,7 @@ from typing import Optional, Dict, Any
 
 import pandas as pd
 
+from modules.d_logic import compute_d_metrics
 from modules.t_logic import compute_t_metrics
 from modules.q_logic import score_quality
 from modules.valuation import score_valuation
@@ -106,6 +107,8 @@ def compute_indicators(
     industry: str = "",                                   # ★v3.3/v3.4 業種別閾値
     sector: str = "",                                     # ★v3.4 閾値マッチング補助
     is_us: bool = False,                                  # ★v3.5 US市場フラグ
+    price_df: Optional[pd.DataFrame] = None,              # ★D: 個別銘柄の元価格系列
+    bm_raw_vals: Optional[Dict[str, Any]] = None,         # ★D: ベンチマーク生データ
 ) -> Dict[str, Any]:
     """
     テクニカル指標 + Q/V/T スコアをまとめて計算し、UI 用の dict を返す。
@@ -187,6 +190,13 @@ def compute_indicators(
     )
     v_score = v_result["v_score"]
 
+    # ── D スコア（benchmark-relative） ──
+    d_result = compute_d_metrics(
+        price_df=price_df if price_df is not None else df,
+        close_col=close_col,
+        bm_raw_vals=bm_raw_vals,
+    )
+
     # ── QVT 総合 ──
     #qvt_score = round((q_score + v_score + t_score) / 3.0, 1)
     # ── QVT 重み設定 ──
@@ -247,6 +257,11 @@ def compute_indicators(
         "v3": v_result["v3"],
         "v4": v_result["v4"],                   # ★v3
         "has_sector": v_result["has_sector"],   # ★v3
+
+        # D スコア
+        "d_score": d_result["d_score"],
+        "d_scores": d_result["d_scores"],
+        "d_visualization": d_result["visualization"],
 
         # セクター相対（UI表示用）
         "sector_rel_scores": sector_rel_scores or {},  # ★v3

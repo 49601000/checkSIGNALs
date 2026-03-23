@@ -137,6 +137,8 @@ def build_analysis_output(
                 industry=base.get("industry", ""),
                 sector=base.get("sector", ""),
                 is_us=not ticker.upper().endswith(".T"),
+                price_df=base.get("price_df", base["df"]),
+                bm_raw_vals=base.get("bm_raw_vals"),
             )
         except ValueError as exc:
             st.error(str(exc))
