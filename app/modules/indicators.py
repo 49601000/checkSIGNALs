@@ -5,7 +5,7 @@ indicators.py  (v3)
 
 【v3 の変更点】
   - Q スコア: 内部の簡易関数を廃止 → q_logic.score_quality() を正式呼び出し
-  - V スコア: 内部の簡易関数を廃止 → valuation.score_valuation() を正式呼び出し
+  - V スコア: 内部の簡易関数を廃止 → v_logic.score_valuation() を正式呼び出し
   - Q 計算に operating_margin / de_ratio / interest_coverage を追加
   - V 計算に ev_ebitda / sector_v_score（pattern_db 由来）を追加
   - tech dict に q1/q3/v1〜v4/q_warnings/financial_type を追加
@@ -19,7 +19,7 @@ import pandas as pd
 
 from modules.t_logic import compute_t_metrics
 from modules.q_logic import score_quality
-from modules.valuation import score_valuation
+from modules.v_logic import score_valuation
 
 
 # -----------------------------------------------------------
@@ -179,7 +179,7 @@ def compute_indicators(
     )
     q_score = q_result["q_score"]
 
-    # ── V スコア（valuation を正式呼び出し） ──
+    # ── V スコア（v_logic を正式呼び出し） ──
     v_result = score_valuation(
         per=per, pbr=pbr, dividend_yield=dividend_yield,
         ev_ebitda=ev_ebitda,
