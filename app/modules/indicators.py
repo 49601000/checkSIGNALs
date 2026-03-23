@@ -24,7 +24,7 @@ from modules.d_logic import score_defense, get_base_rank
 
 
  # -----------------------------------------------------------
-# D スコアのマージ
+ # D スコアのマージ
  # -----------------------------------------------------------
 
 _D_SUBSCORE_KEYS = [f"def{i}" for i in range(1, 7)]
