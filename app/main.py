@@ -61,12 +61,12 @@ def _save_ui_preference(key):
 
 
 # ─── UI レジストリ ───────────────────────────────────────────
-# 新しいUIを追加するときはここに1行追加するだけでOK
+# 新しいUI skin を追加するときはここに1行追加するだけでOK
 #
 # キー      : URLクエリパラメータ (?ui=<key>) およびセッション管理に使用
 # name      : 選択画面に表示する名前
 # icon      : 選択画面に表示する絵文字
-# desc      : 選択画面に表示する説明文
+# desc      : 共通出力をどう見せるかの説明文
 # module    : インポートするモジュールパス（app/ からの相対）
 # ─────────────────────────────────────────────────────────────
 UI_REGISTRY = [
@@ -74,14 +74,14 @@ UI_REGISTRY = [
         "key":    "classic",
         "name":   "checkSIGNAL",
         "icon":   "📡",
-        "desc":   "シンプルモダンUI。スコアカード・テーブル・メトリクスで視認性重視。",
+        "desc":   "共通分析出力をシンプルモダンに見せる classic skin。視認性重視。",
         "module": "ui.classic.main",
     },
     {
         "key":    "magi",
         "name":   "MAGI SYSTEM",
         "icon":   "🔴",
-        "desc":   "MAGI風UI。六角形判定パネル・スキャンライン・オレンジCRT。",
+        "desc":   "共通分析出力をMAGI風に見せる skin。六角形判定パネル・CRT演出。",
         "module": "ui.magi.main",
     },
     # ── 将来UIの追加例（コメントアウト） ──────────────────────
@@ -211,8 +211,8 @@ def _load_ui_module(module_path: str):
 def render_selector():
     """UI選択画面を描画し、選択されたキーを返す（未選択時は None）。"""
     st.markdown(_SELECTOR_CSS, unsafe_allow_html=True)
-    st.markdown('<div class="sel-header">▶ SELECT INTERFACE ◀</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sel-sub">CHECKSIGNAL — UI SYSTEM v3 — SELECT YOUR VIEW MODE</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sel-header">▶ SELECT SKIN ◀</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sel-sub">CHECKSIGNAL — SHARED ANALYSIS OUTPUT + SELECTABLE UI SKINS</div>', unsafe_allow_html=True)
 
     selected_key = None
     for ui in UI_REGISTRY:
@@ -220,7 +220,7 @@ def render_selector():
         if st.button(label, key=f"sel_{ui['key']}", use_container_width=True):
             selected_key = ui["key"]
 
-    st.markdown('<div class="sel-footer">■ MORE UI MODULES CAN BE ADDED TO app/ui/ ■</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sel-footer">■ MORE UI SKINS CAN BE ADDED TO app/ui/ ■</div>', unsafe_allow_html=True)
     return selected_key
 
 
@@ -269,9 +269,9 @@ def main():
 
     # ── サイドバーにUI切り替えボタンを追加（折りたたみ可） ──
     with st.sidebar:
-        st.markdown(f"**現在: {ui_entry['icon']} {ui_entry['name']}**")
+        st.markdown(f"**現在のskin: {ui_entry['icon']} {ui_entry['name']}**")
         st.markdown("---")
-        st.markdown("**UIを切り替える**")
+        st.markdown("**skin を切り替える**")
         for ui in UI_REGISTRY:
             if ui["key"] == current_key:
                 continue  # 現在選択中は表示しない

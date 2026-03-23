@@ -6,17 +6,10 @@ app/ui/magi/main.py — MAGI SYSTEM UI
 """
 
 import streamlit as st
-from modules.data_fetch import convert_ticker, get_price_and_meta
-from modules.indicators import compute_indicators
+from modules.data_fetch import convert_ticker
 from modules.q_correction import apply_q_correction
-from modules.pattern_db import (
-    load_pattern_db,
-    classify_ticker,
-    calc_sector_relative_scores,            # 財務タイプ表示用（旧・変更なし）
-    calc_sector_relative_scores_from_db,    # V4 計算用（sector_db ベース・新方式）
-    load_sector_db,                         # sector_db_latest.csv ローダー
-    get_all_types_for_display,
-)
+from modules.pattern_db import get_all_types_for_display
+from ui.output_structure import build_analysis_output
 
 
 # ─── スタイル ─────────────────────────────────────────────────
@@ -891,71 +884,6 @@ def render_qvt_tab(tech):
 
 # ─── データ取得 & 指標計算（共通処理） ──────────────────────
 
-def _fetch_and_compute(ticker):
-    with st.spinner(f"■ {ticker} データ取得中…"):
-        try:
-            base = get_price_and_meta(ticker)
-        except ValueError as e:
-            st.error(str(e)); return None, None
-
-    with st.spinner("■ 財務タイプ分類中…"):
-        db = load_pattern_db()
-        financial_type = classify_ticker(
-            ticker, db,
-            roe=base.get("roe"),
-            roa=base.get("roa"),
-            equity_ratio=base.get("equity_ratio"),
-            interest_coverage=base.get("interest_coverage"),
-            operating_margin=base.get("operating_margin"),
-        )
-        _close = base.get("close", 0); _eps = base.get("eps"); _bps = base.get("bps")
-        _per_tmp = (_close / _eps) if (_eps and _eps != 0 and _close) else None
-        _pbr_tmp = (_close / _bps) if (_bps and _bps != 0 and _close) else None
-        # V4: sector_db ベースで計算（financial_type は表示ラベルに限定）
-        _sector_name = base.get("sector", "")
-        sector_rel = calc_sector_relative_scores_from_db(
-            sector=_sector_name, per=_per_tmp, pbr=_pbr_tmp, ev_ebitda=base.get("ev_ebitda"))
-        sector_v_score = sector_rel.get("sector_v_score") if (
-            _sector_name and sector_rel.get("sector_matched", False)
-        ) else None
-
-    with st.spinner("■ 指標計算中…"):
-        try:
-            tech = compute_indicators(
-                base["df"], base["close_col"], base["high_52w"], base["low_52w"],
-                eps=base.get("eps"), bps=base.get("bps"),
-                eps_fwd=base.get("eps_fwd"), per_fwd=base.get("per_fwd"),
-                roe=base.get("roe"), roa=base.get("roa"),
-                equity_ratio=base.get("equity_ratio"), dividend_yield=base.get("dividend_yield"),
-                operating_margin=base.get("operating_margin"), de_ratio=base.get("de_ratio"),
-                interest_coverage=base.get("interest_coverage"), ev_ebitda=base.get("ev_ebitda"),
-                sector_v_score=sector_v_score, sector_rel_scores=sector_rel,
-                financial_type=financial_type,
-                industry=base.get("industry", ""), sector=base.get("sector", ""),
-                is_us=not ticker.upper().endswith(".T"),
-            )
-        except ValueError as e:
-            st.error(str(e)); return base, None
-
-    # compute_indicators 後に ev_ebitda が確定するので sector_rel を再計算して上書き
-    _per_final = tech.get("per")
-    _pbr_final = tech.get("pbr")
-    _ev_final  = tech.get("ev_ebitda")
-    if _per_final or _pbr_final or _ev_final:
-        # compute_indicators 後に確定した値で sector_rel を再計算（sector_db ベース）
-        sector_rel_final = calc_sector_relative_scores_from_db(
-            sector=_sector_name, per=_per_final, pbr=_pbr_final, ev_ebitda=_ev_final)
-        tech["sector_rel_scores"] = sector_rel_final
-        # sector_matched = True のときのみ V4 を有効化
-        if sector_rel_final.get("sector_matched", False):
-            tech["sector_v_score"] = sector_rel_final.get("sector_v_score")
-
-    # is_us を tech に格納しておく（各タブから参照可能に）
-    tech["is_us"]     = not ticker.upper().endswith(".T")
-    # sector / industry が indicators から返らない場合の保険
-    if not tech.get("sector"):   tech["sector"]   = base.get("sector", "")
-    if not tech.get("industry"): tech["industry"] = base.get("industry", "")
-    return base, tech
 
 
 # ─── エントリーポイント ───────────────────────────────────────
@@ -997,14 +925,22 @@ def run():
         st.info("ティッカーを入力すると結果が表示されます。")
         return
 
-    base, tech = _fetch_and_compute(ticker)
-    if base is None or tech is None:
+    output = build_analysis_output(
+        ticker,
+        spinner_messages={
+            "fetch": f"■ {ticker} データ取得中…",
+            "classify": "■ 財務タイプ分類中…",
+            "compute": "■ 指標計算中…",
+        },
+    )
+    if not output or output["tech"] is None:
         return
 
-    q   = float(tech["q_score"]); v = float(tech["v_score"])
-    t   = float(tech["t_score"]); qvt = float(tech["qvt_score"])
+    base = output["base"]
+    tech = output["tech"]
+    scores = output["scores"]
 
-    render_magi_panel(q, v, t, qvt, ticker, base, tech)
+    render_magi_panel(scores["q"], scores["v"], scores["t"], scores["qvt"], ticker, base, tech)
     st.markdown("---")
 
     tab_t, tab_q, tab_v, tab_qvt = st.tabs([

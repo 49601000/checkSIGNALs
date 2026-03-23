@@ -26,6 +26,10 @@ import streamlit as st
 IRBANK_BASE = "https://irbank.net/"
 ALPHA_BASE  = "https://www.alphavantage.co/query"
 COMPANY_NAME_CACHE: Dict[str, str] = {}
+DEFAULT_BENCHMARK_TICKERS = {
+    "jp": "^N225",
+    "us": "^GSPC",
+}
 
 
 # ─── Alpha Vantage APIキー ─────────────────────────────────────────────────
@@ -105,6 +109,124 @@ def _safe_get_yf_info(ticker_obj) -> dict:
             import time as _time
             _time.sleep(0.5)
     return {}
+
+
+def _download_price_frame(ticker: str, period: str = "400d", interval: str = "1d") -> dict:
+    """
+    yfinance から価格系列を取得し、主要列情報を共通フォーマットで返す。
+    benchmark / 個別銘柄の両方で使う内部ヘルパー。
+    """
+    df = None
+    last_err = None
+    for _ in range(2):
+        try:
+            df = yf.download(ticker, period=period, interval=interval, progress=False)
+        except Exception as e:
+            last_err = e
+            df = pd.DataFrame()
+        if not df.empty and len(df) >= 2:
+            break
+        time.sleep(1)
+
+    if df is None or df.empty or len(df) < 2:
+        msg = f"株価データ取得エラー: {last_err}" if last_err else "株価データが取得できませんでした。"
+        raise ValueError(msg)
+
+    if isinstance(df.columns, pd.MultiIndex):
+        df.columns = ["_".join(col).strip() for col in df.columns]
+
+    try:
+        close_col = next(c for c in df.columns if "Close" in c)
+    except StopIteration:
+        raise ValueError("終値（Close）列が見つかりませんでした。")
+
+    try:
+        high_col = next(c for c in df.columns if c.startswith("High"))
+        low_col = next(c for c in df.columns if c.startswith("Low"))
+        use_hl = True
+    except StopIteration:
+        use_hl = False
+
+    trading_days_1y = 252
+    df_1y = df.iloc[-trading_days_1y:]
+
+    close = float(df[close_col].iloc[-1])
+    previous_close = float(df[close_col].iloc[-2])
+
+    if use_hl:
+        high_52w = float(df_1y[high_col].max())
+        low_52w = float(df_1y[low_col].min())
+    else:
+        high_52w = float(df_1y[close_col].max())
+        low_52w = float(df_1y[close_col].min())
+
+    return {
+        "df": df,
+        "close_col": close_col,
+        "close": close,
+        "previous_close": previous_close,
+        "high_52w": high_52w,
+        "low_52w": low_52w,
+    }
+
+
+def _default_benchmark_ticker_for(ticker: str) -> str:
+    return DEFAULT_BENCHMARK_TICKERS["jp"] if is_jpx_ticker(ticker) else DEFAULT_BENCHMARK_TICKERS["us"]
+
+
+def get_benchmark_data(
+    ticker: str,
+    bm_ticker: Optional[str] = None,
+    period: str = "400d",
+    interval: str = "1d",
+) -> dict:
+    """
+    Dスコア等の比較用ベンチマーク系列を取得する。
+    デフォルトは日本株なら日経225、米国株ならS&P500。
+    """
+    benchmark_ticker = (bm_ticker or _default_benchmark_ticker_for(ticker)).strip().upper()
+    price_data = _download_price_frame(benchmark_ticker, period=period, interval=interval)
+
+    ticker_obj = yf.Ticker(benchmark_ticker)
+    info = _safe_get_yf_info(ticker_obj)
+    company_name = (
+        info.get("shortName")
+        or info.get("longName")
+        or info.get("displayName")
+        or benchmark_ticker
+    )
+
+    return {
+        "ticker": benchmark_ticker,
+        "company_name": company_name,
+        "asset_type": "benchmark",
+        **price_data,
+    }
+
+
+def fetch_all_for_d_index(
+    ticker: str,
+    bm_ticker: Optional[str] = None,
+    period: str = "400d",
+    interval: str = "1d",
+) -> dict:
+    """
+    Dスコア参照用に、個別銘柄データとベンチマークデータをまとめて返す。
+    """
+    base = get_price_and_meta(ticker, period=period, interval=interval)
+    benchmark = get_benchmark_data(
+        ticker=ticker,
+        bm_ticker=bm_ticker,
+        period=period,
+        interval=interval,
+    )
+    return {
+        "ticker": ticker,
+        "benchmark_ticker": benchmark["ticker"],
+        "base": base,
+        "benchmark": benchmark,
+        "bm_raw_vals": benchmark,
+    }
 # ─── TSE マスター（業種情報） ──────────────────────────────────────────────
 _TSE_MASTER: Optional[dict] = None
 
@@ -533,50 +655,13 @@ def get_price_and_meta(ticker: str, period: str = "400d", interval: str = "1d") 
         operating_margin ★, interest_coverage ★, de_ratio ★
         ev_ebitda ★
     """
-    # ── 株価データ（yfinance・リトライ付き） ──
-    df = None
-    last_err = None
-    for _ in range(2):
-        try:
-            df = yf.download(ticker, period=period, interval=interval, progress=False)
-        except Exception as e:
-            last_err = e
-            df = pd.DataFrame()
-        if not df.empty and len(df) >= 2:
-            break
-        time.sleep(1)
-
-    if df is None or df.empty or len(df) < 2:
-        msg = f"株価データ取得エラー: {last_err}" if last_err else "株価データが取得できませんでした。"
-        raise ValueError(msg)
-
-    if isinstance(df.columns, pd.MultiIndex):
-        df.columns = ["_".join(col).strip() for col in df.columns]
-
-    try:
-        close_col = next(c for c in df.columns if "Close" in c)
-    except StopIteration:
-        raise ValueError("終値（Close）列が見つかりませんでした。")
-
-    try:
-        high_col = next(c for c in df.columns if c.startswith("High"))
-        low_col = next(c for c in df.columns if c.startswith("Low"))
-        use_hl = True
-    except StopIteration:
-        use_hl = False
-
-    TRADING_DAYS_1Y = 252
-    df_1y = df.iloc[-TRADING_DAYS_1Y:]
-
-    close = float(df[close_col].iloc[-1])
-    previous_close = float(df[close_col].iloc[-2])
-
-    if use_hl:
-        high_52w = float(df_1y[high_col].max())
-        low_52w = float(df_1y[low_col].min())
-    else:
-        high_52w = float(df_1y[close_col].max())
-        low_52w = float(df_1y[close_col].min())
+    price_data = _download_price_frame(ticker, period=period, interval=interval)
+    df = price_data["df"]
+    close_col = price_data["close_col"]
+    close = price_data["close"]
+    previous_close = price_data["previous_close"]
+    high_52w = price_data["high_52w"]
+    low_52w = price_data["low_52w"]
 
     # ── yfinance オブジェクト / info は最初に1回だけ取得 ──
     ticker_obj = yf.Ticker(ticker)
