@@ -20,6 +20,7 @@ import pandas as pd
 from modules.t_logic import compute_t_metrics
 from modules.q_logic import score_quality
 from modules.v_logic import score_valuation
+from modules.d_logic import score_defense, get_base_rank, METRIC_COLS
 
 
 # -----------------------------------------------------------
@@ -106,6 +107,13 @@ def compute_indicators(
     industry: str = "",                                   # ★v3.3/v3.4 業種別閾値
     sector: str = "",                                     # ★v3.4 閾値マッチング補助
     is_us: bool = False,                                  # ★v3.5 US市場フラグ
+    # ─ D スコア関連 ─
+    price_df: Optional[pd.DataFrame] = None,              # ★D Close/Low/Volume DataFrame
+    bm_raw_vals: Optional[Dict[str, float]] = None,       # ★D ベンチマーク生値
+    same_market_raw: Optional[Dict[str, Any]] = None,     # ★D σ推定用同市場生値
+    d_weights: Optional[Dict[str, float]] = None,         # ★D 重み
+    d_ma_period: int = 200,                               # ★D MAウィンドウ
+    d_vol_ma_window: int = 20,                            # ★D 出来高MAウィンドウ
 ) -> Dict[str, Any]:
     """
     テクニカル指標 + Q/V/T スコアをまとめて計算し、UI 用の dict を返す。
@@ -203,6 +211,23 @@ def compute_indicators(
     )
   
 
+    # ── D スコア（price_df と bm_raw_vals が渡された場合のみ計算）──
+    d_result: Dict[str, Any] = {}
+    if price_df is not None and bm_raw_vals is not None:
+        try:
+            d_result = score_defense(
+                df            = price_df,
+                bm_raw_vals   = bm_raw_vals,
+                same_market_raw = same_market_raw,
+                ma_period     = d_ma_period,
+                vol_ma_window = d_vol_ma_window,
+                weights       = d_weights,
+            )
+        except Exception as _e:
+            d_result = {"d_score": None, "defensive_score": None,
+                        "grade": None, "base_rank": None,
+                        "_d_error": str(_e)}
+
     # ── 返却 dict ──
     result: Dict[str, Any] = {
         # 生データ
@@ -264,5 +289,37 @@ def compute_indicators(
 
     # T メトリクスをマージ
     result.update(t_metrics)
+
+    # ── D スコアをマージ ──
+    if d_result.get("defensive_score") is not None:
+        # 反転済み指標スコア（高い = 防衛力が高い）
+        result["def1"] = d_result.get("def1")   # ① MA固り比率
+        result["def2"] = d_result.get("def2")   # ② 最大下方乖離
+        result["def3"] = d_result.get("def3")   # ③ 52w安値/200MA
+        result["def4"] = d_result.get("def4")   # ④ 最大DD
+        result["def5"] = d_result.get("def5")   # ⑤ 下方Vol
+        result["def6"] = d_result.get("def6")   # ⑥ 出来高下方圧力
+        # 各指標のランク（get_base_rank で算出）
+        result["def1_rank"] = get_base_rank(d_result["def1"]) if d_result.get("def1") is not None else None
+        result["def2_rank"] = get_base_rank(d_result["def2"]) if d_result.get("def2") is not None else None
+        result["def3_rank"] = get_base_rank(d_result["def3"]) if d_result.get("def3") is not None else None
+        result["def4_rank"] = get_base_rank(d_result["def4"]) if d_result.get("def4") is not None else None
+        result["def5_rank"] = get_base_rank(d_result["def5"]) if d_result.get("def5") is not None else None
+        result["def6_rank"] = get_base_rank(d_result["def6"]) if d_result.get("def6") is not None else None
+        # 総合グレード
+        result["d_score"]         = d_result.get("d_score")
+        result["defensive_score"]  = d_result.get("defensive_score")
+        result["d_grade"]          = d_result.get("grade")
+        result["d_base_rank"]      = d_result.get("base_rank")
+        result["d_raw"]            = d_result.get("raw", {})
+        result["d_detail"]         = d_result.get("detail", {})
+    else:
+        # D スコア未計算時はすべて None
+        for _k in ["def1","def2","def3","def4","def5","def6",
+                   "def1_rank","def2_rank","def3_rank",
+                   "def4_rank","def5_rank","def6_rank",
+                   "d_score","defensive_score","d_grade","d_base_rank",
+                   "d_raw","d_detail"]:
+            result[_k] = None
 
     return result
