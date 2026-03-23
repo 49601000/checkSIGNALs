@@ -110,6 +110,33 @@ def _safe_get_yf_info(ticker_obj) -> dict:
     return {}
 
 
+def _statement_value(stmt, keys, exact_first: bool = False) -> Optional[float]:
+    """財務諸表 DataFrame から最新列の値を取得する。"""
+    if stmt is None or stmt.empty:
+        return None
+
+    col = stmt.columns[0]
+    normalized_index = [(idx, str(idx).strip().lower()) for idx in stmt.index]
+
+    def _extract(match_exact: bool) -> Optional[float]:
+        for key in keys:
+            key_norm = key.strip().lower()
+            for idx, idx_norm in normalized_index:
+                matched = idx_norm == key_norm if match_exact else key_norm in idx_norm
+                if not matched:
+                    continue
+                value = stmt.loc[idx, col]
+                if value is not None and str(value) not in ("nan", "None", "NaN"):
+                    return float(value)
+        return None
+
+    if exact_first:
+        value = _extract(match_exact=True)
+        if value is not None:
+            return value
+    return _extract(match_exact=False)
+
+
 def _download_price_frame(ticker: str, period: str = "400d", interval: str = "1d") -> dict:
     """
     yfinance から価格系列を取得し、主要列情報を共通フォーマットで返す。
@@ -203,14 +230,14 @@ def get_benchmark_data(
     }
 
 
-def fetch_all_for_d_index(
+def fetch_single_for_d_index(
     ticker: str,
     bm_ticker: Optional[str] = None,
     period: str = "400d",
     interval: str = "1d",
 ) -> dict:
     """
-    Dスコア参照用に、個別銘柄データとベンチマークデータをまとめて返す。
+    単一銘柄の D スコア参照用に、個別銘柄データとベンチマークデータをまとめて返す。
     """
     base = get_price_and_meta(ticker, period=period, interval=interval)
     base["price_df"] = base["df"].copy()
@@ -380,11 +407,11 @@ def get_us_fundamentals_alpha(symbol: str, api_key: str) -> dict:
     """
     Returns dict with keys:
         eps, bps, per_fwd, roe, roa, equity_ratio,
-        operating_margin, interest_coverage, ev_ebitda
+        operating_margin, ev_ebitda
     """
     result = {k: None for k in [
         "eps", "bps", "per_fwd", "roe", "roa", "equity_ratio",
-        "operating_margin", "interest_coverage", "ev_ebitda"
+        "operating_margin", "ev_ebitda"
     ]}
 
     params = {"function": "OVERVIEW", "symbol": symbol, "apikey": api_key}
@@ -459,18 +486,11 @@ def _supplement_from_yfinance(info: dict, current: dict, ticker_obj=None) -> dic
         try:
             fin = ticker_obj.financials
             if fin is not None and not fin.empty:
-                col = fin.columns[0]
-                def _get_fin_row(keys):
-                    for k in keys:
-                        for idx in fin.index:
-                            if k.lower() in str(idx).lower():
-                                v = fin.loc[idx, col]
-                                if v is not None and str(v) not in ("nan", "None"):
-                                    return float(v)
-                    return None
-                op_inc = _get_fin_row(["Operating Income", "Operating Profit",
-                                       "Total Operating Income As Reported"])
-                rev    = _get_fin_row(["Total Revenue", "Net Sales", "Revenue"])
+                op_inc = _statement_value(
+                    fin,
+                    ["Operating Income", "Operating Profit", "Total Operating Income As Reported"],
+                )
+                rev = _statement_value(fin, ["Total Revenue", "Net Sales", "Revenue"])
                 if op_inc is not None and rev not in (None, 0):
                     current["operating_margin"] = round(op_inc / abs(rev) * 100.0, 2)
         except Exception:
@@ -496,19 +516,8 @@ def _supplement_from_yfinance(info: dict, current: dict, ticker_obj=None) -> dic
             try:
                 fin = ticker_obj.financials  # 損益計算書（年次）
                 if fin is not None and not fin.empty:
-                    # 最新年度の列を使用
-                    col = fin.columns[0]
-                    def _get_fin(keys):
-                        for k in keys:
-                            for idx in fin.index:
-                                if k.lower() in str(idx).lower():
-                                    v = fin.loc[idx, col]
-                                    if v is not None and str(v) != "nan":
-                                        return float(v)
-                        return None
-
-                    ebit_fin  = _get_fin(["EBIT", "Operating Income"])
-                    intex_fin = _get_fin(["Interest Expense", "Interest And Debt Expense"])
+                    ebit_fin = _statement_value(fin, ["EBIT", "Operating Income"])
+                    intex_fin = _statement_value(fin, ["Interest Expense", "Interest And Debt Expense"])
                     if ebit_fin is not None and intex_fin not in (None, 0):
                         current["interest_coverage"] = round(ebit_fin / abs(intex_fin), 2)
             except Exception:
@@ -530,20 +539,16 @@ def _supplement_from_yfinance(info: dict, current: dict, ticker_obj=None) -> dic
         try:
             bs = ticker_obj.balance_sheet
             if bs is not None and not bs.empty:
-                col = bs.columns[0]
-                def _get_bs_row(keys):
-                    for k in keys:
-                        for idx in bs.index:
-                            if k.lower() in str(idx).lower():
-                                v = bs.loc[idx, col]
-                                if v is not None and str(v) not in ("nan", "None", "NaN"):
-                                    return float(v)
-                    return None
-                long_debt  = _get_bs_row(["Long Term Debt", "LongTermDebt"])
-                short_debt = _get_bs_row(["Short Term Debt", "Current Debt",
-                                          "Current Portion Of Long Term Debt"])
-                equity_bs  = _get_bs_row(["Stockholders Equity", "StockholdersEquity",
-                                          "Common Stock Equity", "Total Equity Gross Minority Interest"])
+                long_debt = _statement_value(bs, ["Long Term Debt", "LongTermDebt"])
+                short_debt = _statement_value(
+                    bs,
+                    ["Short Term Debt", "Current Debt", "Current Portion Of Long Term Debt"],
+                )
+                equity_bs = _statement_value(
+                    bs,
+                    ["Stockholders Equity", "StockholdersEquity", "Common Stock Equity",
+                     "Total Equity Gross Minority Interest"],
+                )
                 total_d    = (long_debt or 0.0) + (short_debt or 0.0)
                 if total_d > 0 and equity_bs not in (None, 0):
                     current["de_ratio"] = round(total_d / abs(equity_bs), 3)
@@ -573,34 +578,19 @@ def _supplement_from_yfinance(info: dict, current: dict, ticker_obj=None) -> dic
             cf  = ticker_obj.cashflow
             bs  = ticker_obj.balance_sheet
 
-            def _get_stmt_ev(stmt, keys):
-                """財務諸表から部分一致でfloatを取得"""
-                if stmt is None or stmt.empty:
-                    return None
-                col = stmt.columns[0]
-                for k in keys:
-                    for idx in stmt.index:
-                        if str(idx).strip().lower() == k.lower():   # 完全一致を優先
-                            v = stmt.loc[idx, col]
-                            if v is not None and str(v) not in ("nan", "None", "NaN"):
-                                return float(v)
-                for k in keys:
-                    for idx in stmt.index:
-                        if k.lower() in str(idx).lower():           # 部分一致でフォールバック
-                            v = stmt.loc[idx, col]
-                            if v is not None and str(v) not in ("nan", "None", "NaN"):
-                                return float(v)
-                return None
-
             # EBITDA: financials に "EBITDA" キーが直接ある（7203/5333で確認済み）
-            ebitda_fin = _get_stmt_ev(fin, ["EBITDA"])
+            ebitda_fin = _statement_value(fin, ["EBITDA"], exact_first=True)
             if ebitda_fin is None:
                 # フォールバック: EBIT + D&A（cashflowから）
-                ebit_val = _get_stmt_ev(fin, ["EBIT", "Operating Income",
-                                              "Total Operating Income As Reported"])
-                da_val   = _get_stmt_ev(cf,  ["Depreciation And Amortization",
-                                              "Depreciation Amortization Depletion",
-                                              "Depreciation"])
+                ebit_val = _statement_value(
+                    fin,
+                    ["EBIT", "Operating Income", "Total Operating Income As Reported"],
+                )
+                da_val = _statement_value(
+                    cf,
+                    ["Depreciation And Amortization", "Depreciation Amortization Depletion",
+                     "Depreciation"],
+                )
                 if ebit_val is not None and da_val is not None:
                     ebitda_fin = ebit_val + abs(da_val)
 
@@ -609,7 +599,7 @@ def _supplement_from_yfinance(info: dict, current: dict, ticker_obj=None) -> dic
                 ev_use = _safe_float(info.get("enterpriseValue"))
                 if ev_use is None:
                     mktcap   = _safe_float(info.get("marketCap"))
-                    net_debt = _get_stmt_ev(bs, ["Net Debt"])   # BS直接キー（7203/5333で確認済み）
+                    net_debt = _statement_value(bs, ["Net Debt"], exact_first=True)   # BS直接キー（7203/5333で確認済み）
 
                     # marketCap も info から取れない場合は fast_info を使う
                     if mktcap is None:
@@ -626,10 +616,13 @@ def _supplement_from_yfinance(info: dict, current: dict, ticker_obj=None) -> dic
                         ev_use = mktcap + net_debt
                     elif mktcap is not None:
                         # Net Debt がなければ有利子負債 - 現金で計算
-                        debt_l     = _get_stmt_ev(bs, ["Long Term Debt"])
-                        debt_s     = _get_stmt_ev(bs, ["Current Debt"])
-                        cash       = _get_stmt_ev(bs, ["Cash And Cash Equivalents",
-                                                       "Cash Cash Equivalents And Short Term Investments"])
+                        debt_l = _statement_value(bs, ["Long Term Debt"])
+                        debt_s = _statement_value(bs, ["Current Debt"])
+                        cash = _statement_value(
+                            bs,
+                            ["Cash And Cash Equivalents",
+                             "Cash Cash Equivalents And Short Term Investments"],
+                        )
                         total_debt = (debt_l or 0.0) + (debt_s or 0.0)
                         ev_use     = mktcap + total_debt - (cash or 0.0)
 
@@ -664,6 +657,7 @@ def get_price_and_meta(ticker: str, period: str = "400d", interval: str = "1d") 
         operating_margin ★, interest_coverage ★, de_ratio ★
         ev_ebitda ★
     """
+    ticker = convert_ticker(ticker)
     price_data = _download_price_frame(ticker, period=period, interval=interval)
     df = price_data["df"]
     close_col = price_data["close_col"]
@@ -708,11 +702,7 @@ def get_price_and_meta(ticker: str, period: str = "400d", interval: str = "1d") 
 
         fundamentals = _supplement_from_yfinance(info, fundamentals, ticker_obj=ticker_obj)
 
-    # PER（実績）が未計算なら補完
-    if fundamentals["eps"] not in (None, 0) and close > 0 and fundamentals.get("per_fwd") is None:
-        fundamentals["per_fwd"] = close / fundamentals["eps"]
-
-    # 予想 EPS
+    # 予想 EPS（forward PER が取得できた場合のみ）
     if fundamentals["per_fwd"] not in (None, 0) and close > 0:
         fundamentals["eps_fwd"] = close / fundamentals["per_fwd"]
 
