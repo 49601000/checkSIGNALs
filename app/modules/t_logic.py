@@ -14,10 +14,134 @@ t_logic.py
 
 from typing import Tuple, Optional, Dict, Any
 
+import pandas as pd
 
 # -----------------------------------------------------------
 # BB テキスト判定
 # -----------------------------------------------------------
+
+
+def calc_moving_averages(df: pd.DataFrame, close_col: str) -> pd.DataFrame:
+    df["25MA"] = df[close_col].rolling(25).mean()
+    df["50MA"] = df[close_col].rolling(50).mean()
+    df["75MA"] = df[close_col].rolling(75).mean()
+    return df
+
+
+def calc_bollinger_bands(df: pd.DataFrame, close_col: str) -> pd.DataFrame:
+    df["20MA"] = df[close_col].rolling(20).mean()
+    df["20STD"] = df[close_col].rolling(20).std()
+    df["BB_+1σ"] = df["20MA"] + df["20STD"]
+    df["BB_+2σ"] = df["20MA"] + 2 * df["20STD"]
+    df["BB_-1σ"] = df["20MA"] - df["20STD"]
+    df["BB_-2σ"] = df["20MA"] - 2 * df["20STD"]
+    return df
+
+
+def calc_rsi(df: pd.DataFrame, close_col: str, period: int = 14) -> pd.DataFrame:
+    delta = df[close_col].diff()
+    gain = delta.clip(lower=0)
+    loss = -delta.clip(upper=0)
+    avg_gain = gain.rolling(period).mean()
+    avg_loss = loss.rolling(period).mean().replace(0, 1e-10)
+    rs = avg_gain / avg_loss
+    df["RSI"] = 100 - (100 / (1 + rs))
+    return df
+
+
+def calc_slope(series: pd.Series, window: int = 4) -> float:
+    s = series.dropna()
+    if len(s) < window + 1:
+        return 0.0
+    start = float(s.iloc[-window - 1])
+    end = float(s.iloc[-1])
+    if start == 0:
+        return 0.0
+    return (end - start) / start * 100.0
+
+
+def slope_arrow(series: pd.Series) -> str:
+    s = series.dropna()
+    if len(s) < 2:
+        return "→"
+    diff = float(s.iloc[-1]) - float(s.iloc[-2])
+    if diff > 0:
+        return "↗"
+    if diff < 0:
+        return "↘"
+    return "→"
+
+
+def prepare_technical_frame(df: pd.DataFrame, close_col: str) -> pd.DataFrame:
+    """T ロジックで使うテクニカル列を追加した DataFrame を返す。"""
+    enriched = df.copy()
+    enriched = calc_moving_averages(enriched, close_col)
+    enriched = calc_bollinger_bands(enriched, close_col)
+    enriched = calc_rsi(enriched, close_col)
+    return enriched
+
+
+def compute_t_block(
+    df: pd.DataFrame,
+    close_col: str,
+    high_52w: Optional[float] = None,
+    low_52w: Optional[float] = None,
+    per: Optional[float] = None,
+    pbr: Optional[float] = None,
+) -> Dict[str, Any]:
+    """
+    DataFrame から T スコア用のテクニカル列と表示用メトリクスを一括計算する。
+    """
+    enriched = prepare_technical_frame(df, close_col)
+    df_valid = enriched.dropna(subset=[
+        close_col, "25MA", "50MA", "75MA",
+        "BB_+1σ", "BB_+2σ", "BB_-1σ", "BB_-2σ", "RSI",
+    ])
+    if df_valid.empty or len(df_valid) < 5:
+        raise ValueError("テクニカル指標を計算するためのデータが不足しています。")
+
+    last = df_valid.iloc[-1]
+    snapshot = {
+        "close": float(last[close_col]),
+        "ma_25": float(last["25MA"]),
+        "ma_50": float(last["50MA"]),
+        "ma_75": float(last["75MA"]),
+        "rsi": float(last["RSI"]),
+        "bb_plus1": float(last["BB_+1σ"]),
+        "bb_plus2": float(last["BB_+2σ"]),
+        "bb_minus1": float(last["BB_-1σ"]),
+        "bb_minus2": float(last["BB_-2σ"]),
+        "slope_25": calc_slope(enriched["25MA"]),
+        "slope_50": calc_slope(enriched["50MA"]),
+        "slope_75": calc_slope(enriched["75MA"]),
+        "arrow_25": slope_arrow(enriched["25MA"]),
+        "arrow_50": slope_arrow(enriched["50MA"]),
+        "arrow_75": slope_arrow(enriched["75MA"]),
+    }
+
+    metrics = compute_t_metrics(
+        price=snapshot["close"],
+        ma_25=snapshot["ma_25"],
+        ma_50=snapshot["ma_50"],
+        ma_75=snapshot["ma_75"],
+        rsi=snapshot["rsi"],
+        bb_plus1=snapshot["bb_plus1"],
+        bb_plus2=snapshot["bb_plus2"],
+        bb_minus1=snapshot["bb_minus1"],
+        bb_minus2=snapshot["bb_minus2"],
+        slope_25=snapshot["slope_25"],
+        low_52w=low_52w,
+        high_52w=high_52w,
+        per=per,
+        pbr=pbr,
+    )
+
+    return {
+        "df": enriched,
+        "df_valid": df_valid,
+        "snapshot": snapshot,
+        "t_metrics": metrics,
+    }
 
 
 def judge_bb_signal(
