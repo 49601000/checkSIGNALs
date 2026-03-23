@@ -32,7 +32,7 @@ D（価格防衛指数）スコア — 6サブ指標構造
 
 【設計メモ】
   - t_logic / q_logic / v_logic と同じ dict 返却インターフェース
-  - ノートブックのセル4〜6の計算ロジックをモジュール化
+  - ノートブックのセル4〜8の計算ロジックをモジュール化
   - ベンチマーク値は呼び出し元（data_fetch.fetch_all_for_d_index）から注入
 """
 
@@ -473,3 +473,165 @@ def score_defense(
         "ma_period":       ma_period,
         "vol_ma_window":   vol_ma_window,
     }
+
+# ═══════════════════════════════════════════════════════════════════════════
+# セル8: グレードサマリー生成（複数銘柄 → grade_df）
+# ═══════════════════════════════════════════════════════════════════════════
+
+# グレード表示順（ソート用）
+GRADE_ORDER: List[str] = [
+    "S", "S-",
+    "A+", "A", "A-",
+    "B+", "B", "B-",
+    "C+", "C", "C-",
+    "D+", "D", "D-",
+    "E+", "E",
+]
+
+# グレード → 表示スタイル（Streamlit / Jupyter 共用）
+GRADE_STYLE: Dict[str, Dict[str, str]] = {
+    "S":  {"bg": "#1e3a5f", "fg": "#60a5fa"},
+    "A":  {"bg": "#14532d", "fg": "#4ade80"},
+    "B":  {"bg": "#1a2e05", "fg": "#a3e635"},
+    "C":  {"bg": "#422006", "fg": "#fb923c"},
+    "D":  {"bg": "#450a0a", "fg": "#f87171"},
+    "E":  {"bg": "#27272a", "fg": "#a1a1aa"},
+}
+
+
+def grade_color_css(grade: str) -> str:
+    """
+    グレード文字列から CSS スタイル文字列を返す。
+    Jupyter の .applymap / Streamlit の st.markdown で使用可能。
+
+    例: 'B-' → 'background-color: #1a2e05; color: #a3e635'
+    """
+    key = grade[0] if grade else "E"   # 先頭1文字でスタイルを決定
+    style = GRADE_STYLE.get(key, GRADE_STYLE["E"])
+    return f"background-color: {style['bg']}; color: {style['fg']}"
+
+
+def compute_grade_summary(
+    results: List[Dict[str, Any]],
+) -> pd.DataFrame:
+    """
+    score_defense の返却値リストから grade_df を生成する。
+
+    セル8の以下のブロックに相当:
+        results = []
+        for label in norm_df.index:
+            ...
+        grade_df = pd.DataFrame(results).set_index('Ticker')
+
+    Parameters
+    ----------
+    results : list of dict
+        各銘柄の score_defense 返却値に以下のキーを追加したリスト:
+            - "label"     : ティッカー表示ラベル
+            - "market"    : 市場区分
+            - "bm_label"  : ベンチマーク名
+
+    Returns
+    -------
+    pd.DataFrame
+        インデックス = Ticker
+        カラム:
+            Market, Benchmark, defensive_score, Grade,
+            ①_below_ma_ratio 〜 ⑥_vol_pressure（defensive 方向）
+    """
+    rows = []
+    for r in results:
+        label = r.get("label", "")
+        row = {
+            "Ticker":          label,
+            "Market":          r.get("market", ""),
+            "Benchmark":       r.get("bm_label", ""),
+            "defensive_score": r["defensive_score"],
+            "Grade":           r["grade"],
+        }
+        # 指標別 defensive スコア（1 - norm、高い = 防衛力が高い）
+        for col in METRIC_COLS:
+            key = f"def{METRIC_COLS.index(col) + 1}"   # def1〜def6
+            row[col] = r.get(key, float("nan"))
+        rows.append(row)
+
+    df = pd.DataFrame(rows).set_index("Ticker")
+    df = df.sort_values("defensive_score", ascending=False)
+    return df
+
+
+def build_results_list(
+    price_data: Dict[str, pd.DataFrame],
+    ticker_meta: Dict[str, dict],
+    bm_data: Dict[str, pd.DataFrame],
+    ma_period: int = 200,
+    vol_ma_window: int = 20,
+    weights: Optional[Dict[str, float]] = None,
+) -> Tuple[List[dict], Dict[str, dict], Dict[str, dict]]:
+    """
+    複数銘柄のスコアを一括計算し、results リストと中間データを返す。
+
+    セル6の calc_d_index() 相当のエントリポイント。
+    単一銘柄アプリでも複数銘柄ノートブックでも使える汎用関数。
+
+    Parameters
+    ----------
+    price_data   : {label: DataFrame[Close, Low, Volume]}
+    ticker_meta  : {label: parse_ticker_for_d の返却 dict}
+    bm_data      : {market: DataFrame[Close, Low, Volume]}
+    ma_period    : int
+    vol_ma_window: int
+    weights      : dict, optional
+
+    Returns
+    -------
+    results      : score_defense 結果リスト（label/market/bm_label を追加済み）
+    detail_store : {label: detail dict}（可視化用）
+    bm_raw_store : {market: raw_vals dict}（ベンチマーク生値）
+    """
+    # ── ベンチマーク生値の事前計算 ──
+    bm_raw_store: Dict[str, dict] = {}
+    for market, df in bm_data.items():
+        rv, _ = compute_raw_metrics(df, ma_period, vol_ma_window)
+        bm_raw_store[market] = rv
+
+    # ── 全銘柄の生値を先に計算（σ推定プール用）──
+    all_raw: Dict[str, dict] = {}
+    for label, df in price_data.items():
+        rv, _ = compute_raw_metrics(df, ma_period, vol_ma_window)
+        all_raw[label] = rv
+
+    # ── 市場別グループ化 ──
+    market_groups: Dict[str, Dict[str, dict]] = {}
+    for label, meta in ticker_meta.items():
+        mkt = meta["market"]
+        market_groups.setdefault(mkt, {})[label] = all_raw.get(label, {})
+
+    # ── 銘柄ごとの score_defense 計算 ──
+    results: List[dict] = []
+    detail_store: Dict[str, dict] = {}
+
+    for label, df in price_data.items():
+        meta    = ticker_meta[label]
+        market  = meta["market"]
+        bm_rv   = bm_raw_store.get(market, {})
+        same_rv = market_groups.get(market, {})
+
+        result = score_defense(
+            df            = df,
+            bm_raw_vals   = bm_rv,
+            same_market_raw = same_rv,
+            ma_period     = ma_period,
+            vol_ma_window = vol_ma_window,
+            weights       = weights,
+        )
+
+        # label / market / bm_label をスコア dict に追加
+        result["label"]    = label
+        result["market"]   = market
+        result["bm_label"] = meta.get("bm_label", "")
+
+        results.append(result)
+        detail_store[label] = result["detail"]
+
+    return results, detail_store, bm_raw_store
