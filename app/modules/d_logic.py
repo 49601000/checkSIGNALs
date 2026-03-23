@@ -173,8 +173,8 @@ def calc_volume_pressure(close: pd.Series, volume: pd.Series,
 
 
 def compute_raw_metrics(df: pd.DataFrame,
-                         ma_period: int = 200,
-                         vol_ma_window: int = 20) -> Tuple[dict, dict]:
+                        ma_period: int = 200,
+                        vol_ma_window: int = 20) -> Tuple[dict, dict]:
     """
     DataFrame[Close, Low, Volume] から6指標の生値と中間データを計算する。
 
@@ -212,6 +212,68 @@ def compute_raw_metrics(df: pd.DataFrame,
         "n_down":    r6["n_down"],
     }
     return raw_vals, detail
+
+
+def compute_benchmark_raw(
+    bm_df: pd.DataFrame,
+    ma_period: int = 200,
+    vol_ma_window: int = 20,
+) -> Dict[str, float]:
+    """
+    ベンチマーク価格データから D スコア正規化用の生値 dict を生成する。
+
+    Parameters
+    ----------
+    bm_df : pd.DataFrame
+        ベンチマークの価格データ DataFrame[Close, Low, Volume]
+    ma_period : int
+        移動平均ウィンドウ（デフォルト 200）
+    vol_ma_window : int
+        出来高移動平均ウィンドウ（デフォルト 20）
+
+    Returns
+    -------
+    dict
+        score_defense() にそのまま渡せるベンチマーク生値 dict
+    """
+    raw_vals, _ = compute_raw_metrics(
+        bm_df,
+        ma_period=ma_period,
+        vol_ma_window=vol_ma_window,
+    )
+    return raw_vals
+
+
+def build_benchmark_raw_store(
+    bm_data: Dict[str, pd.DataFrame],
+    ma_period: int = 200,
+    vol_ma_window: int = 20,
+) -> Dict[str, Dict[str, float]]:
+    """
+    市場別ベンチマーク価格データを D スコア用の生値ストアへ変換する。
+
+    Parameters
+    ----------
+    bm_data : dict
+        {market: DataFrame[Close, Low, Volume]}
+    ma_period : int
+        移動平均ウィンドウ（デフォルト 200）
+    vol_ma_window : int
+        出来高移動平均ウィンドウ（デフォルト 20）
+
+    Returns
+    -------
+    dict
+        {market: bm_raw_vals_dict}
+    """
+    bm_raw_store: Dict[str, Dict[str, float]] = {}
+    for market, df in bm_data.items():
+        bm_raw_store[market] = compute_benchmark_raw(
+            df,
+            ma_period=ma_period,
+            vol_ma_window=vol_ma_window,
+        )
+    return bm_raw_store
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -590,10 +652,11 @@ def build_results_list(
     bm_raw_store : {market: raw_vals dict}（ベンチマーク生値）
     """
     # ── ベンチマーク生値の事前計算 ──
-    bm_raw_store: Dict[str, dict] = {}
-    for market, df in bm_data.items():
-        rv, _ = compute_raw_metrics(df, ma_period, vol_ma_window)
-        bm_raw_store[market] = rv
+    bm_raw_store = build_benchmark_raw_store(
+        bm_data,
+        ma_period=ma_period,
+        vol_ma_window=vol_ma_window,
+    )
 
     # ── 全銘柄の生値を先に計算（σ推定プール用）──
     all_raw: Dict[str, dict] = {}
