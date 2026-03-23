@@ -43,6 +43,7 @@ def _merge_defense_result(result: Dict[str, Any], d_result: Dict[str, Any]) -> N
         result["d_base_rank"] = None
         result["d_raw"] = None
         result["d_detail"] = None
+        result["vp_score"] = None
         return
 
     for key in _D_SUBSCORE_KEYS:
@@ -56,6 +57,7 @@ def _merge_defense_result(result: Dict[str, Any], d_result: Dict[str, Any]) -> N
     result["d_base_rank"] = d_result.get("base_rank")
     result["d_raw"] = d_result.get("raw", {})
     result["d_detail"] = d_result.get("detail", {})
+    result["vp_score"] = d_result.get("vp_score")
 
 
 # -----------------------------------------------------------
