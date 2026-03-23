@@ -833,8 +833,8 @@ def _build_defensive_metric_frame(tech):
     raw = tech.get("d_raw") or {}
     for idx, label in enumerate(_DEFENSIVE_METRIC_LABELS, start=1):
         if idx == 6:
-            def_val = tech.get(f"def{idx}")
-            rank = tech.get(f"def{idx}_rank")
+            def_val = tech.get("vp_score")
+            rank = tech.get("vp_rank")
         else:
             def_val = tech.get(f"def{idx}")
             rank = tech.get(f"def{idx}_rank")
