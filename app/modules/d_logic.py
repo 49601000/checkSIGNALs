@@ -396,6 +396,10 @@ def get_plus_minus(score: float, base_rank: str,
 
     # ④ 境界付近: 6指標の分布で判定
     def_scores = 1.0 - metric_norm_scores   # 反転して defensive 方向に
+    # ── ⑥出来高下方圧力の非反転スコア（高いほど圧力が強い） ──
+    vp_score = round(norm_scores["⑥_vol_pressure"], 4)
+    vp_rank  = get_pressure_rank(vp_score)
+    
     upper_count = lower_count = 0
     for ms in def_scores:
         ms_rank = get_base_rank(float(ms))
@@ -538,8 +542,6 @@ def score_defense(
         "d4": round(norm_scores["④_max_drawdown"],   4),
         "d5": round(norm_scores["⑤_downside_vol"],   4),
         "d6": round(norm_scores["⑥_vol_pressure"],   4),
-        "vp_score": vp_score,
-        "vp_rank":  vp_rank,
       
         # ── サブスコア（defensive 方向）──
         "def1": def_scores["①_below_ma_ratio"],
@@ -549,8 +551,13 @@ def score_defense(
         "def5": def_scores["⑤_downside_vol"],
         "def6": round(1.0 - norm_scores["⑥_vol_pressure"], 4),  # 従来維持
       
+        # ── ⑥出来高下方圧力の専用出力（非反転）──
+        "vp_score": vp_score,
+        "vp_rank":  vp_rank,
+
         "vp_score": round(norm_scores["⑥_vol_pressure"], 4),     # ← 新規追加（高いほど圧力強い） 
 
+      
         # ── 生値・中間データ ──
         "raw":    raw_vals,
         "detail": detail,
