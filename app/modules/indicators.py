@@ -234,4 +234,4 @@ def compute_indicators(
     # ── D スコアをマージ ──
     _merge_defense_result(result, d_result)
 
-     return result
+    return result
