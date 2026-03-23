@@ -1043,17 +1043,15 @@ def _render_volume_pressure_histogram(tech):
 
 
 def render_defensive_tab(tech):
-    defensive_score = tech.get("defensive_score")
-    d_score = tech.get("d_score")
-    if defensive_score is None or d_score is None:
-        st.info("Defensive タブ用の D スコアデータを取得できませんでした。")
-        return
-
     bm_label = tech.get("bm_label") or "—"
     bm_ticker = tech.get("bm_ticker") or "—"
     grade = tech.get("d_grade") or "—"
-    base_rank = tech.get("d_base_rank") or "—"
-
+    
+    top_col1, top_col2 = st.columns(2)
+    top_col1.metric("価格ディフェンシブ度", grade)
+    top_col2.metric("価格ディフェンシブスコア", f"{float(defensive_score):.3f}", help="高いほど価格ディフェンシブ性が高い。0.5はベンチマーク相当。")
+    st.caption(f"比較ベンチマーク: {bm_label} ({bm_ticker})")
+    
     st.metric("Defensive Score", f"{float(defensive_score):.3f}", help="高いほど価格ディフェンシブ性が高い。0.5はベンチマーク相当。")
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Grade", grade)
