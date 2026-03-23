@@ -45,6 +45,32 @@ DEFAULT_V_WEIGHTS_NO_SECTOR = {
 }
 
 
+def build_valuation_inputs(
+    price: float,
+    eps: Optional[float] = None,
+    bps: Optional[float] = None,
+    eps_fwd: Optional[float] = None,
+    per_fwd: Optional[float] = None,
+) -> Dict[str, Optional[float]]:
+    """
+    価格とファンダ値から V ロジックで使う PER / PBR / 予想PER を組み立てる。
+    """
+    per = price / eps if eps not in (None, 0) else None
+    pbr = price / bps if bps not in (None, 0) else None
+
+    per_fwd_calc: Optional[float] = None
+    if per_fwd not in (None, 0):
+        per_fwd_calc = per_fwd
+    elif eps_fwd not in (None, 0):
+        per_fwd_calc = price / eps_fwd
+
+    return {
+        "per": per,
+        "pbr": pbr,
+        "per_fwd": per_fwd_calc,
+    }
+
+
 def _normalize_weights(weights: Dict[str, float], keys: list[str]) -> Dict[str, float]:
     filtered = {k: float(weights[k]) for k in keys}
     total = sum(filtered.values())
@@ -185,4 +211,47 @@ def score_valuation(
         "has_sector": sector_v_score is not None,
         "is_us": is_us,
         "v_weights_used": weights,
+    }
+
+
+def compute_v_block(
+    price: float,
+    eps: Optional[float],
+    bps: Optional[float],
+    dividend_yield: Optional[float],
+    eps_fwd: Optional[float] = None,
+    per_fwd: Optional[float] = None,
+    ev_ebitda: Optional[float] = None,
+    sector_v_score: Optional[float] = None,
+    is_us: bool = False,
+) -> Dict[str, Dict]:
+    """
+    indicators 向けに V スコア計算結果と関連入力をまとめて返す。
+    """
+    valuation_inputs = build_valuation_inputs(
+        price=price,
+        eps=eps,
+        bps=bps,
+        eps_fwd=eps_fwd,
+        per_fwd=per_fwd,
+    )
+    v_result = score_valuation(
+        per=valuation_inputs["per"],
+        pbr=valuation_inputs["pbr"],
+        dividend_yield=dividend_yield,
+        ev_ebitda=ev_ebitda,
+        sector_v_score=sector_v_score,
+        is_us=is_us,
+    )
+    return {
+        "valuation_inputs": valuation_inputs,
+        "v_result": v_result,
+        "v_score": v_result["v_score"],
+        "payload": {
+            "v1": v_result["v1"],
+            "v2": v_result["v2"],
+            "v3": v_result["v3"],
+            "v4": v_result["v4"],
+            "has_sector": v_result["has_sector"],
+        },
     }
