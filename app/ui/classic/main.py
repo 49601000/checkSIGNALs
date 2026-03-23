@@ -849,8 +849,8 @@ def _build_defensive_metric_frame(tech):
             raw_disp = _fmt_optional_float(raw_val, 3)
         rows.append({
             "パラメータ": label,
-            "スコア": None if def_val is None else round(float(def_val), 3),
             "ランク": rank or "—",
+            "スコア": None if def_val is None else round(float(def_val), 3),
             "ローデータ": raw_disp,
         })
     return pd.DataFrame(rows)
