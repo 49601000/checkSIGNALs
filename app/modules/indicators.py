@@ -17,63 +17,45 @@ from typing import Optional, Dict, Any
 
 import pandas as pd
 
-from modules.t_logic import compute_t_metrics
-from modules.q_logic import score_quality
-from modules.v_logic import score_valuation
-from modules.d_logic import score_defense, get_base_rank, METRIC_COLS
+from modules.t_logic import compute_t_block
+from modules.q_logic import compute_q_block
+from modules.v_logic import compute_v_block
+from modules.d_logic import score_defense, get_base_rank
 
 
-# -----------------------------------------------------------
-# 単純テクニカル計算（変更なし）
-# -----------------------------------------------------------
+ # -----------------------------------------------------------
+# D スコアのマージ
+ # -----------------------------------------------------------
 
-def calc_moving_averages(df: pd.DataFrame, close_col: str) -> pd.DataFrame:
-    df["25MA"] = df[close_col].rolling(25).mean()
-    df["50MA"] = df[close_col].rolling(50).mean()
-    df["75MA"] = df[close_col].rolling(75).mean()
-    return df
+_D_SUBSCORE_KEYS = [f"def{i}" for i in range(1, 7)]
 
 
-def calc_bollinger_bands(df: pd.DataFrame, close_col: str) -> pd.DataFrame:
-    df["20MA"]  = df[close_col].rolling(20).mean()
-    df["20STD"] = df[close_col].rolling(20).std()
-    df["BB_+1σ"] = df["20MA"] + df["20STD"]
-    df["BB_+2σ"] = df["20MA"] + 2 * df["20STD"]
-    df["BB_-1σ"] = df["20MA"] - df["20STD"]
-    df["BB_-2σ"] = df["20MA"] - 2 * df["20STD"]
-    return df
+def _merge_defense_result(result: Dict[str, Any], d_result: Dict[str, Any]) -> None:
+    """score_defense() の結果を indicators の返却 dict にマージする。"""
+    defensive_score = d_result.get("defensive_score")
+    if defensive_score is None:
+        for key in _D_SUBSCORE_KEYS:
+            result[key] = None
+            result[f"{key}_rank"] = None
+        result["d_score"] = None
+        result["defensive_score"] = None
+        result["d_grade"] = None
+        result["d_base_rank"] = None
+        result["d_raw"] = None
+        result["d_detail"] = None
+        return
 
+    for key in _D_SUBSCORE_KEYS:
+        value = d_result.get(key)
+        result[key] = value
+        result[f"{key}_rank"] = get_base_rank(value) if value is not None else None
 
-def calc_rsi(df: pd.DataFrame, close_col: str, period: int = 14) -> pd.DataFrame:
-    delta    = df[close_col].diff()
-    gain     = delta.clip(lower=0)
-    loss     = -delta.clip(upper=0)
-    avg_gain = gain.rolling(period).mean()
-    avg_loss = loss.rolling(period).mean().replace(0, 1e-10)
-    rs       = avg_gain / avg_loss
-    df["RSI"] = 100 - (100 / (1 + rs))
-    return df
-
-
-def calc_slope(series: pd.Series, window: int = 4) -> float:
-    s = series.dropna()
-    if len(s) < window + 1:
-        return 0.0
-    start = float(s.iloc[-window - 1])
-    end   = float(s.iloc[-1])
-    if start == 0:
-        return 0.0
-    return (end - start) / start * 100.0
-
-
-def slope_arrow(series: pd.Series) -> str:
-    s = series.dropna()
-    if len(s) < 2:
-        return "→"
-    diff = float(s.iloc[-1]) - float(s.iloc[-2])
-    if diff > 0:   return "↗"
-    elif diff < 0: return "↘"
-    return "→"
+    result["d_score"] = d_result.get("d_score")
+    result["defensive_score"] = defensive_score
+    result["d_grade"] = d_result.get("grade")
+    result["d_base_rank"] = d_result.get("base_rank")
+    result["d_raw"] = d_result.get("raw", {})
+    result["d_detail"] = d_result.get("detail", {})
 
 
 # -----------------------------------------------------------
@@ -119,63 +101,35 @@ def compute_indicators(
     テクニカル指標 + Q/V/T スコアをまとめて計算し、UI 用の dict を返す。
     """
 
-    # ── テクニカル計算 ──
-    df = calc_moving_averages(df, close_col)
-    df = calc_bollinger_bands(df, close_col)
-    df = calc_rsi(df, close_col)
-
-    df_valid = df.dropna(subset=[
-        close_col, "25MA", "50MA", "75MA",
-        "BB_+1σ", "BB_+2σ", "BB_-1σ", "BB_-2σ", "RSI",
-    ])
-    if df_valid.empty or len(df_valid) < 5:
-        raise ValueError("テクニカル指標を計算するためのデータが不足しています。")
-
-    last = df_valid.iloc[-1]
-
-    price  = float(last[close_col])
-    ma_25  = float(last["25MA"])
-    ma_50  = float(last["50MA"])
-    ma_75  = float(last["75MA"])
-    rsi    = float(last["RSI"])
-    bb_plus1  = float(last["BB_+1σ"])
-    bb_plus2  = float(last["BB_+2σ"])
-    bb_minus1 = float(last["BB_-1σ"])
-    bb_minus2 = float(last["BB_-2σ"])
-
-    slope_25 = calc_slope(df["25MA"])
-    slope_50 = calc_slope(df["50MA"])
-    slope_75 = calc_slope(df["75MA"])
-    arrow_25 = slope_arrow(df["25MA"])
-    arrow_50 = slope_arrow(df["50MA"])
-    arrow_75 = slope_arrow(df["75MA"])
-
-    # ── PER / PBR 実績 ──
-    per: Optional[float] = None
-    pbr: Optional[float] = None
-    if eps not in (None, 0):
-        per = price / eps
-    if bps not in (None, 0):
-        pbr = price / bps
-
-    per_fwd_calc: Optional[float] = None
-    if per_fwd not in (None, 0):
-        per_fwd_calc = per_fwd
-    elif eps_fwd not in (None, 0):
-        per_fwd_calc = price / eps_fwd
-
-    # ── T ロジック ──
-    t_metrics = compute_t_metrics(
-        price=price, ma_25=ma_25, ma_50=ma_50, ma_75=ma_75,
-        rsi=rsi, bb_plus1=bb_plus1, bb_plus2=bb_plus2,
-        bb_minus1=bb_minus1, bb_minus2=bb_minus2,
-        slope_25=slope_25, low_52w=low_52w, high_52w=high_52w,
-        per=per, pbr=pbr,
+    t_block = compute_t_block(
+        df=df,
+        close_col=close_col,
+        high_52w=high_52w,
+        low_52w=low_52w,
     )
+    df = t_block["df"]
+    df_valid = t_block["df_valid"]
+    tech_snapshot = t_block["snapshot"]
+    price = tech_snapshot["close"]
+
+    v_block = compute_v_block(
+        price=price,
+        eps=eps,
+        bps=bps,
+        dividend_yield=dividend_yield,
+        eps_fwd=eps_fwd,
+        per_fwd=per_fwd,
+        ev_ebitda=ev_ebitda,
+        sector_v_score=sector_v_score,
+        is_us=is_us,
+    )
+    valuation_inputs = v_block["valuation_inputs"]
+    per = valuation_inputs["per"]
+    pbr = valuation_inputs["pbr"]
+    t_metrics = t_block["t_metrics"]
     t_score = float(t_metrics["t_score"])
 
-    # ── Q スコア（q_logic を正式呼び出し） ──
-    q_result = score_quality(
+    q_block = compute_q_block(
         roe=roe, roa=roa, equity_ratio=equity_ratio,
         operating_margin=operating_margin,
         de_ratio=de_ratio,
@@ -185,15 +139,11 @@ def compute_indicators(
         sector=sector,
         is_us=is_us,
     )
-    q_score = q_result["q_score"]
+    q_result = q_block["q_result"]
+    q_score = q_block["q_score"]
+    v_result = v_block["v_result"]
+    v_score = v_block["v_score"]
 
-    # ── V スコア（v_logic を正式呼び出し） ──
-    v_result = score_valuation(
-        per=per, pbr=pbr, dividend_yield=dividend_yield,
-        ev_ebitda=ev_ebitda,
-        sector_v_score=sector_v_score,
-    )
-    v_score = v_result["v_score"]
 
     # ── QVT 総合 ──
     #qvt_score = round((q_score + v_score + t_score) / 3.0, 1)
@@ -235,20 +185,20 @@ def compute_indicators(
         "close": price,
 
         # MA
-        "ma_25": ma_25, "ma_50": ma_50, "ma_75": ma_75,
-        "slope_25": slope_25, "slope_50": slope_50, "slope_75": slope_75,
-        "arrow_25": arrow_25, "arrow_50": arrow_50, "arrow_75": arrow_75,
+        "ma_25": tech_snapshot["ma_25"], "ma_50": tech_snapshot["ma_50"], "ma_75": tech_snapshot["ma_75"],
+        "slope_25": tech_snapshot["slope_25"], "slope_50": tech_snapshot["slope_50"], "slope_75": tech_snapshot["slope_75"],
+        "arrow_25": tech_snapshot["arrow_25"], "arrow_50": tech_snapshot["arrow_50"], "arrow_75": tech_snapshot["arrow_75"],
 
         # BB
-        "bb_plus1": bb_plus1, "bb_plus2": bb_plus2,
-        "bb_minus1": bb_minus1, "bb_minus2": bb_minus2,
+        "bb_plus1": tech_snapshot["bb_plus1"], "bb_plus2": tech_snapshot["bb_plus2"],
+        "bb_minus1": tech_snapshot["bb_minus1"], "bb_minus2": tech_snapshot["bb_minus2"],
 
-        "rsi": rsi,
+        "rsi": tech_snapshot["rsi"],
         "high_52w": high_52w, "low_52w": low_52w,
 
         # ファンダ（生）
         "eps": eps, "bps": bps, "eps_fwd": eps_fwd,
-        "per": per, "pbr": pbr, "per_fwd": per_fwd_calc,
+        "per": per, "pbr": pbr, "per_fwd": valuation_inputs["per_fwd"],
         "roe": roe, "roa": roa, "equity_ratio": equity_ratio,
         "operating_margin": operating_margin,   # ★v3
         "de_ratio": de_ratio,                   # ★v3
@@ -258,20 +208,11 @@ def compute_indicators(
 
         # Q サブスコア
         "q_score": q_score,
-        "q1": q_result["q1"],
-        "q3": q_result["q3"],
-        "q_warnings":      q_result["warnings"],
-        "er_threshold":    q_result.get("er_threshold",   10.0),   # ★v3.4
-        "ic_threshold":    q_result.get("ic_threshold",    1.5),   # ★v3.4
-        "threshold_note":  q_result.get("threshold_note", "標準基準"),  # ★v3.4
+        **q_block["payload"],
 
         # V サブスコア
         "v_score": v_score,
-        "v1": v_result["v1"],
-        "v2": v_result["v2"],
-        "v3": v_result["v3"],
-        "v4": v_result["v4"],                   # ★v3
-        "has_sector": v_result["has_sector"],   # ★v3
+        **v_block["payload"],
 
         # セクター相対（UI表示用）
         "sector_rel_scores": sector_rel_scores or {},  # ★v3
@@ -291,35 +232,6 @@ def compute_indicators(
     result.update(t_metrics)
 
     # ── D スコアをマージ ──
-    if d_result.get("defensive_score") is not None:
-        # 反転済み指標スコア（高い = 防衛力が高い）
-        result["def1"] = d_result.get("def1")   # ① MA固り比率
-        result["def2"] = d_result.get("def2")   # ② 最大下方乖離
-        result["def3"] = d_result.get("def3")   # ③ 52w安値/200MA
-        result["def4"] = d_result.get("def4")   # ④ 最大DD
-        result["def5"] = d_result.get("def5")   # ⑤ 下方Vol
-        result["def6"] = d_result.get("def6")   # ⑥ 出来高下方圧力
-        # 各指標のランク（get_base_rank で算出）
-        result["def1_rank"] = get_base_rank(d_result["def1"]) if d_result.get("def1") is not None else None
-        result["def2_rank"] = get_base_rank(d_result["def2"]) if d_result.get("def2") is not None else None
-        result["def3_rank"] = get_base_rank(d_result["def3"]) if d_result.get("def3") is not None else None
-        result["def4_rank"] = get_base_rank(d_result["def4"]) if d_result.get("def4") is not None else None
-        result["def5_rank"] = get_base_rank(d_result["def5"]) if d_result.get("def5") is not None else None
-        result["def6_rank"] = get_base_rank(d_result["def6"]) if d_result.get("def6") is not None else None
-        # 総合グレード
-        result["d_score"]         = d_result.get("d_score")
-        result["defensive_score"]  = d_result.get("defensive_score")
-        result["d_grade"]          = d_result.get("grade")
-        result["d_base_rank"]      = d_result.get("base_rank")
-        result["d_raw"]            = d_result.get("raw", {})
-        result["d_detail"]         = d_result.get("detail", {})
-    else:
-        # D スコア未計算時はすべて None
-        for _k in ["def1","def2","def3","def4","def5","def6",
-                   "def1_rank","def2_rank","def3_rank",
-                   "def4_rank","def5_rank","def6_rank",
-                   "d_score","defensive_score","d_grade","d_base_rank",
-                   "d_raw","d_detail"]:
-            result[_k] = None
+    _merge_defense_result(result, d_result)
 
-    return result
+     return result
