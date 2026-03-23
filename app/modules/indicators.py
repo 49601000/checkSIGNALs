@@ -58,6 +58,8 @@ def _merge_defense_result(result: Dict[str, Any], d_result: Dict[str, Any]) -> N
     result["d_raw"] = d_result.get("raw", {})
     result["d_detail"] = d_result.get("detail", {})
     result["vp_score"] = d_result.get("vp_score")
+    result["vp_score"] = d_result.get("vp_score")
+    result["vp_rank"]  = d_result.get("vp_rank")
 
 
 # -----------------------------------------------------------
