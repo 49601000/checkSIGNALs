@@ -501,8 +501,14 @@ def score_defense(
     grade     = get_plus_minus(defensive_score, base_rank, metric_norm_series)
 
     # ── defensive 方向の指標スコア（1 - norm） ──
-    def_scores = {col: round(1.0 - norm_scores[col], 4) for col in METRIC_COLS}
-
+    display_scores = {
+        "①_below_ma_ratio": round(1.0 - norm_scores["①_below_ma_ratio"], 4),
+        "②_max_neg_dev":    round(1.0 - norm_scores["②_max_neg_dev"], 4),
+        "③_52w_low_vs_ma":  round(1.0 - norm_scores["③_52w_low_vs_ma"], 4),
+        "④_max_drawdown":   round(1.0 - norm_scores["④_max_drawdown"], 4),
+        "⑤_downside_vol":   round(1.0 - norm_scores["⑤_downside_vol"], 4),
+        "⑥_vol_pressure":   round(norm_scores["⑥_vol_pressure"], 4),   # ← ここだけ非反転
+    }
     return {
         # ── メインスコア ──
         "d_score":         round(d_index, 4),
@@ -524,7 +530,9 @@ def score_defense(
         "def3": def_scores["③_52w_low_vs_ma"],
         "def4": def_scores["④_max_drawdown"],
         "def5": def_scores["⑤_downside_vol"],
-        "def6": def_scores["⑥_vol_pressure"],
+        "def6": round(1.0 - norm_scores["⑥_vol_pressure"], 4),  # 従来維持
+      
+        "vp_score": round(norm_scores["⑥_vol_pressure"], 4),     # ← 新規追加（高いほど圧力強い） 
 
         # ── 生値・中間データ ──
         "raw":    raw_vals,
