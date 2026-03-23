@@ -1052,14 +1052,6 @@ def render_defensive_tab(tech):
     top_col2.metric("価格ディフェンシブスコア", f"{float(defensive_score):.3f}", help="高いほど価格ディフェンシブ性が高い。0.5はベンチマーク相当。")
     st.caption(f"比較ベンチマーク: {bm_label} ({bm_ticker})")
     
-    st.metric("Defensive Score", f"{float(defensive_score):.3f}", help="高いほど価格ディフェンシブ性が高い。0.5はベンチマーク相当。")
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Grade", grade)
-    col2.metric("Base Rank", base_rank)
-    col3.metric("D Index", f"{float(d_score):.3f}")
-    col4.metric("Benchmark", bm_label)
-    st.caption(f"比較ベンチマーク: {bm_label} ({bm_ticker})")
-
     metric_df = _build_defensive_metric_frame(tech)
     st.markdown("##### 6指標サマリー")
     st.dataframe(metric_df, use_container_width=True, hide_index=True)
