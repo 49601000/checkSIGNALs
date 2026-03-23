@@ -740,6 +740,65 @@ def render_v_tab(tech):
 
 
 
+# ─── タブ: QVT ────────────────────────────────────────────────
+
+def render_qvt_tab(tech):
+    q   = float(tech["q_score"])
+    v   = float(tech["v_score"])
+    t   = float(tech["t_score"])
+    qvt = float(tech["qvt_score"])
+
+    corr = st.session_state.get("q_correction_result")
+    if corr:
+        q_show   = float(corr.get("q_corrected", q))
+        qvt_show = float(corr.get("qvt_corrected", qvt))
+    else:
+        q_show, qvt_show = q, qvt
+
+    col1, col2, col3 = st.columns(3)
+    if corr:
+        col1.metric("Q（補正後）", f"{q_show:.1f}", delta=f"{q_show - q:+.1f}")
+    else:
+        col1.metric("Q（質）", f"{q:.1f}")
+    col2.metric("V（値札）",       f"{v:.1f}")
+    col3.metric("T（タイミング）", f"{t:.1f}")
+
+    st.markdown("---")
+    color = _color_score(qvt_show)
+    msg = ("総合的に非常に魅力的（主力候補）"          if qvt_show >= 70
+           else "買い検討レベル。押し目を慎重に狙いたい" if qvt_show >= 60
+           else "悪くないが他候補との比較推奨"           if qvt_show >= 50
+           else "テーマ性が強くないなら見送りも選択肢")
+    star = "⭐⭐⭐" if qvt_show >= 71.05 else "⭐⭐" if qvt_show >= 65.35 else "⭐" if qvt_show >= 59.64 else ""
+
+    st.markdown(f"""
+    <div class="score-card" style="padding:1.5rem">
+      <div class="score-label">QVT 総合スコア</div>
+      <div class="score-value" style="color:{color};font-size:3.5rem">{qvt_show:.1f}</div>
+      <div class="score-max">/ 100</div>
+      <div style="font-size:1.2rem;margin-top:.5rem">{star}</div>
+      <div style="font-size:.8rem;color:#9da3b8;margin-top:.5rem">{msg}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    if corr:
+        st.caption("※ コメントは補正後QVTスコアをもとに判定しています。")
+
+    with st.expander("📘 QVT フレームワーク"):
+        st.markdown("""
+**Q（Quality）** — ビジネスの質。ROE・ROA・営業利益率（Q1）＋自己資本比率・D/E・インタレストカバレッジ（Q3）。  
+**V（Valuation）** — 割安度。PER・PBR・EV/EBITDA・配当利回り＋セクター相対評価（日本株）。  
+**T（Timing）** — テクニカル的な買いタイミング。RSI・BB・MA・52Wレンジから算出。
+
+| QVT | 目安 |
+|---|---|
+| 70以上 | 主力候補 |
+| 60〜69 | 慎重に押し目 |
+| 50〜59 | 比較検討 |
+| 50未満 | 見送りも選択肢 |
+        """)
+
+
 # ─── タブ: Defensive ───────────────────────────────────────────────
 
 _DEFENSIVE_METRIC_LABELS = [
@@ -789,10 +848,10 @@ def _build_defensive_metric_frame(tech):
         else:
             raw_disp = _fmt_optional_float(raw_val, 3)
         rows.append({
-            "指標": label,
-            "Defensive": None if def_val is None else round(float(def_val), 3),
-            "Rank": rank or "—",
-            "生値": raw_disp,
+            "パラメータ": label,
+            "スコア": None if def_val is None else round(float(def_val), 3),
+            "ランク": rank or "—",
+            "ローデータ": raw_disp,
         })
     return pd.DataFrame(rows)
 
@@ -1036,65 +1095,6 @@ def render_defensive_tab(tech):
         """)
 
 
-# ─── タブ: QVT ────────────────────────────────────────────────
-
-def render_qvt_tab(tech):
-    q   = float(tech["q_score"])
-    v   = float(tech["v_score"])
-    t   = float(tech["t_score"])
-    qvt = float(tech["qvt_score"])
-
-    corr = st.session_state.get("q_correction_result")
-    if corr:
-        q_show   = float(corr.get("q_corrected", q))
-        qvt_show = float(corr.get("qvt_corrected", qvt))
-    else:
-        q_show, qvt_show = q, qvt
-
-    col1, col2, col3 = st.columns(3)
-    if corr:
-        col1.metric("Q（補正後）", f"{q_show:.1f}", delta=f"{q_show - q:+.1f}")
-    else:
-        col1.metric("Q（質）", f"{q:.1f}")
-    col2.metric("V（値札）",       f"{v:.1f}")
-    col3.metric("T（タイミング）", f"{t:.1f}")
-
-    st.markdown("---")
-    color = _color_score(qvt_show)
-    msg = ("総合的に非常に魅力的（主力候補）"          if qvt_show >= 70
-           else "買い検討レベル。押し目を慎重に狙いたい" if qvt_show >= 60
-           else "悪くないが他候補との比較推奨"           if qvt_show >= 50
-           else "テーマ性が強くないなら見送りも選択肢")
-    star = "⭐⭐⭐" if qvt_show >= 71.05 else "⭐⭐" if qvt_show >= 65.35 else "⭐" if qvt_show >= 59.64 else ""
-
-    st.markdown(f"""
-    <div class="score-card" style="padding:1.5rem">
-      <div class="score-label">QVT 総合スコア</div>
-      <div class="score-value" style="color:{color};font-size:3.5rem">{qvt_show:.1f}</div>
-      <div class="score-max">/ 100</div>
-      <div style="font-size:1.2rem;margin-top:.5rem">{star}</div>
-      <div style="font-size:.8rem;color:#9da3b8;margin-top:.5rem">{msg}</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    if corr:
-        st.caption("※ コメントは補正後QVTスコアをもとに判定しています。")
-
-    with st.expander("📘 QVT フレームワーク"):
-        st.markdown("""
-**Q（Quality）** — ビジネスの質。ROE・ROA・営業利益率（Q1）＋自己資本比率・D/E・インタレストカバレッジ（Q3）。  
-**V（Valuation）** — 割安度。PER・PBR・EV/EBITDA・配当利回り＋セクター相対評価（日本株）。  
-**T（Timing）** — テクニカル的な買いタイミング。RSI・BB・MA・52Wレンジから算出。
-
-| QVT | 目安 |
-|---|---|
-| 70以上 | 主力候補 |
-| 60〜69 | 慎重に押し目 |
-| 50〜59 | 比較検討 |
-| 50未満 | 見送りも選択肢 |
-        """)
-
-
 # ─── エントリーポイント ───────────────────────────────────────
 
 def run():
@@ -1159,12 +1159,12 @@ def run():
     render_qvt_cards(scores["q"], scores["v"], scores["t"], scores["qvt"])
     st.markdown("---")
 
-    tab_t, tab_q, tab_v, tab_d, tab_qvt = st.tabs(["⏰ タイミング", "🏢 質", "💰 値札", "🛡️ Defensive", "🧮 総合"])
+    tab_t, tab_q, tab_v, tab_qvt, tab_d = st.tabs(["⏰ タイミング", "🏢 質", "💰 値札", "🧮 総合", "🛡️ Defensive"])
     with tab_t:   render_t_tab(tech)
     with tab_q:   render_q_tab(tech)
     with tab_v:   render_v_tab(tech)
-    with tab_d:   render_defensive_tab(tech)
     with tab_qvt: render_qvt_tab(tech)
+    with tab_d:   render_defensive_tab(tech)
 
     if base.get("dividend_yield"):
         st.caption(f"予想配当利回り: **{base['dividend_yield']:.2f}%**")
