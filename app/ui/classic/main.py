@@ -1060,8 +1060,9 @@ def render_defensive_tab(tech):
     grade = tech.get("d_grade") or "—"
     
     top_col1, top_col2 = st.columns(2)
+    score_text = "—" if defensive_score is None else f"{float(defensive_score):.3f}"
     top_col1.metric("価格ディフェンシブ度", grade)
-    top_col2.metric("価格ディフェンシブスコア", f"{float(defensive_score):.3f}", help="高いほど価格ディフェンシブ性が高い。0.5はベンチマーク相当。")
+    top_col2.metric("価格ディフェンシブスコア", score_text)
     st.caption(f"比較ベンチマーク: {bm_label} ({bm_ticker})")
     
     metric_df = _build_defensive_metric_frame(tech)
