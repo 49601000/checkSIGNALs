@@ -891,7 +891,7 @@ def run():
     st.markdown("""
     <div class="magi-banner">DIRECT BUS CONNECTION MAGI-47 &nbsp;■&nbsp; ACCESS AUTHORIZED — SUPERUSER</div>
     <div class="magi-banner-title">▶ MOTION : BUY THE DIP ◀</div>
-    <div class="magi-banner">MAGI SYSTEM v3 — 日本株 / 米国株対応</div>
+    <div class="magi-banner">MAGI SYSTEM v4 — 日本株 / 米国株対応</div>
     """, unsafe_allow_html=True)
 
     col_input, col_btn = st.columns([4, 1])
