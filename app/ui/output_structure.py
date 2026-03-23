@@ -10,13 +10,73 @@ from typing import Any, Dict, Optional
 
 import streamlit as st
 
-from modules.data_fetch import get_price_and_meta
+from modules.data_fetch import get_benchmark_data, get_price_and_meta, parse_ticker_for_d
+from modules.d_logic import compute_benchmark_raw
 from modules.indicators import compute_indicators
 from modules.pattern_db import (
     calc_sector_relative_scores_from_db,
     classify_ticker,
     load_pattern_db,
 )
+
+
+
+
+def _extract_defense_price_frame(df) -> Optional[Any]:
+    """Dスコア計算用に Close / Low / Volume を標準列名で切り出す。"""
+    if df is None or getattr(df, "empty", True):
+        return None
+
+    def _find_col(prefix: str) -> Optional[str]:
+        for col in df.columns:
+            col_str = str(col)
+            if col_str == prefix or col_str.startswith(prefix):
+                return col
+        return None
+
+    close_col = _find_col("Close")
+    low_col = _find_col("Low")
+    volume_col = _find_col("Volume")
+    if not close_col or not low_col or not volume_col:
+        return None
+
+    price_df = df[[close_col, low_col, volume_col]].copy()
+    price_df.columns = ["Close", "Low", "Volume"]
+    return price_df.dropna(subset=["Close", "Low"])
+
+
+def _build_defense_context(ticker: str, base: Dict[str, Any]) -> Dict[str, Any]:
+    """Classic UI の Defensive タブ用に単一銘柄の Dスコア入力を組み立てる。"""
+    meta = parse_ticker_for_d(ticker)
+    price_df = _extract_defense_price_frame(base.get("df"))
+
+    context: Dict[str, Any] = {
+        "market": meta.get("market", ""),
+        "bm_label": meta.get("bm_label", ""),
+        "bm_ticker": None,
+        "bm_company_name": None,
+        "price_df": price_df,
+        "bm_raw_vals": None,
+    }
+
+    if price_df is None:
+        return context
+
+    try:
+        benchmark = get_benchmark_data(ticker)
+        benchmark_df = _extract_defense_price_frame(benchmark.get("df"))
+        if benchmark_df is None:
+            return context
+
+        context.update({
+            "bm_ticker": benchmark.get("ticker"),
+            "bm_company_name": benchmark.get("company_name"),
+            "bm_raw_vals": compute_benchmark_raw(benchmark_df),
+        })
+    except Exception:
+        return context
+
+    return context
 
 
 DEFAULT_SPINNER_MESSAGES: Dict[str, str] = {
@@ -111,6 +171,7 @@ def build_analysis_output(
             operating_margin=base.get("operating_margin"),
         )
         sector_context = _compute_sector_context(base)
+        defense_context = _build_defense_context(ticker, base)
 
     with st.spinner(messages["compute"]):
         try:
@@ -137,6 +198,8 @@ def build_analysis_output(
                 industry=base.get("industry", ""),
                 sector=base.get("sector", ""),
                 is_us=not ticker.upper().endswith(".T"),
+                price_df=defense_context.get("price_df"),
+                bm_raw_vals=defense_context.get("bm_raw_vals"),
             )
         except ValueError as exc:
             st.error(str(exc))
@@ -157,6 +220,11 @@ def build_analysis_output(
             }
 
     tech = _finalize_tech(ticker, base, tech, sector_context["sector_name"])
+    tech["d_market"] = defense_context.get("market")
+    tech["bm_label"] = defense_context.get("bm_label")
+    tech["bm_ticker"] = defense_context.get("bm_ticker")
+    tech["bm_company_name"] = defense_context.get("bm_company_name")
+    tech["d_price_df"] = defense_context.get("price_df")
 
     return {
         "ticker": ticker,
