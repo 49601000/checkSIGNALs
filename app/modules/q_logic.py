@@ -692,3 +692,44 @@ def score_quality(
         "ic_threshold": thr["ic"],
         "threshold_note": thr["note"],
     }
+
+
+def compute_q_block(
+    roe: Optional[float],
+    roa: Optional[float],
+    equity_ratio: Optional[float],
+    operating_margin: Optional[float] = None,
+    de_ratio: Optional[float] = None,
+    interest_coverage: Optional[float] = None,
+    q_rel_scores: Optional[Dict[str, Any]] = None,
+    industry: str = "",
+    sector: str = "",
+    is_us: bool = False,
+) -> Dict[str, Any]:
+    """
+    indicators 向けに Q スコア結果を整形したブロックを返す。
+    """
+    q_result = score_quality(
+        roe=roe,
+        roa=roa,
+        equity_ratio=equity_ratio,
+        operating_margin=operating_margin,
+        de_ratio=de_ratio,
+        interest_coverage=interest_coverage,
+        q_rel_scores=q_rel_scores,
+        industry=industry,
+        sector=sector,
+        is_us=is_us,
+    )
+    return {
+        "q_result": q_result,
+        "q_score": q_result["q_score"],
+        "payload": {
+            "q1": q_result["q1"],
+            "q3": q_result["q3"],
+            "q_warnings": q_result["warnings"],
+            "er_threshold": q_result.get("er_threshold", 10.0),
+            "ic_threshold": q_result.get("ic_threshold", 1.5),
+            "threshold_note": q_result.get("threshold_note", "標準基準"),
+        },
+    }
