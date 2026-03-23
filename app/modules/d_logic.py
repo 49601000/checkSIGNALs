@@ -549,14 +549,11 @@ def score_defense(
         "def3": def_scores["③_52w_low_vs_ma"],
         "def4": def_scores["④_max_drawdown"],
         "def5": def_scores["⑤_downside_vol"],
-        "def6": round(1.0 - norm_scores["⑥_vol_pressure"], 4),  # 従来維持
+        "def6": def_scores["⑥_vol_pressure"],   # ← 従来維持
       
         # ── ⑥出来高下方圧力の専用出力（非反転）──
         "vp_score": vp_score,
         "vp_rank":  vp_rank,
-
-        "vp_score": round(norm_scores["⑥_vol_pressure"], 4),     # ← 新規追加（高いほど圧力強い） 
-
       
         # ── 生値・中間データ ──
         "raw":    raw_vals,
