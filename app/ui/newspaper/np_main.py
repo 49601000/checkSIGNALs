@@ -441,30 +441,6 @@ def _render_header(summary, tech, scores, ticker):
     risk_text = _summary_risk_text(tech)
     signal_text = _signal_label(tech)
 
-    st.markdown(
-        f"""
-        <div class="np-shell">
-          <div class="np-masthead">
-            <div class="np-brand">CHECKSIGNAL DAILY</div>
-            <div class="np-date">{_market_date_label()}</div>
-          </div>
-
-          <div class="np-alert">BUY SIGNAL DETECTED</div>
-
-          <div class="np-headline">{company_name} ({ticker})</div>
-          <div class="np-subhed">{signal_text}</div>
-
-          <div class="np-summary">
-            <strong>QVT SCORE:</strong> {_fmt_num(qvt, 1)} / 100<br>
-            <strong>CONFIDENCE:</strong> {confidence}<br>
-            <strong>RISK:</strong> {risk_text}
-          </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
 def _render_columns(summary, tech, scores):
     q_items = "".join([
         _kv("Q Score", _fmt_num(scores.get("q"), 1)),
