@@ -834,9 +834,8 @@ def _build_defensive_metric_frame(tech):
     for idx, label in enumerate(_DEFENSIVE_METRIC_LABELS, start=1):
     # 修正済みの正しいコード（前回出力版）
         if idx == 6:
-            raw_def6 = tech.get("def6")
-            def_val = (1.0 - raw_def6) if raw_def6 is not None else None  # 反転して表示
-            rank = tech.get("def6_rank")   # ← get_base_rank(1-def6) で計算済み
+            def_val = tech.get("def6")          # d_logic側で反転済み
+            rank = tech.get("def6_rank")
         else:
             def_val = tech.get(f"def{idx}")
             rank = tech.get(f"def{idx}_rank")
@@ -869,7 +868,7 @@ def _render_defensive_radar(tech):
         tech.get("def3"),
         tech.get("def4"),
         tech.get("def5"),
-        tech.get("vp_score"), 
+        tech.get("def6"),   # d_logic側で反転済み（高い = ディフェンシブ）
     ]
     if any(v is None for v in values):
         st.info("Dスコアのレーダーチャートに必要なデータが不足しています。")
