@@ -102,6 +102,9 @@ def _setup_style():
                 0 10px 30px rgba(0,0,0,0.05);
             padding: 28px 30px 26px 30px;
             margin-top: 0.8rem;
+            color: var(--ink) !important;
+            opacity: 1 !important;
+            filter: none !important;
         }
 
         .np-shell::before {
@@ -119,6 +122,24 @@ def _setup_style():
             background-size: 180px 180px;
         }
 
+        /* 紙面内の文字色を強制固定 */
+        .np-shell,
+        .np-shell * {
+            color: var(--ink);
+        }
+
+        .np-masthead,
+        .np-alert,
+        .np-headline,
+        .np-subhed,
+        .np-summary,
+        .np-columns,
+        .np-note,
+        .np-footer {
+            opacity: 1 !important;
+            filter: none !important;
+        }
+
         .np-masthead {
             text-align: center;
             border-bottom: 1px solid var(--rule);
@@ -132,14 +153,16 @@ def _setup_style():
             font-size: 0.74rem;
             letter-spacing: 0.30em;
             text-transform: uppercase;
-            color: var(--muted);
+            color: var(--muted) !important;
+            -webkit-text-fill-color: var(--muted) !important;
             font-weight: 700;
         }
 
         .np-date {
             margin-top: 6px;
             font-size: 0.85rem;
-            color: var(--muted);
+            color: var(--muted) !important;
+            -webkit-text-fill-color: var(--muted) !important;
         }
 
         .np-alert {
@@ -149,7 +172,8 @@ def _setup_style():
             padding: 8px 12px;
             border-top: 2px solid var(--green);
             border-bottom: 1px solid var(--rule);
-            color: var(--green);
+            color: var(--green) !important;
+            -webkit-text-fill-color: var(--green) !important;
             font-size: 0.78rem;
             font-weight: 700;
             letter-spacing: 0.18em;
@@ -166,13 +190,16 @@ def _setup_style():
             letter-spacing: -0.01em;
             font-weight: 700;
             margin: 16px 0 10px 0;
+            color: var(--ink) !important;
+            -webkit-text-fill-color: var(--ink) !important;
         }
 
         .np-subhed {
             position: relative;
             z-index: 1;
             text-align: center;
-            color: var(--green);
+            color: var(--green) !important;
+            -webkit-text-fill-color: var(--green) !important;
             font-size: 0.96rem;
             font-weight: 700;
             letter-spacing: 0.08em;
@@ -190,10 +217,14 @@ def _setup_style():
             text-align: center;
             font-size: 0.96rem;
             line-height: 1.7;
+            color: var(--ink) !important;
+            -webkit-text-fill-color: var(--ink) !important;
         }
 
         .np-summary strong {
             font-weight: 700;
+            color: var(--ink) !important;
+            -webkit-text-fill-color: var(--ink) !important;
         }
 
         .np-columns {
@@ -203,12 +234,16 @@ def _setup_style():
             grid-template-columns: 1fr 1fr;
             gap: 28px;
             align-items: start;
+            color: var(--ink) !important;
+            -webkit-text-fill-color: var(--ink) !important;
         }
 
         .np-section {
             border-top: 1px solid var(--ink);
             padding-top: 8px;
             margin-bottom: 18px;
+            color: var(--ink) !important;
+            -webkit-text-fill-color: var(--ink) !important;
         }
 
         .np-section-title {
@@ -217,6 +252,8 @@ def _setup_style():
             letter-spacing: 0.18em;
             text-transform: uppercase;
             margin-bottom: 8px;
+            color: var(--ink) !important;
+            -webkit-text-fill-color: var(--ink) !important;
         }
 
         .np-kv {
@@ -228,7 +265,8 @@ def _setup_style():
         }
 
         .np-k {
-            color: var(--muted);
+            color: var(--muted) !important;
+            -webkit-text-fill-color: var(--muted) !important;
             font-size: 0.9rem;
         }
 
@@ -237,6 +275,8 @@ def _setup_style():
             font-variant-numeric: tabular-nums;
             font-weight: 600;
             font-size: 0.94rem;
+            color: var(--ink) !important;
+            -webkit-text-fill-color: var(--ink) !important;
         }
 
         .np-note {
@@ -245,6 +285,8 @@ def _setup_style():
             margin-top: 10px;
             padding-top: 10px;
             border-top: 2px solid var(--ink);
+            color: var(--ink) !important;
+            -webkit-text-fill-color: var(--ink) !important;
         }
 
         .np-note-title {
@@ -253,11 +295,15 @@ def _setup_style():
             letter-spacing: 0.18em;
             text-transform: uppercase;
             margin-bottom: 6px;
+            color: var(--ink) !important;
+            -webkit-text-fill-color: var(--ink) !important;
         }
 
         .np-note-body {
             font-size: 0.94rem;
             line-height: 1.85;
+            color: var(--ink) !important;
+            -webkit-text-fill-color: var(--ink) !important;
         }
 
         .np-footer {
@@ -268,7 +314,8 @@ def _setup_style():
             padding-top: 10px;
             text-align: center;
             font-size: 0.78rem;
-            color: var(--muted);
+            color: var(--muted) !important;
+            -webkit-text-fill-color: var(--muted) !important;
             letter-spacing: 0.06em;
         }
 
@@ -277,7 +324,8 @@ def _setup_style():
             padding: 1px 8px;
             border: 1px solid rgba(36,75,60,0.22);
             background: var(--soft-green);
-            color: var(--green);
+            color: var(--green) !important;
+            -webkit-text-fill-color: var(--green) !important;
             font-size: 0.74rem;
             font-weight: 700;
         }
@@ -287,7 +335,8 @@ def _setup_style():
             padding: 1px 8px;
             border: 1px solid rgba(143,45,45,0.22);
             background: var(--soft-red);
-            color: var(--red);
+            color: var(--red) !important;
+            -webkit-text-fill-color: var(--red) !important;
             font-size: 0.74rem;
             font-weight: 700;
         }
@@ -308,7 +357,6 @@ def _setup_style():
         """,
         unsafe_allow_html=True,
     )
-
 
 # ─────────────────────────────────────────────────────────────
 # Helpers
