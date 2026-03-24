@@ -523,7 +523,7 @@ def score_defense(
         "③_52w_low_vs_ma":  round(1.0 - norm_scores["③_52w_low_vs_ma"], 4),
         "④_max_drawdown":   round(1.0 - norm_scores["④_max_drawdown"], 4),
         "⑤_downside_vol":   round(1.0 - norm_scores["⑤_downside_vol"], 4),
-        "⑥_vol_pressure":   round(norm_scores["⑥_vol_pressure"], 4),   # ← ここだけ非反転
+        "⑥_vol_pressure":   round(1.0 - norm_scores["⑥_vol_pressure"], 4),   # ← 反転済み（高い = 圧力低い = ディフェンシブ）
     }
     vp_score = round(norm_scores["⑥_vol_pressure"], 4)
     vp_rank  = get_pressure_rank(vp_score)
