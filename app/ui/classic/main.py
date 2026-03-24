@@ -1229,7 +1229,6 @@ def render_defensive_tab(tech):
 
     # --- スコア ---
     top_col2.metric("価格ディフェンシブスコア", score_text)
-    top_col2.metric("価格ディフェンシブスコア", score_text)
 
     st.caption(f"比較ベンチマーク: {bm_label} ({bm_ticker})")
 
