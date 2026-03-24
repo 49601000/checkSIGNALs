@@ -1336,7 +1336,7 @@ def run():
         "🏢 QUALITY / MELCHIOR",
         "💰 VALUATION / BALTHASAR",
         "🧮 QVT / MAGI",
-        "🛡️ DEFENSIVE",
+        "🛡️ DEF-PROTOCOL",
     ])
     with tab_t:   render_t_tab(tech)
     with tab_q:   render_q_tab(tech)
