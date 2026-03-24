@@ -8,18 +8,6 @@ BASE_DEFENSIVE_LABELS = {
     "E": "価格安定性は低い・下落耐性も弱い",
 }
 
-# --- 最終dict（ここに展開される） ---
-DEFENSIVE_RANK_LABELS = {}
-
-for base, text in BASE_DEFENSIVE_LABELS.items():
-    # 基本ランク
-    DEFENSIVE_RANK_LABELS[base] = text
-    
-    # +（上振れ）
-    DEFENSIVE_RANK_LABELS[f"{base}+"] = f"{text}（＋）"
-    
-    # -（下振れ）
-    DEFENSIVE_RANK_LABELS[f"{base}-"] = f"{text}（ー）"
 # --------------------------------------------------------------------------
 COMMENT_PARTS_SUMMARY = {
 
