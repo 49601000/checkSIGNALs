@@ -547,6 +547,8 @@ def _render_note_and_footer(summary, tech, ticker):
         "",
         _safe(summary.get("company_name", ticker)).rstrip("の").strip()
     ).strip()
+    signal_text = _signal_label(tech)
+
 
     # ── タイミング ──
     timing_text = tech.get("signal_text") or "—"
