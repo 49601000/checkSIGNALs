@@ -833,10 +833,8 @@ def _build_defensive_metric_frame(tech):
     raw = tech.get("d_raw") or {}
     for idx, label in enumerate(_DEFENSIVE_METRIC_LABELS, start=1):
         if idx == 6:
-            raw_def6 = tech.get("def6")
-            # 表示は反転（低い圧力 = 高いディフェンシブ性）
-            def_val = (1.0 - raw_def6) if raw_def6 is not None else None
-            rank = tech.get("def6_rank")
+            def_val = tech.get("vp_score")
+            rank = tech.get("vp_rank")
         else:
             def_val = tech.get(f"def{idx}")
             rank = tech.get(f"def{idx}_rank")
@@ -863,14 +861,13 @@ def _build_defensive_metric_frame(tech):
 
 
 def _render_defensive_radar(tech):
-    raw_def6 = tech.get("def6")
     values = [
         tech.get("def1"),
         tech.get("def2"),
         tech.get("def3"),
         tech.get("def4"),
         tech.get("def5"),
-        (1.0 - raw_def6) if raw_def6 is not None else None,  # ⑥は反転して①〜⑤と軸方向を統一
+        tech.get("vp_score"), 
     ]
     if any(v is None for v in values):
         st.info("Dスコアのレーダーチャートに必要なデータが不足しています。")
@@ -1069,12 +1066,18 @@ def render_defensive_tab(tech):
     top_col2.metric("価格ディフェンシブスコア", score_text)
     
     st.caption(f"比較ベンチマーク: {bm_label} ({bm_ticker})")
+
+    # ── コメント表示 ──
+    summary_comment = tech.get("d_comment_summary")
+    detail_comment  = tech.get("d_comment_detail")
+    if summary_comment:
+        st.info(summary_comment)
+    if detail_comment:
+        st.caption(detail_comment)
     
     metric_df = _build_defensive_metric_frame(tech)
     st.markdown("##### 6指標サマリー")
     st.dataframe(metric_df, use_container_width=True, hide_index=True)
-    if tech.get("d_comment_summary"):
-       st.info(tech["d_comment_summary"])
 
     c1, c2 = st.columns([1, 1])
     with c1:
@@ -1084,8 +1087,6 @@ def render_defensive_tab(tech):
         st.markdown("##### 指標別 Defensive スコア")
         chart_df = metric_df.set_index("パラメータ")[["スコア"]]
         st.bar_chart(chart_df, use_container_width=True)
-    if tech.get("d_comment_detail"):
-       st.caption(tech["d_comment_detail"])
 
     st.markdown("##### 終値 vs 200MA")
     _render_close_vs_ma_chart(tech)
