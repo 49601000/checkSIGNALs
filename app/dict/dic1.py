@@ -1,5 +1,3 @@
-# defensive_rank_dict.py
-
 DEFENSIVE_RANK_LABELS = {
     "S": "価格安定性は高い・下落耐性も強い",
     "A": "価格安定性はやや高い・下落耐性も比較的強い",
