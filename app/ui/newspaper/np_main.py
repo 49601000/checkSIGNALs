@@ -547,8 +547,9 @@ def _render_note_and_footer(summary, tech, ticker):
         "",
         _safe(summary.get("company_name", ticker)).rstrip("の").strip()
     ).strip()
+
     signal_text = _signal_label(tech)
-    qvt = scores.get("qvt")
+    # ← scoresはこの関数にないので削除 or 渡す必要あり
 
     # ── タイミング ──
     timing_text = tech.get("signal_text") or "—"
@@ -576,7 +577,6 @@ def _render_note_and_footer(summary, tech, ticker):
         else:
             sector_comment = "セクター内でかなり割高。割高圏にある。"
 
-    # 個別指標補足
     pbr_rel = sector_rel.get("pbr_rel_score")
     extra_note = ""
     if pbr_rel is not None and pbr_rel <= 25:
@@ -597,33 +597,29 @@ def _render_note_and_footer(summary, tech, ticker):
 {detail_comment}
 """
 
-# ── 全体まとめ ──
-full_note = f"""
+    # ✅ ここを関数内に入れる
+    full_note = f"""
 タイミング－{timing_text}
 {valuation_block}
 {defensive_block}
 """
 
-# ── 描画 ──
-st.markdown(f"""
-    <div class="np-shell">
-        <div class="np-masthead">
-            <div class="np-brand">CHECKSIGNAL DAILY</div>
-            <div class="np-date">{_market_date_label()}</div>
+    # ── 描画 ──
+    st.markdown(
+        f"""
+        <div class="np-note">
+          <div class="np-note-title">Analyst Note</div>
+          <div class="np-note-body">
+            {full_note}
+          </div>
         </div>
-        
-        <div class="np-alert">BUY SIGNAL DETECTED</div>
-        
-        <div class="np-headline">{company_name} ({ticker})</div>
-        <div class="np-subhed">{signal_text}</div>
-        
-        <div class="np-summary">
-            <strong>QVT SCORE:</strong> {_fmt_num(qvt, 1)} / 100<br>
-            <strong>CONFIDENCE:</strong> {confidence}<br>
-            <strong>RISK:</strong> {risk_text}
+
+        <div class="np-footer">
+          DATA SOURCE: CHECKSIGNAL SYSTEM &nbsp;|&nbsp; TICKER: {ticker}
         </div>
-</div>
-""", unsafe_allow_html=True)
+        """,
+        unsafe_allow_html=True,
+    )
     
 # ─────────────────────────────────────────────────────────────
 # Entry point
