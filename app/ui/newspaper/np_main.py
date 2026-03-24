@@ -454,7 +454,7 @@ def _section(title, items_html):
 # ─────────────────────────────────────────────────────────────
 
 def _render_header(summary, tech, scores, ticker):
-    company_name = _safe(summary.get("company_name", ticker)).rstrip("の").strip()
+    company_name = _safe(summary.get("company_name")).rstrip("の").strip()
     qvt = scores.get("qvt")
     confidence = _confidence_label(qvt)
     risk_text = _summary_risk_text(tech)
