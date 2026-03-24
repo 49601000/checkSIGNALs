@@ -51,9 +51,8 @@ def _merge_defense_result(result: Dict[str, Any], d_result: Dict[str, Any]) -> N
         value = d_result.get(key)
         result[key] = value
         if key == "def6":
-            # 表示は 1-def6（低い=圧力強い=非ディフェンシブ）なのでランクも反転後の値で評価
-            display_val = (1.0 - value) if value is not None else None
-            result[f"{key}_rank"] = get_base_rank(display_val) if display_val is not None else None
+            # ⑥は「下方圧力スコア」そのものに基づいて表示・ランク付けする
+            result[f"{key}_rank"] = get_base_rank(value) if value is not None else None
         else:
             result[f"{key}_rank"] = get_base_rank(value) if value is not None else None
 
