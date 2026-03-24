@@ -452,14 +452,13 @@ def _section(title, items_html):
 # ─────────────────────────────────────────────────────────────
 # Render blocks
 # ─────────────────────────────────────────────────────────────
-
 def _render_header(summary, tech, scores, ticker):
     company_name = re.sub(
-        r"[（(]\d{4,5}[）)]$", 
+        r"[（(]\d{4,5}[）)]$",
         "",
         _safe(summary.get("company_name", ticker)).rstrip("の").strip()
     ).strip()
-    
+
     qvt = scores.get("qvt")
     confidence = _confidence_label(qvt)
     risk_text = _summary_risk_text(tech)
@@ -483,6 +482,7 @@ def _render_header(summary, tech, scores, ticker):
             <strong>CONFIDENCE:</strong> {confidence}<br>
             <strong>RISK:</strong> {risk_text}
           </div>
+        </div>
         """,
         unsafe_allow_html=True,
     )
