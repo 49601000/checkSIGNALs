@@ -833,7 +833,7 @@ def _build_defensive_metric_frame(tech):
     raw = tech.get("d_raw") or {}
     for idx, label in enumerate(_DEFENSIVE_METRIC_LABELS, start=1):
         if idx == 6:
-            def_val = tech.get("vp_score")
+            def_val = tech.get("def6")
             rank = tech.get("vp_rank")
         else:
             def_val = tech.get(f"def{idx}")
@@ -867,7 +867,7 @@ def _render_defensive_radar(tech):
         tech.get("def3"),
         tech.get("def4"),
         tech.get("def5"),
-        tech.get("vp_score"), 
+        tech.get("def6"), 
     ]
     if any(v is None for v in values):
         st.info("Dスコアのレーダーチャートに必要なデータが不足しています。")
