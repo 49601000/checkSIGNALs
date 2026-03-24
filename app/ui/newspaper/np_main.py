@@ -542,6 +542,11 @@ def _render_columns(summary, tech, scores):
 
 
 def _render_note_and_footer(summary, tech, ticker):
+    company_name = re.sub(
+        r"[（(]\d{4,5}[）)]$", 
+        "",
+        _safe(summary.get("company_name", ticker)).rstrip("の").strip()
+    ).strip()
 
     # ── タイミング ──
     timing_text = tech.get("signal_text") or "—"
