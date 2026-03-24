@@ -605,21 +605,28 @@ def _render_note_and_footer(summary, tech, ticker):
 """
 
     # ── 描画 ──
-    st.markdown(
-        f"""
-        <div class="np-note">
-          <div class="np-note-title">Analyst Note</div>
-          <div class="np-note-body">
-            {full_note}
-          </div>
+st.markdown(
+    f"""
+    <div class="np-shell">
+      <div class="np-masthead">
+      <div class="np-date">{_market_date_label()}</div>
+    </div>
+    
+    <div class="np-alert">BUY SIGNAL DETECTED</div>
+        
+    <div class="np-headline">{company_name} ({ticker})</div>
+    <div class="np-subhed">{signal_text}</div>
+        
+    <div class="np-summary">
+    <div class="np-note">
+      <strong>QVT SCORE:</strong> {_fmt_num(qvt, 1)} / 100<br>
+      <strong>CONFIDENCE:</strong> {confidence}<br>
+      <strong>RISK:</strong> {risk_text}          
         </div>
-
-        <div class="np-footer">
-          DATA SOURCE: CHECKSIGNAL SYSTEM &nbsp;|&nbsp; TICKER: {ticker}          
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
     
 # ─────────────────────────────────────────────────────────────
 # Entry point
