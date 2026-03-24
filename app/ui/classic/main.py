@@ -1227,11 +1227,13 @@ def render_defensive_tab(tech):
     st.markdown("##### 6指標サマリー")
     st.dataframe(metric_df, use_container_width=True, hide_index=True)
 
-    st.markdown("##### レーダーチャート")
-    _render_defensive_radar(tech)
-
-    st.markdown("##### 終値 vs 200MA")
-    _render_close_vs_ma_chart(tech)
+    c1, c2 = st.columns([1, 1])
+    with c1:
+        st.markdown("##### レーダーチャート")
+        _render_defensive_radar(tech)
+    with c2:
+        st.markdown("##### 終値 vs 200MA")
+        _render_close_vs_ma_chart(tech)
 
     left, right = st.columns(2)
     with left:
