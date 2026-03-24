@@ -542,8 +542,8 @@ def _render_note_and_footer(summary, tech, ticker):
 
     valuation_block = (
         f"バリエーション ー 財務タイプは {ft_ja} ({ft_code})。\n"
-        f"{ft_desc}\n"
-        f"セクター診断をすると、{sector}セクター内で{sector_comment}{extra_note}"
+        f"{ft_desc}"
+        f"セクター診断では{sector}セクター内で{sector_comment}{extra_note}"
     )
 
     summary_comment = tech.get("d_comment_summary") or ""
