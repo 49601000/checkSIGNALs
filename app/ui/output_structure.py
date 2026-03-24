@@ -18,9 +18,7 @@ from modules.pattern_db import (
     classify_ticker,
     load_pattern_db,
 )
-
-
-
+from d_comment import build_d_comment
 
 def _extract_defense_price_frame(df) -> Optional[Any]:
     """Dスコア計算用に Close / Low / Volume を標準列名で切り出す。"""
@@ -85,6 +83,9 @@ DEFAULT_SPINNER_MESSAGES: Dict[str, str] = {
     "compute": "指標計算中…",
 }
 
+d_comment = build_d_comment(tech)       #Dタブ用コメント生成
+tech["d_comment_summary"] = d_comment["summary"]
+tech["d_comment_detail"]  = d_comment["detail"]
 
 def _merge_spinner_messages(spinner_messages: Optional[Dict[str, str]] = None) -> Dict[str, str]:
     merged = dict(DEFAULT_SPINNER_MESSAGES)
