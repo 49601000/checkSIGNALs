@@ -1210,12 +1210,25 @@ def render_defensive_tab(tech):
     top_col1, top_col2 = st.columns(2)
     score_text = "—" if defensive_score is None else f"{float(defensive_score):.3f}"
         
-    # 価格ディフェンシブ度+解釈    
-    grade_text = "—"
+    # --- 価格ディフェンシブ度（ランク本体） ---
+    top_col1.metric("価格ディフェンシブ度", grade or "—")
+    # --- 解釈（metric直下に寄せる） ---
     if grade and grade != "—":
-        grade_text = f"{grade}（{grade_label}）"
+        top_col1.markdown(
+            f"""
+            <div style="margin-top: -8px;
+                color: #9ca3af;
+                font-size: 0.9rem;
+                line-height: 1.2;"
+            >
+                {grade_label}
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
-    top_col1.metric("価格ディフェンシブ度", grade_text)
+    # --- スコア ---
+    top_col2.metric("価格ディフェンシブスコア", score_text)
     top_col2.metric("価格ディフェンシブスコア", score_text)
 
     st.caption(f"比較ベンチマーク: {bm_label} ({bm_ticker})")
