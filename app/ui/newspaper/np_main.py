@@ -617,6 +617,8 @@ def _render_note_and_footer(summary, tech, ticker):
         <div class="np-footer">
           DATA SOURCE: CHECKSIGNAL SYSTEM &nbsp;|&nbsp; TICKER: {ticker}
         </div>
+          
+        </div>
         """,
         unsafe_allow_html=True,
     )
