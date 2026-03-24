@@ -1011,45 +1011,113 @@ def _render_volume_pressure_boxplot(tech):
 
     type_domain = ["上昇・横ばい日", "下落日"]
     type_range = ["steelblue", "#f05c6e"]
-    whisker_yellow = "#f5c542"
+    yellow = "#f5c542"
+    box_width = 42
+    cap_height = 0.03  # ヒゲ先端の横線の太さ代わり（Y方向の薄い帯）
 
-    # 標準的な Tukey boxplot（1.5 IQR）
-    boxplot = alt.Chart(compare_df).mark_boxplot(
-        extent=1.5,
-        size=42,
-        median=alt.MarkConfig(color=whisker_yellow, strokeWidth=2.5),
-        ticks=alt.MarkConfig(color=whisker_yellow, strokeWidth=2),
-        rule=alt.MarkConfig(color=whisker_yellow, strokeWidth=2),
-    ).encode(
+    # ---- 四分位・中央値 ----
+    q_df = (
+        compare_df.groupby("Type")["VolumeRatio"]
+        .quantile([0.25, 0.5, 0.75])
+        .unstack()
+        .reset_index()
+    )
+    q_df.columns = ["Type", "q1", "median", "q3"]
+
+    # ---- whisker（1.5 IQR） ----
+    whisker_rows = []
+    outlier_rows = []
+
+    for label, grp in compare_df.groupby("Type"):
+        s = grp["VolumeRatio"]
+        q1 = s.quantile(0.25)
+        q3 = s.quantile(0.75)
+        iqr = q3 - q1
+        lower_fence = q1 - 1.5 * iqr
+        upper_fence = q3 + 1.5 * iqr
+
+        inliers = s[(s >= lower_fence) & (s <= upper_fence)]
+        lower = inliers.min()
+        upper = inliers.max()
+
+        whisker_rows.append({
+            "Type": label,
+            "lower": lower,
+            "upper": upper,
+        })
+
+        out = grp[(grp["VolumeRatio"] < lower_fence) | (grp["VolumeRatio"] > upper_fence)].copy()
+        outlier_rows.append(out)
+
+    whisker_df = pd.DataFrame(whisker_rows)
+    plot_df = pd.merge(q_df, whisker_df, on="Type", how="left")
+    outlier_df = pd.concat(outlier_rows, ignore_index=True) if outlier_rows else compare_df.iloc[0:0]
+
+    # ---- 箱 ----
+    box = alt.Chart(plot_df).mark_bar(size=box_width).encode(
         x=alt.X("Type:N", title=None, sort=type_domain),
-        y=alt.Y("VolumeRatio:Q", title="出来高倍率（当日 / 20日MA）"),
+        y=alt.Y("q1:Q", title="出来高倍率（当日 / 20日MA）"),
+        y2="q3:Q",
         color=alt.Color(
             "Type:N",
             scale=alt.Scale(domain=type_domain, range=type_range),
             legend=None,
         ),
+        tooltip=[
+            "Type:N",
+            alt.Tooltip("q1:Q", format=".3f", title="Q1"),
+            alt.Tooltip("median:Q", format=".3f", title="中央値"),
+            alt.Tooltip("q3:Q", format=".3f", title="Q3"),
+        ],
     )
 
-    # 1.5 IQR 超の外れ値を手動抽出して、強調表示
-    outlier_rows = []
-    for label, grp in compare_df.groupby("Type"):
-        q1 = grp["VolumeRatio"].quantile(0.25)
-        q3 = grp["VolumeRatio"].quantile(0.75)
-        iqr = q3 - q1
-        lower = q1 - 1.5 * iqr
-        upper = q3 + 1.5 * iqr
-        out = grp[(grp["VolumeRatio"] < lower) | (grp["VolumeRatio"] > upper)].copy()
-        outlier_rows.append(out)
+    # ---- 中央値線 ----
+    median = alt.Chart(plot_df).mark_tick(
+        color=yellow,
+        thickness=2.5,
+        size=box_width,
+    ).encode(
+        x=alt.X("Type:N", sort=type_domain),
+        y="median:Q",
+    )
 
-    outlier_df = pd.concat(outlier_rows, ignore_index=True) if outlier_rows else compare_df.iloc[0:0]
+    # ---- ヒゲ（縦線） ----
+    whisker_rule = alt.Chart(plot_df).mark_rule(
+        color=yellow,
+        strokeWidth=2,
+    ).encode(
+        x=alt.X("Type:N", sort=type_domain),
+        y="lower:Q",
+        y2="upper:Q",
+    )
 
+    # ---- ヒゲ先端（箱と同じ幅の横線）----
+    lower_cap = alt.Chart(plot_df).mark_tick(
+        color=yellow,
+        thickness=2,
+        size=box_width,
+    ).encode(
+        x=alt.X("Type:N", sort=type_domain),
+        y="lower:Q",
+    )
+
+    upper_cap = alt.Chart(plot_df).mark_tick(
+        color=yellow,
+        thickness=2,
+        size=box_width,
+    ).encode(
+        x=alt.X("Type:N", sort=type_domain),
+        y="upper:Q",
+    )
+
+    # ---- 外れ値 ----
     outliers = alt.Chart(outlier_df).mark_point(
         shape="circle",
         filled=True,
-        size=85,          # ← 強調
-        opacity=0.9,      # ← しっかり見せる
-        stroke="white",   # ← 縁取りで背景から浮かせる
-        strokeWidth=1.2,
+        size=90,
+        opacity=0.95,
+        stroke="white",
+        strokeWidth=1.4,
     ).encode(
         x=alt.X("Type:N", sort=type_domain),
         y=alt.Y("VolumeRatio:Q"),
@@ -1065,7 +1133,12 @@ def _render_volume_pressure_boxplot(tech):
     )
 
     chart = (
-        boxplot + outliers
+        box
+        + whisker_rule
+        + lower_cap
+        + upper_cap
+        + median
+        + outliers
     ).properties(height=320)
 
     st.altair_chart(chart, use_container_width=True)
