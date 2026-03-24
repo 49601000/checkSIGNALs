@@ -1151,8 +1151,6 @@ def _render_volume_pressure_boxplot(tech):
         "🔵 上昇・横ばい日　🔴 下落日"
     )
 
-
-
 def _render_volume_pressure_histogram(tech):
     detail = tech.get("d_detail") or {}
     vol_ratio = detail.get("vol_ratio")
@@ -1214,7 +1212,7 @@ def render_defensive_tab(tech):
         
     # 価格ディフェンシブ度+解釈    
     grade_text = "—"
-        if grade and grade != "—":
+    if grade and grade != "—":
         grade_text = f"{grade}（{grade_label}）"
 
     top_col1.metric("価格ディフェンシブ度", grade_text)
