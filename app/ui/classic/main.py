@@ -1004,57 +1004,78 @@ def _render_volume_pressure_boxplot(tech):
         return
 
     mask = down_mask.reindex(vr.index).fillna(False).astype(bool)
-    # クリップなし（外れ値もそのまま表示）
     compare_df = pd.DataFrame({
         "Type": np.where(mask, "下落日", "上昇・横ばい日"),
         "VolumeRatio": vr.values,
     })
 
     type_domain = ["上昇・横ばい日", "下落日"]
-    type_range  = ["steelblue", "#f05c6e"]
+    type_range = ["steelblue", "#f05c6e"]
+    whisker_yellow = "#f5c542"
 
-    # 箱ひげ本体（ヒゲ先端・中央線を黄色で視認性向上）
+    # 標準的な Tukey boxplot（1.5 IQR）
     boxplot = alt.Chart(compare_df).mark_boxplot(
-        extent="min-max",
-        median=alt.MarkConfig(color="#f5c542", size=14),
-        ticks=alt.MarkConfig(color="#f5c542", size=8),
+        extent=1.5,
+        size=42,
+        median=alt.MarkConfig(color=whisker_yellow, strokeWidth=2.5),
+        ticks=alt.MarkConfig(color=whisker_yellow, strokeWidth=2),
+        rule=alt.MarkConfig(color=whisker_yellow, strokeWidth=2),
     ).encode(
         x=alt.X("Type:N", title=None, sort=type_domain),
         y=alt.Y("VolumeRatio:Q", title="出来高倍率（当日 / 20日MA）"),
-        color=alt.Color("Type:N",
+        color=alt.Color(
+            "Type:N",
             scale=alt.Scale(domain=type_domain, range=type_range),
             legend=None,
         ),
     )
 
-    # 外れ値（1.5 IQR 超）を点で重ねて表示
+    # 1.5 IQR 超の外れ値を手動抽出して、強調表示
     outlier_rows = []
     for label, grp in compare_df.groupby("Type"):
         q1 = grp["VolumeRatio"].quantile(0.25)
         q3 = grp["VolumeRatio"].quantile(0.75)
         iqr = q3 - q1
-        out = grp[(grp["VolumeRatio"] < q1 - 1.5 * iqr) | (grp["VolumeRatio"] > q3 + 1.5 * iqr)]
+        lower = q1 - 1.5 * iqr
+        upper = q3 + 1.5 * iqr
+        out = grp[(grp["VolumeRatio"] < lower) | (grp["VolumeRatio"] > upper)].copy()
         outlier_rows.append(out)
-    outlier_df = pd.concat(outlier_rows) if outlier_rows else compare_df.iloc[0:0]
+
+    outlier_df = pd.concat(outlier_rows, ignore_index=True) if outlier_rows else compare_df.iloc[0:0]
 
     outliers = alt.Chart(outlier_df).mark_point(
-        shape="circle", size=30, opacity=0.6, filled=True,
+        shape="circle",
+        filled=True,
+        size=85,          # ← 強調
+        opacity=0.9,      # ← しっかり見せる
+        stroke="white",   # ← 縁取りで背景から浮かせる
+        strokeWidth=1.2,
     ).encode(
         x=alt.X("Type:N", sort=type_domain),
         y=alt.Y("VolumeRatio:Q"),
-        color=alt.Color("Type:N",
+        color=alt.Color(
+            "Type:N",
             scale=alt.Scale(domain=type_domain, range=type_range),
             legend=None,
         ),
-        tooltip=["Type:N", alt.Tooltip("VolumeRatio:Q", format=".3f", title="倍率")],
+        tooltip=[
+            "Type:N",
+            alt.Tooltip("VolumeRatio:Q", format=".3f", title="倍率"),
+        ],
     )
 
-    chart = (boxplot + outliers).properties(height=320)
+    chart = (
+        boxplot + outliers
+    ).properties(height=320)
+
     st.altair_chart(chart, use_container_width=True)
 
     pressure = (tech.get("d_raw") or {}).get("⑥_vol_pressure")
     n_down = detail.get("n_down")
-    st.caption(f"圧力={_fmt_optional_float(pressure, 3)} / 下落日数={n_down or 0}　　🔵 上昇・横ばい日　🔴 下落日")
+    st.caption(
+        f"圧力={_fmt_optional_float(pressure, 3)} / 下落日数={n_down or 0}　　"
+        "🔵 上昇・横ばい日　🔴 下落日"
+    )
 
 
 
