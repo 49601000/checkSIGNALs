@@ -20,7 +20,7 @@ import pandas as pd
 from modules.t_logic import compute_t_block
 from modules.q_logic import compute_q_block
 from modules.v_logic import compute_v_block
-from modules.d_logic import score_defense, get_base_rank
+from modules.d_logic import score_defense, get_base_rank, get_pressure_rank
 
 
  # -----------------------------------------------------------
@@ -44,12 +44,17 @@ def _merge_defense_result(result: Dict[str, Any], d_result: Dict[str, Any]) -> N
         result["d_raw"] = None
         result["d_detail"] = None
         result["vp_score"] = None
+        result["vp_rank"] = None   # ★ Noneパスの抜け修正
         return
 
     for key in _D_SUBSCORE_KEYS:
         value = d_result.get(key)
         result[key] = value
-        result[f"{key}_rank"] = get_base_rank(value) if value is not None else None
+        if key == "def6":
+            # ⑥は低いほどディフェンシブ → get_pressure_rank で評価
+            result[f"{key}_rank"] = get_pressure_rank(value) if value is not None else None
+        else:
+            result[f"{key}_rank"] = get_base_rank(value) if value is not None else None
 
     result["d_score"] = d_result.get("d_score")
     result["defensive_score"] = defensive_score
