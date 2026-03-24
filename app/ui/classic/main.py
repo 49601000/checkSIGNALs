@@ -1227,14 +1227,8 @@ def render_defensive_tab(tech):
     st.markdown("##### 6指標サマリー")
     st.dataframe(metric_df, use_container_width=True, hide_index=True)
 
-    c1, c2 = st.columns([1, 1])
-    with c1:
-        st.markdown("##### レーダーチャート")
-        _render_defensive_radar(tech)
-    with c2:
-        st.markdown("##### 指標別 Defensive スコア")
-        chart_df = metric_df.set_index("パラメータ")[["スコア"]]
-        st.bar_chart(chart_df, use_container_width=True)
+    st.markdown("##### レーダーチャート")
+    _render_defensive_radar(tech)
 
     st.markdown("##### 終値 vs 200MA")
     _render_close_vs_ma_chart(tech)
@@ -1249,7 +1243,7 @@ def render_defensive_tab(tech):
 
     with st.expander("📘 Defensiveスコアの見方"):
         st.markdown("""
-- **Defensive Score** は `1 - D Index` で、**高いほど価格耐性が高い**ことを示します。
+- **Defensive Score** は **高いほど価格耐性が高い**ことを示します。
 - **Benchmark = 0.5** はベンチマーク並みの水準です。
 - レーダーチャートは外側ほど防衛力が高く、破線がベンチマーク基準線です。
 - 出来高圧力チャートは、下落日に出来高が偏っていないかを確認するための補助図です。
