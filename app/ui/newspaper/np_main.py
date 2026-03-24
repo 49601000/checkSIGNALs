@@ -13,8 +13,8 @@ app/ui/newspaper/main.py — FT寄り newspaper skin（たたき台）
 """
 
 from datetime import datetime
-
 import streamlit as st
+import re
 
 from modules.data_fetch import convert_ticker
 from ui.output_structure import build_analysis_output
@@ -454,7 +454,12 @@ def _section(title, items_html):
 # ─────────────────────────────────────────────────────────────
 
 def _render_header(summary, tech, scores, ticker):
-    company_name = _safe(summary.get("company_name",ticker)).rstrip("の").strip()
+    company_name = re.sub(
+        r"[（(]\d{4,5}[）)]$", 
+        "",
+        _safe(summary.get("company_name", ticker)).rstrip("の").strip()
+    ).strip()
+    
     qvt = scores.get("qvt")
     confidence = _confidence_label(qvt)
     risk_text = _summary_risk_text(tech)
