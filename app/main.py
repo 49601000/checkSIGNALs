@@ -76,15 +76,23 @@ UI_REGISTRY = [
         "name":   "checkSIGNAL",
         "icon":   "📡",
         "desc":   "共通分析出力をシンプルモダンに見せる classic skin。視認性重視。",
-        "module": "ui.classic.main",
+        "module": "ui.classic.cls_main",
     },
     {
         "key":    "magi",
         "name":   "MAGI SYSTEM",
         "icon":   "🔴",
         "desc":   "共通分析出力をMAGI風に見せる skin。六角形判定パネル・CRT演出。",
-        "module": "ui.magi.main",
+        "module": "ui.magi.magi_main",
     },
+  {
+        "key":    "newspaper",
+        "name":   "CHECKSIGNAL DAILY",
+        "icon":   "📰",
+        "desc":   "FT寄りの newspaper skin。オフホワイト紙面・罫線・セリフ体で結果を記事化。",
+        "module": "ui.newspaper.np_main",
+    },
+
     # ── 将来UIの追加例（コメントアウト） ──────────────────────
     # {
     #     "key":    "neo",
