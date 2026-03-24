@@ -872,12 +872,11 @@ def _build_defensive_metric_frame(tech):
     raw = tech.get("d_raw") or {}
     for idx, label in enumerate(_DEFENSIVE_METRIC_LABELS, start=1):
         if idx == 6:
-            raw_def6 = tech.get("def6")
-            def_val  = (1.0 - raw_def6) if raw_def6 is not None else None  # 反転して表示
-            rank     = tech.get("def6_rank")
+            def_val = tech.get("def6")
+            rank = tech.get("def6_rank")
         else:
             def_val = tech.get(f"def{idx}")
-            rank    = tech.get(f"def{idx}_rank")
+            rank = tech.get(f"def{idx}_rank")
         raw_key = [
             "①_below_ma_ratio", "②_max_neg_dev", "③_52w_low_vs_ma",
             "④_max_drawdown",   "⑤_downside_vol", "⑥_vol_pressure",
@@ -897,8 +896,7 @@ def _render_defensive_radar(tech):
     raw_def6 = tech.get("def6")
     values = [
         tech.get("def1"), tech.get("def2"), tech.get("def3"),
-        tech.get("def4"), tech.get("def5"),
-        (1.0 - raw_def6) if raw_def6 is not None else None,  # 表示用に反転
+        tech.get("def4"), tech.get("def5"), tech.get("def6"),
     ]
     if any(v is None for v in values):
         st.info("レーダーチャートに必要なデータが不足しています。")
