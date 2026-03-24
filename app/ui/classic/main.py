@@ -834,8 +834,9 @@ def _build_defensive_metric_frame(tech):
     for idx, label in enumerate(_DEFENSIVE_METRIC_LABELS, start=1):
     # 修正済みの正しいコード（前回出力版）
         if idx == 6:
-            def_val = tech.get("def6")   # 非反転（高い = 圧力強い = 非ディフェンシブ）
-            rank = tech.get("def6_rank")
+            raw_def6 = tech.get("def6")
+            def_val = (1.0 - raw_def6) if raw_def6 is not None else None  # 反転して表示
+            rank = tech.get("def6_rank")   # ← get_base_rank(1-def6) で計算済み
         else:
             def_val = tech.get(f"def{idx}")
             rank = tech.get(f"def{idx}_rank")
@@ -868,7 +869,7 @@ def _render_defensive_radar(tech):
         tech.get("def3"),
         tech.get("def4"),
         tech.get("def5"),
-        tech.get("def6"),   # 非反転（高い = 圧力強い）※軸の向きは①〜⑤と逆
+        tech.get("vp_score"), 
     ]
     if any(v is None for v in values):
         st.info("Dスコアのレーダーチャートに必要なデータが不足しています。")
@@ -1003,21 +1004,57 @@ def _render_volume_pressure_boxplot(tech):
         return
 
     mask = down_mask.reindex(vr.index).fillna(False).astype(bool)
+    # クリップなし（外れ値もそのまま表示）
     compare_df = pd.DataFrame({
-        "Type": np.where(mask, "下落日", "上昇日"),
-        "VolumeRatio": vr.clip(upper=vr.quantile(0.99)).values,
+        "Type": np.where(mask, "下落日", "上昇・横ばい日"),
+        "VolumeRatio": vr.values,
     })
 
-    chart = alt.Chart(compare_df).mark_boxplot(extent="min-max").encode(
-        x=alt.X("Type:N", title=None, sort=["上昇日", "下落日"]),
+    type_domain = ["上昇・横ばい日", "下落日"]
+    type_range  = ["steelblue", "#f05c6e"]
+
+    # 箱ひげ本体（ヒゲ先端・中央線を黄色で視認性向上）
+    boxplot = alt.Chart(compare_df).mark_boxplot(
+        extent="min-max",
+        median=alt.MarkConfig(color="#f5c542", size=14),
+        ticks=alt.MarkConfig(color="#f5c542", size=8),
+    ).encode(
+        x=alt.X("Type:N", title=None, sort=type_domain),
         y=alt.Y("VolumeRatio:Q", title="出来高倍率（当日 / 20日MA）"),
-        color=alt.Color("Type:N", scale=alt.Scale(domain=["上昇日", "下落日"], range=["steelblue", "#f05c6e"]), legend=None),
-    ).properties(height=320)
+        color=alt.Color("Type:N",
+            scale=alt.Scale(domain=type_domain, range=type_range),
+            legend=None,
+        ),
+    )
+
+    # 外れ値（1.5 IQR 超）を点で重ねて表示
+    outlier_rows = []
+    for label, grp in compare_df.groupby("Type"):
+        q1 = grp["VolumeRatio"].quantile(0.25)
+        q3 = grp["VolumeRatio"].quantile(0.75)
+        iqr = q3 - q1
+        out = grp[(grp["VolumeRatio"] < q1 - 1.5 * iqr) | (grp["VolumeRatio"] > q3 + 1.5 * iqr)]
+        outlier_rows.append(out)
+    outlier_df = pd.concat(outlier_rows) if outlier_rows else compare_df.iloc[0:0]
+
+    outliers = alt.Chart(outlier_df).mark_point(
+        shape="circle", size=30, opacity=0.6, filled=True,
+    ).encode(
+        x=alt.X("Type:N", sort=type_domain),
+        y=alt.Y("VolumeRatio:Q"),
+        color=alt.Color("Type:N",
+            scale=alt.Scale(domain=type_domain, range=type_range),
+            legend=None,
+        ),
+        tooltip=["Type:N", alt.Tooltip("VolumeRatio:Q", format=".3f", title="倍率")],
+    )
+
+    chart = (boxplot + outliers).properties(height=320)
     st.altair_chart(chart, use_container_width=True)
 
     pressure = (tech.get("d_raw") or {}).get("⑥_vol_pressure")
     n_down = detail.get("n_down")
-    st.caption(f"圧力={_fmt_optional_float(pressure, 3)} / 下落日数={n_down or 0}")
+    st.caption(f"圧力={_fmt_optional_float(pressure, 3)} / 下落日数={n_down or 0}　　🔵 上昇・横ばい日　🔴 下落日")
 
 
 
@@ -1035,22 +1072,38 @@ def _render_volume_pressure_histogram(tech):
         return
 
     mask = down_mask.reindex(vr.index).fillna(False).astype(bool)
+    # 99%tile でクリップして外れ値によるレンジ拡大を抑制
+    clip_upper = float(vr.quantile(0.99))
     hist_df = pd.DataFrame({
         "Type": np.where(mask, "下落日", "上昇・横ばい日"),
-        "VolumeRatio": vr.values,
+        "VolumeRatio": vr.clip(upper=clip_upper).values,
     })
 
-    chart = alt.Chart(hist_df).mark_bar(opacity=0.55).encode(
+    type_domain = ["上昇・横ばい日", "下落日"]
+    type_range  = ["steelblue", "#f05c6e"]
+
+    # ヒストグラム本体（凡例なし）
+    bars = alt.Chart(hist_df).mark_bar(opacity=0.55).encode(
         x=alt.X("VolumeRatio:Q", bin=alt.Bin(maxbins=30), title="出来高倍率（当日 / 20日MA）"),
         y=alt.Y("count():Q", title="日数"),
-        color=alt.Color("Type:N", scale=alt.Scale(domain=["上昇・横ばい日", "下落日"], range=["steelblue", "#f05c6e"])),
+        color=alt.Color("Type:N",
+            scale=alt.Scale(domain=type_domain, range=type_range),
+            legend=None,   # 凡例はキャプションで代替
+        ),
         tooltip=["Type:N", alt.Tooltip("count():Q", title="件数")],
-    ).properties(height=320)
+    )
+
+    # BM基準線（出来高倍率 = 1.0）
+    bm_line = alt.Chart(pd.DataFrame({"x": [1.0]})).mark_rule(
+        color="#f5c542", strokeDash=[6, 4], strokeWidth=1.5,
+    ).encode(x=alt.X("x:Q"))
+
+    chart = (bars + bm_line).properties(height=320)
     st.altair_chart(chart, use_container_width=True)
 
     pressure = (tech.get("d_raw") or {}).get("⑥_vol_pressure")
     n_down = detail.get("n_down")
-    st.caption(f"圧力={_fmt_optional_float(pressure, 3)} / 下落日数={n_down or 0}")
+    st.caption(f"圧力={_fmt_optional_float(pressure, 3)} / 下落日数={n_down or 0}　　🔵 上昇・横ばい日　🔴 下落日　　破線=BM(1.0)")
 
 
 
