@@ -16,10 +16,10 @@ for base, text in BASE_DEFENSIVE_LABELS.items():
     DEFENSIVE_RANK_LABELS[base] = text
     
     # +（上振れ）
-    DEFENSIVE_RANK_LABELS[f"{base}+"] = f"{text}（同ランク内でやや上振れ）"
+    DEFENSIVE_RANK_LABELS[f"{base}+"] = f"{text}（＋）"
     
     # -（下振れ）
-    DEFENSIVE_RANK_LABELS[f"{base}-"] = f"{text}（同ランク内でやや下振れ）"
+    DEFENSIVE_RANK_LABELS[f"{base}-"] = f"{text}（ー）"
 # --------------------------------------------------------------------------
 COMMENT_PARTS_SUMMARY = {
 
