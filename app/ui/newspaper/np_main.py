@@ -583,7 +583,7 @@ def _render_note_and_footer(summary, tech, ticker):
         extra_note = "（PBRは割高圏）"
 
     valuation_block = f"""
-バリエーション－、財務タイプは {ft_ja} ({ft_code})。
+バリエーション ー 財務タイプは {ft_ja} ({ft_code})。
 {ft_desc}
 セクター診断をすると、{sector}セクター内で{sector_comment}{extra_note}
 """
@@ -593,13 +593,13 @@ def _render_note_and_footer(summary, tech, ticker):
     detail_comment  = tech.get("d_comment_detail") or ""
 
     defensive_block = f"""
-価格のディフェンシブ性については、{summary_comment}
+価格のディフェンシブ性 ー {summary_comment}
 {detail_comment}
 """
 
     # ✅ ここを関数内に入れる
     full_note = f"""
-タイミング－{timing_text}
+タイミング ー {timing_text}
 {valuation_block}
 {defensive_block}
 """
