@@ -1,20 +1,17 @@
 """
-app/ui/newspaper/main.py — FT寄り newspaper skin（たたき台）
+app/ui/newspaper/np_main.py — FT寄り newspaper skin
 
 コンセプト:
 - Financial Times 寄りのクラシック × モダン
 - オフホワイト背景 / 黒文字 / ダークグリーン強調
 - 紙っぽい微細ノイズをCSSで薄く追加
 - 情報量は削りすぎず、記事レイアウトに再構成
-
-前提:
-- app/main.py の UI_REGISTRY にこの skin を1行追加する
-- build_analysis_output() が返す output["base"], output["tech"], output["summary"], output["scores"] を利用
 """
 
 from datetime import datetime
-import streamlit as st
 import re
+
+import streamlit as st
 
 from modules.data_fetch import convert_ticker
 from ui.output_structure import build_analysis_output
@@ -58,7 +55,6 @@ def _setup_style():
             padding-bottom: 3rem;
         }
 
-        /* Streamlit input/button も newspaper 調に寄せる */
         div[data-testid="stTextInput"] input {
             background: #fbf8f1 !important;
             color: var(--ink) !important;
@@ -86,7 +82,6 @@ def _setup_style():
             border-color: var(--ink) !important;
         }
 
-        /* 紙面本体 */
         .np-shell {
             position: relative;
             overflow: hidden;
@@ -122,7 +117,6 @@ def _setup_style():
             background-size: 180px 180px;
         }
 
-        /* 紙面内の文字色を強制固定 */
         .np-shell,
         .np-shell * {
             color: var(--ink);
@@ -304,6 +298,7 @@ def _setup_style():
             line-height: 1.85;
             color: var(--ink) !important;
             -webkit-text-fill-color: var(--ink) !important;
+            white-space: pre-line;
         }
 
         .np-footer {
@@ -317,28 +312,6 @@ def _setup_style():
             color: var(--muted) !important;
             -webkit-text-fill-color: var(--muted) !important;
             letter-spacing: 0.06em;
-        }
-
-        .np-badge-green {
-            display: inline-block;
-            padding: 1px 8px;
-            border: 1px solid rgba(36,75,60,0.22);
-            background: var(--soft-green);
-            color: var(--green) !important;
-            -webkit-text-fill-color: var(--green) !important;
-            font-size: 0.74rem;
-            font-weight: 700;
-        }
-
-        .np-badge-red {
-            display: inline-block;
-            padding: 1px 8px;
-            border: 1px solid rgba(143,45,45,0.22);
-            background: var(--soft-red);
-            color: var(--red) !important;
-            -webkit-text-fill-color: var(--red) !important;
-            font-size: 0.74rem;
-            font-weight: 700;
         }
 
         @media (max-width: 900px) {
@@ -357,6 +330,7 @@ def _setup_style():
         """,
         unsafe_allow_html=True,
     )
+
 
 # ─────────────────────────────────────────────────────────────
 # Helpers
@@ -387,7 +361,6 @@ def _safe(s):
 
 
 def _market_date_label():
-    # 要望どおり表示は英語日付
     return datetime.now().strftime("%B %d, %Y")
 
 
@@ -431,6 +404,14 @@ def _summary_risk_text(tech):
     return "RISK DATA LIMITED"
 
 
+def _clean_company_name(summary, ticker):
+    return re.sub(
+        r"[（(]\d{4,5}[）)]$",
+        "",
+        _safe(summary.get("company_name", ticker)).rstrip("の").strip()
+    ).strip()
+
+
 def _kv(label, value):
     return f"""
     <div class="np-kv">
@@ -452,13 +433,9 @@ def _section(title, items_html):
 # ─────────────────────────────────────────────────────────────
 # Render blocks
 # ─────────────────────────────────────────────────────────────
-def _render_header(summary, tech, scores, ticker):
-    company_name = re.sub(
-        r"[（(]\d{4,5}[）)]$",
-        "",
-        _safe(summary.get("company_name", ticker)).rstrip("の").strip()
-    ).strip()
 
+def _render_header(summary, tech, scores, ticker):
+    company_name = _clean_company_name(summary, ticker)
     qvt = scores.get("qvt")
     confidence = _confidence_label(qvt)
     risk_text = _summary_risk_text(tech)
@@ -520,8 +497,8 @@ def _render_columns(summary, tech, scores):
     d_label = _defensive_grade_label(grade)
     d_items = "".join([
         _kv("Defensive Grade", _safe(grade)),
-        _kv("Interpretation", _safe(d_label)),
         _kv("Defensive Score", _fmt_num(tech.get("defensive_score"), 3)),
+        _kv("Interpretation", _safe(d_label)),
         _kv("MA Cluster Ratio", _fmt_num(tech.get("def1"), 3)),
         _kv("Max Drawdown", _fmt_num(tech.get("def4"), 3)),
         _kv("Volume Pressure", _fmt_num(tech.get("def6"), 3)),
@@ -532,9 +509,11 @@ def _render_columns(summary, tech, scores):
 
     st.markdown(
         f"""
-        <div class="np-columns">
-          <div>{left_html}</div>
-          <div>{right_html}</div>
+        <div class="np-shell">
+          <div class="np-columns">
+            <div>{left_html}</div>
+            <div>{right_html}</div>
+          </div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -542,29 +521,16 @@ def _render_columns(summary, tech, scores):
 
 
 def _render_note_and_footer(summary, tech, ticker):
-    company_name = re.sub(
-        r"[（(]\d{4,5}[）)]$", 
-        "",
-        _safe(summary.get("company_name", ticker)).rstrip("の").strip()
-    ).strip()
-
-    signal_text = _signal_label(tech)
-    # ← scoresはこの関数にないので削除 or 渡す必要あり
-
-    # ── タイミング ──
-    timing_text = tech.get("signal_text") or "—"
-
-    # ── バリュエーション ──
     ft = tech.get("financial_type", {})
     ft_ja = ft.get("ja", "—")
     ft_code = ft.get("code", "—")
     ft_desc = ft.get("description", "")
 
-    sector = tech.get("sector")
+    sector = tech.get("sector") or "—"
     sector_rel = tech.get("sector_rel_scores", {})
-    sector_comment = ""
-
     sv = sector_rel.get("sector_v_score")
+    pbr_rel = sector_rel.get("pbr_rel_score")
+
     if sv is not None:
         if sv >= 80:
             sector_comment = "セクター内でかなり割安。"
@@ -576,58 +542,49 @@ def _render_note_and_footer(summary, tech, ticker):
             sector_comment = "セクター内でやや割高。"
         else:
             sector_comment = "セクター内でかなり割高。割高圏にある。"
+    else:
+        sector_comment = "セクター診断データは限定的。"
 
-    pbr_rel = sector_rel.get("pbr_rel_score")
-    extra_note = ""
-    if pbr_rel is not None and pbr_rel <= 25:
-        extra_note = "（PBRは割高圏）"
+    extra_note = "（PBRは割高圏）" if pbr_rel is not None and pbr_rel <= 25 else ""
 
-    valuation_block = f"""
-バリエーション ー 財務タイプは {ft_ja} ({ft_code})。
-{ft_desc}
-セクター診断をすると、{sector}セクター内で{sector_comment}{extra_note}
-"""
+    valuation_block = (
+        f"バリエーション ー 財務タイプは {ft_ja} ({ft_code})。\n"
+        f"{ft_desc}\n"
+        f"セクター診断をすると、{sector}セクター内で{sector_comment}{extra_note}"
+    )
 
-    # ── Defensive ──
     summary_comment = tech.get("d_comment_summary") or ""
-    detail_comment  = tech.get("d_comment_detail") or ""
+    detail_comment = tech.get("d_comment_detail") or ""
+    defensive_block = (
+        f"価格のディフェンシブ性 ー {summary_comment}\n"
+        f"{detail_comment}"
+    )
 
-    defensive_block = f"""
-価格のディフェンシブ性 ー {summary_comment}
-{detail_comment}
-"""
+    timing_text = tech.get("signal_text") or "—"
 
-    # ✅ ここを関数内に入れる
-    full_note = f"""
-タイミング ー {timing_text}
-{valuation_block}
-{defensive_block}
-"""
+    full_note = (
+        f"タイミング ー {timing_text}\n\n"
+        f"{valuation_block}\n\n"
+        f"{defensive_block}"
+    )
 
-    # ── 描画 ──
-st.markdown(
-    f"""
-    <div class="np-shell">
-      <div class="np-masthead">
-      <div class="np-date">{_market_date_label()}</div>
-    </div>
-    
-    <div class="np-alert">BUY SIGNAL DETECTED</div>
-        
-    <div class="np-headline">{company_name} ({ticker})</div>
-    <div class="np-subhed">{signal_text}</div>
-        
-    <div class="np-summary">
-    <div class="np-note">
-      <strong>QVT SCORE:</strong> {_fmt_num(qvt, 1)} / 100<br>
-      <strong>CONFIDENCE:</strong> {confidence}<br>
-      <strong>RISK:</strong> {risk_text}          
+    st.markdown(
+        f"""
+        <div class="np-shell">
+          <div class="np-note">
+            <div class="np-note-title">Analyst Note</div>
+            <div class="np-note-body">{full_note}</div>
+          </div>
+
+          <div class="np-footer">
+            DATA SOURCE: CHECKSIGNAL SYSTEM &nbsp;|&nbsp; TICKER: {ticker}
+          </div>
         </div>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-    
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 # ─────────────────────────────────────────────────────────────
 # Entry point
 # ─────────────────────────────────────────────────────────────
@@ -683,7 +640,6 @@ def run():
     if not output or output.get("tech") is None:
         return
 
-    base = output["base"]
     tech = output["tech"]
     summary = output["summary"]
     scores = output["scores"]
