@@ -1217,9 +1217,10 @@ def render_defensive_tab(tech):
         top_col1.markdown(
             f"""
             <div style="margin-top: -8px;
-                color: #9ca3af;
-                font-size: 0.9rem;
-                line-height: 1.2;"
+                color: #ffffff;
+                font-size: 1.05rem;
+                font-weight: 600;
+                line-height: 1.3;"
             >
                 {grade_label}
             </div>
