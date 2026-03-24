@@ -13,7 +13,7 @@ from modules.data_fetch import convert_ticker
 from modules.q_correction import apply_q_correction
 from modules.pattern_db import get_all_types_for_display
 from ui.output_structure import build_analysis_output
-from app.dict.dic1 import DEFENSIVE_RANK_LABELS
+from dict.dic1 import DEFENSIVE_RANK_LABELS
 
 # ─── ページ設定 / スタイル ────────────────────────────────────
 
