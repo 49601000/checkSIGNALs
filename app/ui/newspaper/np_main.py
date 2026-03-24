@@ -10,7 +10,7 @@ app/ui/newspaper/np_main.py — FT寄り newspaper skin
 
 from datetime import datetime
 import re
-
+import textwrap
 import streamlit as st
 
 from modules.data_fetch import convert_ticker
@@ -543,22 +543,19 @@ def _render_note_and_footer(summary, tech, ticker):
         f"{defensive_block}"
     )
 
-    st.markdown(
-        f"""
+    html = textwrap.dedent(f"""
         <div class="np-shell">
           <div class="np-note">
             <div class="np-note-title">Analyst Note</div>
             <div class="np-note-body">{full_note}</div>
           </div>
-
           <div class="np-footer">
             DATA SOURCE: CHECKSIGNAL SYSTEM &nbsp;|&nbsp; TICKER: {ticker}
           </div>
         </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    """).strip()
 
+    st.markdown(html, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────────────────────
 # Entry point
