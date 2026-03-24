@@ -1204,8 +1204,8 @@ def render_defensive_tab(tech):
     defensive_score = tech.get("defensive_score")
     bm_label = tech.get("bm_label") or "—"
     bm_ticker = tech.get("bm_ticker") or "—"
-    grade = tech.get("d_grade") or "—"
-    grade_label = DEFENSIVE_RANK_LABELS.get(grade, "—")
+    base_grade = grade[0] if grade else "—"
+    grade_label = DEFENSIVE_RANK_LABELS.get(base_grade, "—")
     
     top_col1, top_col2 = st.columns(2)
     score_text = "—" if defensive_score is None else f"{float(defensive_score):.3f}"
