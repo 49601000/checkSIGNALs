@@ -83,10 +83,6 @@ DEFAULT_SPINNER_MESSAGES: Dict[str, str] = {
     "compute": "指標計算中…",
 }
 
-d_comment = build_d_comment(tech)       #Dタブ用コメント生成
-tech["d_comment_summary"] = d_comment["summary"]
-tech["d_comment_detail"]  = d_comment["detail"]
-
 def _merge_spinner_messages(spinner_messages: Optional[Dict[str, str]] = None) -> Dict[str, str]:
     merged = dict(DEFAULT_SPINNER_MESSAGES)
     if spinner_messages:
@@ -226,6 +222,11 @@ def build_analysis_output(
     tech["bm_ticker"] = defense_context.get("bm_ticker")
     tech["bm_company_name"] = defense_context.get("bm_company_name")
     tech["d_price_df"] = defense_context.get("price_df")
+
+    # ── D タブ用コメント生成（tech 確定後）──
+    d_comment = build_d_comment(tech)
+    tech["d_comment_summary"] = d_comment["summary"]
+    tech["d_comment_detail"]  = d_comment["detail"]
 
     return {
         "ticker": ticker,
