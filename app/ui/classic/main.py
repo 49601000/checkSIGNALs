@@ -1073,6 +1073,8 @@ def render_defensive_tab(tech):
     metric_df = _build_defensive_metric_frame(tech)
     st.markdown("##### 6指標サマリー")
     st.dataframe(metric_df, use_container_width=True, hide_index=True)
+    if tech.get("d_comment_summary"):
+       st.info(tech["d_comment_summary"])
 
     c1, c2 = st.columns([1, 1])
     with c1:
@@ -1082,6 +1084,8 @@ def render_defensive_tab(tech):
         st.markdown("##### 指標別 Defensive スコア")
         chart_df = metric_df.set_index("パラメータ")[["スコア"]]
         st.bar_chart(chart_df, use_container_width=True)
+    if tech.get("d_comment_detail"):
+       st.caption(tech["d_comment_detail"])
 
     st.markdown("##### 終値 vs 200MA")
     _render_close_vs_ma_chart(tech)
