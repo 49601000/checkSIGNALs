@@ -395,9 +395,11 @@ def get_plus_minus(score: float, base_rank: str,
         return base_rank + suffix
 
     # ④ 境界付近: 6指標の分布で判定
-    def_scores = 1.0 - metric_norm_scores   # ①‐⑤は反転して defensive 方向に
-    # ⑥だけ上書き（低いほど圧力強い = そのまま使う）
+    def_scores = 1.0 - metric_norm_scores   # ①〜⑤は反転して defensive 方向に
+    # ⑥だけ上書き（スコアが低い = 下方圧力が弱い = ディフェンシブ → 非反転）
     def_scores["⑥_vol_pressure"] = metric_norm_scores["⑥_vol_pressure"]
+
+    upper_count = lower_count = 0
     for ms in def_scores:
         ms_rank = get_base_rank(float(ms))
         ms_idx  = rank_idx.index(ms_rank)
