@@ -395,12 +395,9 @@ def get_plus_minus(score: float, base_rank: str,
         return base_rank + suffix
 
     # ④ 境界付近: 6指標の分布で判定
-    def_scores = 1.0 - metric_norm_scores   # 反転して defensive 方向に
-    # ── ⑥出来高下方圧力の非反転スコア（高いほど圧力が強い） ──
-    vp_score = round(norm_scores["⑥_vol_pressure"], 4)
-    vp_rank  = get_pressure_rank(vp_score)
-    
-    upper_count = lower_count = 0
+    def_scores = 1.0 - metric_norm_scores   # ①‐⑤は反転して defensive 方向に
+    # ⑥だけ上書き（低いほど圧力強い = そのまま使う）
+    def_scores["⑥_vol_pressure"] = metric_norm_scores["⑥_vol_pressure"]
     for ms in def_scores:
         ms_rank = get_base_rank(float(ms))
         ms_idx  = rank_idx.index(ms_rank)
@@ -518,7 +515,7 @@ def score_defense(
     grade     = get_plus_minus(defensive_score, base_rank, metric_norm_series)
 
     # ── defensive 方向の指標スコア（1 - norm） ──
-    display_scores = {
+    def_scores = {
         "①_below_ma_ratio": round(1.0 - norm_scores["①_below_ma_ratio"], 4),
         "②_max_neg_dev":    round(1.0 - norm_scores["②_max_neg_dev"], 4),
         "③_52w_low_vs_ma":  round(1.0 - norm_scores["③_52w_low_vs_ma"], 4),
