@@ -519,9 +519,9 @@ def _render_columns(summary, tech, scores):
     grade = tech.get("d_grade")
     d_label = _defensive_grade_label(grade)
     d_items = "".join([
-        _kv("Defensive Score", _fmt_num(tech.get("defensive_score"), 3)),
         _kv("Defensive Grade", _safe(grade)),
         _kv("Interpretation", _safe(d_label)),
+        _kv("Defensive Score", _fmt_num(tech.get("defensive_score"), 3)),
         _kv("MA Cluster Ratio", _fmt_num(tech.get("def1"), 3)),
         _kv("Max Drawdown", _fmt_num(tech.get("def4"), 3)),
         _kv("Volume Pressure", _fmt_num(tech.get("def6"), 3)),
