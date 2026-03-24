@@ -1213,6 +1213,9 @@ def render_defensive_tab(tech):
     top_col1.metric("価格ディフェンシブ度", grade or "—")
     top_col2.metric("価格ディフェンシブスコア", score_text)
     
+    # 価格ディフェンシブ度解釈
+    st.caption(f"{grade}：{grade_label}")
+
     st.caption(f"比較ベンチマーク: {bm_label} ({bm_ticker})")
 
     # ── コメント表示 ──
