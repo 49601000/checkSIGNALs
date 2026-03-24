@@ -864,13 +864,14 @@ def _build_defensive_metric_frame(tech):
 
 
 def _render_defensive_radar(tech):
+    raw_def6 = tech.get("def6")
     values = [
         tech.get("def1"),
         tech.get("def2"),
         tech.get("def3"),
         tech.get("def4"),
         tech.get("def5"),
-        tech.get("vp_score"), 
+        (1.0 - raw_def6) if raw_def6 is not None else None,  # 表示スコアと同じ反転値
     ]
     if any(v is None for v in values):
         st.info("Dスコアのレーダーチャートに必要なデータが不足しています。")
