@@ -542,18 +542,69 @@ def _render_columns(summary, tech, scores):
 
 
 def _render_note_and_footer(summary, tech, ticker):
-    summary_comment = tech.get("d_comment_summary")
-    detail_comment = tech.get("d_comment_detail")
 
-    note_body = summary_comment or detail_comment or "No analyst note available."
-    if summary_comment and detail_comment:
-        note_body = f"{summary_comment}<br><span style='color:var(--muted)'>{detail_comment}</span>"
+    # ── タイミング ──
+    timing_text = tech.get("signal_text") or "—"
 
+    # ── バリュエーション ──
+    ft = tech.get("financial_type", {})
+    ft_ja = ft.get("ja", "—")
+    ft_code = ft.get("code", "—")
+    ft_desc = ft.get("description", "")
+
+    sector = tech.get("sector")
+    sector_rel = tech.get("sector_rel_scores", {})
+    sector_comment = ""
+
+    sv = sector_rel.get("sector_v_score")
+    if sv is not None:
+        if sv >= 80:
+            sector_comment = "セクター内でかなり割安。"
+        elif sv >= 65:
+            sector_comment = "セクター内でやや割安。"
+        elif sv >= 50:
+            sector_comment = "セクター内で中央値水準。"
+        elif sv >= 35:
+            sector_comment = "セクター内でやや割高。"
+        else:
+            sector_comment = "セクター内でかなり割高。割高圏にある。"
+
+    # 個別指標補足
+    pbr_rel = sector_rel.get("pbr_rel_score")
+    extra_note = ""
+    if pbr_rel is not None and pbr_rel <= 25:
+        extra_note = "（PBRは割高圏）"
+
+    valuation_block = f"""
+バリエーションについて、財務タイプは {ft_ja} ({ft_code})。
+{ft_desc}
+セクター診断をすると、{sector}セクター内で{sector_comment}{extra_note}
+"""
+
+    # ── Defensive ──
+    summary_comment = tech.get("d_comment_summary") or ""
+    detail_comment  = tech.get("d_comment_detail") or ""
+
+    defensive_block = f"""
+価格のディフェンシブ性については、{summary_comment}
+{detail_comment}
+"""
+
+    # ── 全体まとめ ──
+    full_note = f"""
+タイミングは{timing_text}
+{valuation_block}
+{defensive_block}
+"""
+
+    # ── 描画 ──
     st.markdown(
         f"""
         <div class="np-note">
           <div class="np-note-title">Analyst Note</div>
-          <div class="np-note-body">{note_body}</div>
+          <div class="np-note-body">
+            {full_note}
+          </div>
         </div>
 
         <div class="np-footer">
