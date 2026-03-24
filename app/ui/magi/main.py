@@ -872,8 +872,9 @@ def _build_defensive_metric_frame(tech):
     raw = tech.get("d_raw") or {}
     for idx, label in enumerate(_DEFENSIVE_METRIC_LABELS, start=1):
         if idx == 6:
-            def_val = tech.get("def6")   # 非反転（高い = 圧力強い = 非ディフェンシブ）
-            rank    = tech.get("def6_rank")
+            raw_def6 = tech.get("def6")
+            def_val  = (1.0 - raw_def6) if raw_def6 is not None else None  # 反転して表示
+            rank     = tech.get("def6_rank")
         else:
             def_val = tech.get(f"def{idx}")
             rank    = tech.get(f"def{idx}_rank")
@@ -1337,7 +1338,7 @@ def run():
         "🏢 QUALITY / MELCHIOR",
         "💰 VALUATION / BALTHASAR",
         "🧮 QVT / MAGI",
-        "🛡️ DEF-PROTOCOL",
+        "🛡️ DEFENSIVE",
     ])
     with tab_t:   render_t_tab(tech)
     with tab_q:   render_q_tab(tech)
