@@ -576,7 +576,7 @@ def _render_note_and_footer(summary, tech, ticker):
         extra_note = "（PBRは割高圏）"
 
     valuation_block = f"""
-バリエーションについて、財務タイプは {ft_ja} ({ft_code})。
+バリエーション－、財務タイプは {ft_ja} ({ft_code})。
 {ft_desc}
 セクター診断をすると、{sector}セクター内で{sector_comment}{extra_note}
 """
@@ -592,30 +592,32 @@ def _render_note_and_footer(summary, tech, ticker):
 
     # ── 全体まとめ ──
     full_note = f"""
-タイミングは{timing_text}
+タイミング－{timing_text}
 {valuation_block}
 {defensive_block}
 """
 
     # ── 描画 ──
-    st.markdown(
-        f"""
-        <div class="np-note">
-          <div class="np-note-title">Analyst Note</div>
-          <div class="np-note-body">
-            {full_note}
-          </div>
+    st.markdown(f"""
+    <div class="np-shell">
+        <div class="np-masthead">
+            <div class="np-brand">CHECKSIGNAL DAILY</div>
+            <div class="np-date">{_market_date_label()}</div>
         </div>
-
-        <div class="np-footer">
-          DATA SOURCE: CHECKSIGNAL SYSTEM &nbsp;|&nbsp; TICKER: {ticker}
+        
+        <div class="np-alert">BUY SIGNAL DETECTED</div>
+        
+        <div class="np-headline">{company_name} ({ticker})</div>
+        <div class="np-subhed">{signal_text}</div>
+        
+        <div class="np-summary">
+            <strong>QVT SCORE:</strong> {_fmt_num(qvt, 1)} / 100<br>
+            <strong>CONFIDENCE:</strong> {confidence}<br>
+            <strong>RISK:</strong> {risk_text}
         </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
+    </div>
+    """, unsafe_allow_html=True)
+    
 # ─────────────────────────────────────────────────────────────
 # Entry point
 # ─────────────────────────────────────────────────────────────
