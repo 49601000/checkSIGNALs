@@ -604,8 +604,8 @@ full_note = f"""
 {defensive_block}
 """
 
-    # ── 描画 ──
-    st.markdown(f"""
+# ── 描画 ──
+st.markdown(f"""
     <div class="np-shell">
         <div class="np-masthead">
             <div class="np-brand">CHECKSIGNAL DAILY</div>
@@ -622,8 +622,8 @@ full_note = f"""
             <strong>CONFIDENCE:</strong> {confidence}<br>
             <strong>RISK:</strong> {risk_text}
         </div>
-    </div>
-    """, unsafe_allow_html=True)
+</div>
+""", unsafe_allow_html=True)
     
 # ─────────────────────────────────────────────────────────────
 # Entry point
