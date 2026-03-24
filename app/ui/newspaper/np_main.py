@@ -548,7 +548,7 @@ def _render_note_and_footer(summary, tech, ticker):
         _safe(summary.get("company_name", ticker)).rstrip("の").strip()
     ).strip()
     signal_text = _signal_label(tech)
-
+    qvt = scores.get("qvt")
 
     # ── タイミング ──
     timing_text = tech.get("signal_text") or "—"
@@ -597,8 +597,8 @@ def _render_note_and_footer(summary, tech, ticker):
 {detail_comment}
 """
 
-    # ── 全体まとめ ──
-    full_note = f"""
+# ── 全体まとめ ──
+full_note = f"""
 タイミング－{timing_text}
 {valuation_block}
 {defensive_block}
