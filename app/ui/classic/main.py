@@ -13,6 +13,7 @@ from modules.data_fetch import convert_ticker
 from modules.q_correction import apply_q_correction
 from modules.pattern_db import get_all_types_for_display
 from ui.output_structure import build_analysis_output
+from app.dict.dic1 import DEFENSIVE_RANK_LABELS
 
 # ─── ページ設定 / スタイル ────────────────────────────────────
 
@@ -1206,6 +1207,7 @@ def render_defensive_tab(tech):
     bm_label = tech.get("bm_label") or "—"
     bm_ticker = tech.get("bm_ticker") or "—"
     grade = tech.get("d_grade") or "—"
+    grade_label = DEFENSIVE_RANK_LABELS.get(grade, "—")
     
     top_col1, top_col2 = st.columns(2)
     score_text = "—" if defensive_score is None else f"{float(defensive_score):.3f}"
