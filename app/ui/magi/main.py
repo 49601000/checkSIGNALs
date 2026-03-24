@@ -5,11 +5,15 @@ app/ui/magi/main.py — MAGI SYSTEM UI
   app/main.py から動的インポートされ、run() が呼ばれる。
 """
 
+import altair as alt
+import numpy as np
+import pandas as pd
 import streamlit as st
 from modules.data_fetch import convert_ticker
 from modules.q_correction import apply_q_correction
 from modules.pattern_db import get_all_types_for_display
 from ui.output_structure import build_analysis_output
+from dict.dic1 import DEFENSIVE_RANK_LABELS
 
 
 # ─── スタイル ─────────────────────────────────────────────────
@@ -829,6 +833,394 @@ def render_v_tab(tech):
             st.info("財務タイプDBが読み込まれていません。")
 
 
+# ─── タブ: Defensive ─────────────────────────────────────────
+
+# magi カラーパレット
+_MAGI_ORANGE  = "#ff6600"
+_MAGI_BLUE    = "#4477ff"
+_MAGI_RED     = "#ff4444"
+_MAGI_YELLOW  = "#ffaa00"   # ヒゲ・中央線用（視認性重視）
+_MAGI_DIM     = "#cc4400"
+
+_DEFENSIVE_METRIC_LABELS = [
+    "① MA固り比率",
+    "② 最大下方乖離",
+    "③ 52w安値/200MA",
+    "④ 最大DD",
+    "⑤ 下方Vol",
+    "⑥ 出来高下方圧力",
+]
+
+_DEFENSIVE_RADAR_LABELS = [
+    "① MA\n固り比率",
+    "② 最大\n下方乖離",
+    "③ 52w安値\n/200MA",
+    "④ 最大\nDD",
+    "⑤ 下方\nVol",
+    "⑥ 出来高\n下方圧力",
+]
+
+def _fmt_optional_pct_from_ratio(x):
+    return "—" if x is None else f"{float(x) * 100:.1f}%"
+
+def _fmt_optional_float(x, digits=3):
+    return "—" if x is None else f"{float(x):.{digits}f}"
+
+
+def _build_defensive_metric_frame(tech):
+    rows = []
+    raw = tech.get("d_raw") or {}
+    for idx, label in enumerate(_DEFENSIVE_METRIC_LABELS, start=1):
+        if idx == 6:
+            def_val = tech.get("def6")   # 非反転（高い = 圧力強い = 非ディフェンシブ）
+            rank    = tech.get("def6_rank")
+        else:
+            def_val = tech.get(f"def{idx}")
+            rank    = tech.get(f"def{idx}_rank")
+        raw_key = [
+            "①_below_ma_ratio", "②_max_neg_dev", "③_52w_low_vs_ma",
+            "④_max_drawdown",   "⑤_downside_vol", "⑥_vol_pressure",
+        ][idx - 1]
+        raw_val  = raw.get(raw_key)
+        raw_disp = _fmt_optional_pct_from_ratio(raw_val) if idx in (1,2,3,4,5) else _fmt_optional_float(raw_val, 3)
+        rows.append({
+            "パラメータ": label,
+            "ランク":     rank or "—",
+            "スコア":     None if def_val is None else round(float(def_val), 3),
+            "ローデータ": raw_disp,
+        })
+    return pd.DataFrame(rows)
+
+
+def _render_defensive_radar(tech):
+    raw_def6 = tech.get("def6")
+    values = [
+        tech.get("def1"), tech.get("def2"), tech.get("def3"),
+        tech.get("def4"), tech.get("def5"),
+        (1.0 - raw_def6) if raw_def6 is not None else None,  # 表示用に反転
+    ]
+    if any(v is None for v in values):
+        st.info("レーダーチャートに必要なデータが不足しています。")
+        return
+
+    n      = len(values)
+    angles = np.linspace(0, 2 * np.pi, n, endpoint=False)
+
+    def _polygon_points(series_name, radii):
+        rows = []
+        for idx, radius in enumerate(radii):
+            angle = angles[idx]
+            rows.append({
+                "series": series_name, "order": idx,
+                "label": _DEFENSIVE_RADAR_LABELS[idx],
+                "x": float(radius * np.cos(angle)),
+                "y": float(radius * np.sin(angle)),
+            })
+        rows.append(rows[0] | {"order": n})
+        return rows
+
+    value_rows = _polygon_points("Ticker", [float(v) for v in values])
+    bm_rows    = _polygon_points("BM=0.5", [0.5] * n)
+
+    grid_rows = []
+    for radius in (0.25, 0.5, 0.75, 1.0):
+        for step in np.linspace(0, 2 * np.pi, 181):
+            grid_rows.append({
+                "radius": radius,
+                "x": float(radius * np.cos(step)),
+                "y": float(radius * np.sin(step)),
+            })
+
+    spoke_rows = []
+    label_rows = []
+    for idx, angle in enumerate(angles):
+        spoke_rows.extend([
+            {"axis": idx, "x": 0.0, "y": 0.0, "order": 0},
+            {"axis": idx, "x": float(np.cos(angle)), "y": float(np.sin(angle)), "order": 1},
+        ])
+        label_rows.append({
+            "label": _DEFENSIVE_RADAR_LABELS[idx],
+            "x": float(1.18 * np.cos(angle)),
+            "y": float(1.18 * np.sin(angle)),
+        })
+
+    grid_df  = pd.DataFrame(grid_rows)
+    spoke_df = pd.DataFrame(spoke_rows)
+    label_df = pd.DataFrame(label_rows)
+    plot_df  = pd.DataFrame(value_rows + bm_rows)
+
+    grid = alt.Chart(grid_df).mark_line(color="#2a1800", opacity=0.8).encode(
+        x=alt.X("x:Q", axis=None, scale=alt.Scale(domain=[-1.25, 1.25])),
+        y=alt.Y("y:Q", axis=None, scale=alt.Scale(domain=[-1.25, 1.25])),
+        detail="radius:N",
+    )
+    spokes = alt.Chart(spoke_df).mark_line(color="#331100", opacity=0.7).encode(
+        x=alt.X("x:Q", axis=None, scale=alt.Scale(domain=[-1.25, 1.25])),
+        y=alt.Y("y:Q", axis=None, scale=alt.Scale(domain=[-1.25, 1.25])),
+        detail="axis:N", order="order:Q",
+    )
+    polygons = alt.Chart(plot_df).mark_line(point=True, strokeWidth=2).encode(
+        x=alt.X("x:Q", axis=None, scale=alt.Scale(domain=[-1.25, 1.25])),
+        y=alt.Y("y:Q", axis=None, scale=alt.Scale(domain=[-1.25, 1.25])),
+        color=alt.Color(
+            "series:N",
+            scale=alt.Scale(domain=["Ticker", "BM=0.5"], range=[_MAGI_ORANGE, "#664422"]),
+            legend=alt.Legend(title=None, orient="bottom",
+                              labelColor=_MAGI_DIM, titleColor=_MAGI_DIM),
+        ),
+        strokeDash=alt.StrokeDash(
+            "series:N",
+            scale=alt.Scale(domain=["Ticker", "BM=0.5"], range=[[1, 0], [6, 4]]),
+            legend=None,
+        ),
+        detail="series:N", order="order:Q",
+        tooltip=["series:N", "label:N"],
+    )
+    labels = alt.Chart(label_df).mark_text(color=_MAGI_DIM, fontSize=10).encode(
+        x=alt.X("x:Q", axis=None, scale=alt.Scale(domain=[-1.25, 1.25])),
+        y=alt.Y("y:Q", axis=None, scale=alt.Scale(domain=[-1.25, 1.25])),
+        text="label:N",
+    )
+    chart = (grid + spokes + polygons + labels).configure_view(stroke=None)
+    st.altair_chart(chart, use_container_width=True)
+    st.caption(
+        f"Defensive {tech.get('d_grade') or '—'} / "
+        f"Score {float(tech.get('defensive_score', 0)):.3f} / 破線 = BM 0.5"
+    )
+
+
+def _render_close_vs_ma_chart(tech):
+    detail   = tech.get("d_detail") or {}
+    price_df = tech.get("d_price_df")
+    ma       = detail.get("ma")
+    if price_df is None or ma is None or price_df.empty:
+        st.info("終値 vs 200MA チャートに必要なデータが不足しています。")
+        return
+
+    close_df = price_df[["Close"]].copy()
+    close_df["MA200"] = ma.reindex(close_df.index)
+    close_df = (
+        close_df.dropna(subset=["Close", "MA200"])
+        .reset_index()
+        .rename(columns={close_df.index.name or "index": "Date"})
+    )
+    close_df["Baseline"]   = float(close_df["Close"].min())
+    close_df["BelowClose"] = np.where(close_df["Close"] < close_df["MA200"], close_df["Close"], np.nan)
+
+    base       = alt.Chart(close_df).encode(x=alt.X("Date:T", title=None))
+    area       = base.mark_area(color=_MAGI_RED, opacity=0.15).encode(
+        y=alt.Y("BelowClose:Q", title="Price"), y2="Baseline:Q")
+    close_line = base.mark_line(color=_MAGI_ORANGE).encode(y="Close:Q")
+    ma_line    = base.mark_line(color=_MAGI_YELLOW, strokeDash=[6, 4]).encode(y="MA200:Q")
+    chart = (area + close_line + ma_line).properties(height=320)
+    st.altair_chart(chart, use_container_width=True)
+    st.caption(
+        f"D={float(tech.get('d_score', 0)):.3f} / "
+        f"Def={float(tech.get('defensive_score', 0)):.3f} / "
+        f"BM={tech.get('bm_label') or '—'}"
+    )
+
+
+def _render_volume_pressure_boxplot(tech):
+    detail    = tech.get("d_detail") or {}
+    vol_ratio = detail.get("vol_ratio")
+    down_mask = detail.get("down_mask")
+    if vol_ratio is None or down_mask is None:
+        st.info("出来高倍率箱ひげ図に必要なデータが不足しています。")
+        return
+
+    vr = vol_ratio.dropna()
+    if vr.empty:
+        st.info("出来高倍率データが不足しています。")
+        return
+
+    mask       = down_mask.reindex(vr.index).fillna(False).astype(bool)
+    compare_df = pd.DataFrame({
+        "Type":        np.where(mask, "下落日", "上昇・横ばい日"),
+        "VolumeRatio": vr.values,
+    })
+
+    type_domain = ["上昇・横ばい日", "下落日"]
+    type_range  = [_MAGI_BLUE, _MAGI_RED]
+    box_width   = 42
+
+    # 四分位・中央値
+    q_df = (
+        compare_df.groupby("Type")["VolumeRatio"]
+        .quantile([0.25, 0.5, 0.75]).unstack().reset_index()
+    )
+    q_df.columns = ["Type", "q1", "median", "q3"]
+
+    # ヒゲ（1.5 IQR）・外れ値
+    whisker_rows, outlier_rows = [], []
+    for label, grp in compare_df.groupby("Type"):
+        s   = grp["VolumeRatio"]
+        q1_ = s.quantile(0.25); q3_ = s.quantile(0.75); iqr = q3_ - q1_
+        lf  = q1_ - 1.5 * iqr;  uf  = q3_ + 1.5 * iqr
+        inliers = s[(s >= lf) & (s <= uf)]
+        whisker_rows.append({"Type": label, "lower": inliers.min(), "upper": inliers.max()})
+        outlier_rows.append(grp[(grp["VolumeRatio"] < lf) | (grp["VolumeRatio"] > uf)].copy())
+
+    whisker_df  = pd.DataFrame(whisker_rows)
+    plot_df     = pd.merge(q_df, whisker_df, on="Type", how="left")
+    outlier_df  = pd.concat(outlier_rows, ignore_index=True) if outlier_rows else compare_df.iloc[0:0]
+
+    # 箱
+    box = alt.Chart(plot_df).mark_bar(size=box_width).encode(
+        x=alt.X("Type:N", title=None, sort=type_domain),
+        y=alt.Y("q1:Q",   title="出来高倍率（当日 / 20日MA）"),
+        y2="q3:Q",
+        color=alt.Color("Type:N",
+            scale=alt.Scale(domain=type_domain, range=type_range), legend=None),
+        tooltip=[
+            "Type:N",
+            alt.Tooltip("q1:Q",     format=".3f", title="Q1"),
+            alt.Tooltip("median:Q", format=".3f", title="中央値"),
+            alt.Tooltip("q3:Q",     format=".3f", title="Q3"),
+        ],
+    )
+    # 中央線（黄色）
+    median_mark = alt.Chart(plot_df).mark_tick(
+        color=_MAGI_YELLOW, thickness=2.5, size=box_width,
+    ).encode(x=alt.X("Type:N", sort=type_domain), y="median:Q")
+    # ヒゲ縦線（黄色）
+    whisker_rule = alt.Chart(plot_df).mark_rule(
+        color=_MAGI_YELLOW, strokeWidth=2,
+    ).encode(x=alt.X("Type:N", sort=type_domain), y="lower:Q", y2="upper:Q")
+    # ヒゲ先端横線（黄色）
+    lower_cap = alt.Chart(plot_df).mark_tick(
+        color=_MAGI_YELLOW, thickness=2, size=box_width,
+    ).encode(x=alt.X("Type:N", sort=type_domain), y="lower:Q")
+    upper_cap = alt.Chart(plot_df).mark_tick(
+        color=_MAGI_YELLOW, thickness=2, size=box_width,
+    ).encode(x=alt.X("Type:N", sort=type_domain), y="upper:Q")
+    # 外れ値（白枠付き点）
+    outliers = alt.Chart(outlier_df).mark_point(
+        shape="circle", filled=True, size=90, opacity=0.95,
+        stroke="white", strokeWidth=1.4,
+    ).encode(
+        x=alt.X("Type:N", sort=type_domain),
+        y=alt.Y("VolumeRatio:Q"),
+        color=alt.Color("Type:N",
+            scale=alt.Scale(domain=type_domain, range=type_range), legend=None),
+        tooltip=["Type:N", alt.Tooltip("VolumeRatio:Q", format=".3f", title="倍率")],
+    )
+
+    chart = (box + whisker_rule + lower_cap + upper_cap + median_mark + outliers).properties(height=320)
+    st.altair_chart(chart, use_container_width=True)
+
+    pressure = (tech.get("d_raw") or {}).get("⑥_vol_pressure")
+    n_down   = detail.get("n_down")
+    st.caption(
+        f"圧力={_fmt_optional_float(pressure, 3)} / 下落日数={n_down or 0}　　"
+        "🔵 上昇・横ばい日　🔴 下落日"
+    )
+
+
+def _render_volume_pressure_histogram(tech):
+    detail    = tech.get("d_detail") or {}
+    vol_ratio = detail.get("vol_ratio")
+    down_mask = detail.get("down_mask")
+    if vol_ratio is None or down_mask is None:
+        st.info("出来高倍率ヒストグラムに必要なデータが不足しています。")
+        return
+
+    vr = vol_ratio.dropna()
+    if vr.empty:
+        st.info("出来高倍率データが不足しています。")
+        return
+
+    mask        = down_mask.reindex(vr.index).fillna(False).astype(bool)
+    clip_upper  = float(vr.quantile(0.99))
+    hist_df     = pd.DataFrame({
+        "Type":        np.where(mask, "下落日", "上昇・横ばい日"),
+        "VolumeRatio": vr.clip(upper=clip_upper).values,
+    })
+
+    type_domain = ["上昇・横ばい日", "下落日"]
+    type_range  = [_MAGI_BLUE, _MAGI_RED]
+
+    bars = alt.Chart(hist_df).mark_bar(opacity=0.55).encode(
+        x=alt.X("VolumeRatio:Q", bin=alt.Bin(maxbins=30), title="出来高倍率（当日 / 20日MA）"),
+        y=alt.Y("count():Q", title="日数"),
+        color=alt.Color("Type:N",
+            scale=alt.Scale(domain=type_domain, range=type_range), legend=None),
+        tooltip=["Type:N", alt.Tooltip("count():Q", title="件数")],
+    )
+    bm_line = alt.Chart(pd.DataFrame({"x": [1.0]})).mark_rule(
+        color=_MAGI_YELLOW, strokeDash=[6, 4], strokeWidth=1.5,
+    ).encode(x=alt.X("x:Q"))
+
+    chart = (bars + bm_line).properties(height=320)
+    st.altair_chart(chart, use_container_width=True)
+
+    pressure = (tech.get("d_raw") or {}).get("⑥_vol_pressure")
+    n_down   = detail.get("n_down")
+    st.caption(
+        f"圧力={_fmt_optional_float(pressure, 3)} / 下落日数={n_down or 0}　　"
+        "🔵 上昇・横ばい日　🔴 下落日　　破線=BM(1.0)"
+    )
+
+
+def render_defensive_tab(tech):
+    defensive_score = tech.get("defensive_score")
+    bm_label  = tech.get("bm_label")  or "—"
+    bm_ticker = tech.get("bm_ticker") or "—"
+    grade     = tech.get("d_grade")   or "—"
+
+    base_grade  = grade[0] if grade and grade != "—" else "—"
+    grade_label = DEFENSIVE_RANK_LABELS.get(base_grade, "—")
+
+    top_col1, top_col2 = st.columns(2)
+    score_text = "—" if defensive_score is None else f"{float(defensive_score):.3f}"
+
+    top_col1.metric("価格ディフェンシブ度", grade)
+    if grade and grade != "—":
+        top_col1.markdown(
+            f'<div style="margin-top:-8px;color:{_MAGI_ORANGE};'
+            f'font-size:1rem;font-weight:700;line-height:1.3">{grade_label}</div>',
+            unsafe_allow_html=True,
+        )
+    top_col2.metric("価格ディフェンシブスコア", score_text)
+    st.caption(f"比較ベンチマーク: {bm_label} ({bm_ticker})")
+
+    # コメント表示
+    summary_comment = tech.get("d_comment_summary")
+    detail_comment  = tech.get("d_comment_detail")
+    if summary_comment:
+        st.info(summary_comment)
+    if detail_comment:
+        st.caption(detail_comment)
+
+    metric_df = _build_defensive_metric_frame(tech)
+    st.markdown("##### 6指標サマリー")
+    st.dataframe(metric_df, use_container_width=True, hide_index=True)
+
+    c1, c2 = st.columns([1, 1])
+    with c1:
+        st.markdown("##### レーダーチャート")
+        _render_defensive_radar(tech)
+    with c2:
+        st.markdown("##### 終値 vs 200MA")
+        _render_close_vs_ma_chart(tech)
+
+    left, right = st.columns(2)
+    with left:
+        st.markdown("##### 出来高倍率 箱ひげ図")
+        _render_volume_pressure_boxplot(tech)
+    with right:
+        st.markdown("##### 出来高倍率 分布")
+        _render_volume_pressure_histogram(tech)
+
+    with st.expander("Defensiveスコアの見方"):
+        st.markdown("""
+- **Defensive Score** は **高いほど価格耐性が高い**ことを示します。
+- **Benchmark = 0.5** はベンチマーク並みの水準です。
+- レーダーチャートは外側ほど防衛力が高く、破線がベンチマーク基準線です。
+- 出来高圧力チャートは、下落日に出来高が偏っていないかを確認するための補助図です。
+        """)
+
+
 # ─── タブ: QVT ────────────────────────────────────────────────
 
 def render_qvt_tab(tech):
@@ -940,16 +1332,18 @@ def run():
     render_magi_panel(scores["q"], scores["v"], scores["t"], scores["qvt"], ticker, base, tech)
     st.markdown("---")
 
-    tab_t, tab_q, tab_v, tab_qvt = st.tabs([
+    tab_t, tab_q, tab_v, tab_qvt, tab_d = st.tabs([
         "⏰ TIMING / CASPER",
         "🏢 QUALITY / MELCHIOR",
         "💰 VALUATION / BALTHASAR",
         "🧮 QVT / MAGI",
+        "🛡️ DEF-PROTOCOL",
     ])
     with tab_t:   render_t_tab(tech)
     with tab_q:   render_q_tab(tech)
     with tab_v:   render_v_tab(tech)
     with tab_qvt: render_qvt_tab(tech)
+    with tab_d:   render_defensive_tab(tech)
 
     if base.get("dividend_yield"):
         st.caption(f"予想配当利回り: {base['dividend_yield']:.2f}%")
