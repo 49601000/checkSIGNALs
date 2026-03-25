@@ -437,7 +437,7 @@ def _section(title, items_html):
 def _render_header(summary, tech, scores, ticker):
     company_name = _clean_company_name(summary, ticker)
     qvt = scores.get("qvt")
-    confidence = _entryfitness_label(qvt)
+    entryfitness = _entryfitness_label(qvt)
     risk_text = _summary_risk_text(tech)
     signal_text = _signal_label(tech)
 
@@ -451,8 +451,8 @@ def _render_header(summary, tech, scores, ticker):
           <div class="np-headline">{company_name} ({ticker})</div>
           <div class="np-subhed">{signal_text}</div>
           <div class="np-summary">
-            <strong>QVT SCORE:</strong> {_fmt_num(qvt, 1)} / 100<br>
-            <strong>CONFIDENCE:</strong> {confidence}<br>
+            <strong>QVT スコア:</strong> {_fmt_num(qvt, 1)} / 100<br>
+            <strong>エントリー適合度:</strong> {entryfitness}<br>
             <strong>RISK:</strong> {risk_text}
           </div>
         </div>
