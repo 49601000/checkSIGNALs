@@ -447,7 +447,7 @@ def _render_header(summary, tech, scores, ticker):
             <div class="np-brand">CHECKSIGNAL DAILY</div>
             <div class="np-date">{_market_date_label()}</div>
           </div>
-          <div class="np-alert">BUY SIGNAL DETECTED</div>
+          <div class="np-alert">SIGNAL NAVIGATOR</div>
           <div class="np-headline">{company_name} ({ticker})</div>
           <div class="np-subhed">{signal_text}</div>
           <div class="np-summary">
