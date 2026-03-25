@@ -375,10 +375,10 @@ def _entryfitness_label(qvt_score):
     if qvt_score >= 70:
         return "HIGH"
     if qvt_score >= 60:
-        return "MODERATE"
+        return "GOOD"
     if qvt_score >= 50:
-        return "CAUTIOUS"
-    return "LOW"
+        return "NEWURAL"
+    return "WEAK"
 
 
 def _defensive_grade_label(grade):
