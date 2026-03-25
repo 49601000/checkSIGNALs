@@ -459,7 +459,7 @@ def _render_header(summary, tech, scores, ticker):
           <div class="np-subhed">{signal_text}</div>
           <div class="np-summary">
             <strong>エントリー適合度:</strong> {entryfitness}<br>
-            <strong>下落耐性（短期/長期）:</strong> {risk_text}
+            <strong>下落耐性:</strong> {risk_text}<br>
             <strong>QVT スコア:</strong> {_fmt_num(qvt, 1)} / 100<br>
           </div>
         </div>
