@@ -369,7 +369,7 @@ def _signal_label(tech):
     return str(txt).upper()
 
 
-def _confidence_label(qvt_score):
+def _entryfitness_label(qvt_score):
     if qvt_score is None:
         return "UNKNOWN"
     if qvt_score >= 70:
@@ -437,7 +437,7 @@ def _section(title, items_html):
 def _render_header(summary, tech, scores, ticker):
     company_name = _clean_company_name(summary, ticker)
     qvt = scores.get("qvt")
-    confidence = _confidence_label(qvt)
+    confidence = _entryfitness_label(qvt)
     risk_text = _summary_risk_text(tech)
     signal_text = _signal_label(tech)
 
