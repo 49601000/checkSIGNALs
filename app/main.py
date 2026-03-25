@@ -89,7 +89,7 @@ UI_REGISTRY = [
         "key":    "newspaper",
         "name":   "CHECKSIGNAL DAILY",
         "icon":   "📰",
-        "desc":   "FT寄りの newspaper skin。オフホワイト紙面・罫線・セリフ体で結果を記事化。",
+        "desc":   "FT寄りの newspaper skin。結果を記事化。",
         "module": "ui.newspaper.np_main",
     },
 
