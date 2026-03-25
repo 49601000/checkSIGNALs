@@ -371,14 +371,14 @@ def _signal_label(tech):
 
 def _entryfitness_label(qvt_score):
     if qvt_score is None:
-        return "UNKNOWN"
+        return "データ不足のため不明"
     if qvt_score >= 70:
-        return "HIGH"
+        return "高い（押し目買いチャンス。）"
     if qvt_score >= 60:
-        return "GOOD"
+        return "良い（押し目買いとして悪くない）"
     if qvt_score >= 50:
-        return "NEWURAL"
-    return "WEAK"
+        return "中立（押し目ではないが裁量で判断を。）"
+    return "弱い"
 
 
 def _defensive_grade_label(grade):
