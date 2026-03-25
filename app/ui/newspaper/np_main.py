@@ -395,20 +395,20 @@ def _summary_risk_text(tech):
 
     # 長期耐性のラベル決定
     if d_score is not None and d_score >= 0.70:
-        long_text = "長期は高い"
+        long_text = "長期は高"
     elif d_score is not None and d_score >= 0.50:
-        long_text = "長期で指数に近い"
+        long_text = "長期で指数並"
     elif d_score is not None:
-        long_text = "長期で低い"
+        long_text = "長期で低"
     else:
         long_text = "長期のデータ不足"
 
     # 短期リスク優先
     if pressure is not None and pressure >= 1.10:
-        return f"短期の圧力強い／{long_text}"
+        return f"短期の圧力強／{long_text}"
      # 短期に特段の圧力なし
     if d_score is not None:
-        return f"短期の圧力偏りなし／{long_text}"
+        return f"短期は中立／{long_text}"
     return "短期：評価不可／長期：データ不足"
 
 def _clean_company_name(summary, ticker):
