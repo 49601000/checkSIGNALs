@@ -460,7 +460,7 @@ def _render_header(summary, tech, scores, ticker):
           <div class="np-summary">
             <strong>QVT スコア:</strong> {_fmt_num(qvt, 1)} / 100<br>
             <strong>エントリー適合度:</strong> {entryfitness}<br>
-            <strong>RISK:</strong> {risk_text}
+            <strong>短期/長期リスク:</strong> {risk_text}
           </div>
         </div>
     """).strip()
