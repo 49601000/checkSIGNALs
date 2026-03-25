@@ -393,16 +393,23 @@ def _summary_risk_text(tech):
     raw = tech.get("d_raw") or {}
     pressure = raw.get("⑥_vol_pressure")
 
-    if pressure is not None and pressure >= 1.10:
-        return "HIGH DOWNSIDE PRESSURE"
+    # 長期耐性のラベル決定
     if d_score is not None and d_score >= 0.70:
-        return "LOW PRICE DAMAGE TOLERANCE RISK"
-    if d_score is not None and d_score >= 0.50:
-        return "MODERATE DOWNSIDE RISK"
-    if d_score is not None:
-        return "ELEVATED DOWNSIDE RISK"
-    return "RISK DATA LIMITED"
+        long_text = "長期：下落耐性が高い"
+    elif d_score is not None and d_score >= 0.50:
+        long_text = "長期：標準的な耐性"
+    elif d_score is not None:
+        long_text = "長期：下落耐性は低い"
+    else:
+        long_text = "長期：データ不足"
 
+    # 短期リスク優先
+    if pressure is not None and pressure >= 1.10:
+        return f"短期：下落圧力が強い／{long_text}"
+     # 短期に特段の圧力なし
+    if d_score is not None:
+        return f"短期：大きな偏りなし／{long_text}"
+    return "短期：評価不可／長期：データ不足"
 
 def _clean_company_name(summary, ticker):
     return re.sub(
