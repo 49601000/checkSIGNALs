@@ -373,12 +373,12 @@ def _entryfitness_label(qvt_score):
     if qvt_score is None:
         return "データ不足のため不明"
     if qvt_score >= 70:
-        return "高い（押し目買いチャンス。）"
+        return "魅力的な水準"
     if qvt_score >= 60:
-        return "良い（押し目買いとして悪くない）"
+        return "悪くない水準"
     if qvt_score >= 50:
-        return "中立（押し目ではないが裁量で判断を。）"
-    return "弱い"
+        return "どちらともいえない"
+    return "推奨しない"
 
 
 def _defensive_grade_label(grade):
@@ -395,20 +395,20 @@ def _summary_risk_text(tech):
 
     # 長期耐性のラベル決定
     if d_score is not None and d_score >= 0.70:
-        long_text = "長期：下落耐性が高い"
+        long_text = "長期は高い"
     elif d_score is not None and d_score >= 0.50:
-        long_text = "長期：標準的な耐性"
+        long_text = "長期で指数に近い"
     elif d_score is not None:
-        long_text = "長期：下落耐性は低い"
+        long_text = "長期で低い"
     else:
-        long_text = "長期：データ不足"
+        long_text = "長期のデータ不足"
 
     # 短期リスク優先
     if pressure is not None and pressure >= 1.10:
-        return f"短期：下落圧力が強い／{long_text}"
+        return f"短期の圧力強い／{long_text}"
      # 短期に特段の圧力なし
     if d_score is not None:
-        return f"短期：大きな偏りなし／{long_text}"
+        return f"短期の圧力偏りなし／{long_text}"
     return "短期：評価不可／長期：データ不足"
 
 def _clean_company_name(summary, ticker):
@@ -458,9 +458,9 @@ def _render_header(summary, tech, scores, ticker):
           <div class="np-headline">{company_name} ({ticker})</div>
           <div class="np-subhed">{signal_text}</div>
           <div class="np-summary">
-            <strong>QVT スコア:</strong> {_fmt_num(qvt, 1)} / 100<br>
             <strong>エントリー適合度:</strong> {entryfitness}<br>
-            <strong>短期/長期リスク:</strong> {risk_text}
+            <strong>下落耐性（短期/長期）:</strong> {risk_text}
+            <strong>QVT スコア:</strong> {_fmt_num(qvt, 1)} / 100<br>
           </div>
         </div>
     """).strip()
