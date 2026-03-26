@@ -1025,8 +1025,8 @@ def _render_volume_pressure_boxplot(tech):
         ),
         opacity=alt.condition(
             alt.datum.Type == "下落日",
-            alt.value(0.85),   # 下落日はやや強め
-            alt.value(0.45)    # 上昇・横ばい日は少し抑える
+            alt.value(0.95),   # 下落日はやや強め
+            alt.value(0.75)    # 上昇・横ばい日は少し抑える
         )
     ).properties(
         height=280,
