@@ -961,9 +961,9 @@ def _render_defensive_radar(tech):
         height=280,
         background="transparent",
     ).configure_view(stroke=None)
+    
     st.altair_chart(chart, use_container_width=True)
-
-
+    
 def _render_close_vs_ma_chart(tech):
     detail = tech.get("d_detail") or {}
     price_df = tech.get("d_price_df")
@@ -1008,6 +1008,7 @@ def _render_close_vs_ma_chart(tech):
     )
 
     st.altair_chart(lines, use_container_width=True)
+
 def _render_volume_pressure_boxplot(tech):
     detail    = tech.get("d_detail") or {}
     vol_ratio = detail.get("vol_ratio")
