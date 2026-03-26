@@ -96,7 +96,7 @@ UI_REGISTRY = [
         "key":    "CYBER",
         "name":   "CYBER PANK",
         "icon":   "🔴",
-        "desc":   "CYBERPANK CRT演出。",
+        "desc":   "ネオンUIで高密度情報を一画面に圧縮し、直感的な判断を促すサイバーSKIN。",
         "module": "ui.cyber.cyb_main",
     },
 
