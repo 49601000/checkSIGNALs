@@ -1018,15 +1018,17 @@ def _render_volume_pressure_boxplot(tech):
     ).encode(
         x=alt.X("Type:N", sort=type_domain),
         y=alt.Y("VolumeRatio:Q", title="出来高倍率"),
+            axis=alt.Axis(
+                labelColor="#e8f7ff",
+                titleColor="#e8f7ff",
+                gridColor="#3a4d66",   # 少し明るめ
+                gridOpacity=0.55
+                ),
+        ),
         color=alt.Color(
             "Type:N",
             scale=alt.Scale(domain=type_domain, range=type_range),
             legend=None
-        ),
-        opacity=alt.condition(
-            alt.datum.Type == "下落日",
-            alt.value(0.95),   # 下落日はやや強め
-            alt.value(0.75)    # 上昇・横ばい日は少し抑える
         )
     ).properties(
         height=280,
