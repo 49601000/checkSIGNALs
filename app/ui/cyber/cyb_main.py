@@ -1,188 +1,156 @@
-import sys
-from PyQt5.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
-    QLabel, QPushButton, QFrame, QGraphicsDropShadowEffect, QApplication
-)
-from PyQt5.QtCore import Qt, QPoint, pyqtSlot
-from PyQt5.QtGui import QColor, QFont
+import streamlit as st
+import streamlit.components.v1 as components
 
-class CyberMainUI(QMainWindow):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.oldPos = QPoint()
-        self.init_ui()
+class CyberUI:
+    """
+    checkSIGNALs Cyberpunk Edition UI Component
+    Streamlit環境下で動作する高輝度ネオンUI
+    """
+    def __init__(self):
+        self.setup_global_style()
 
-    def init_ui(self):
-        # --- ウィンドウ基本設定 ---
-        self.setWindowTitle("checkSIGNALs - CYBER_PUNK_V4")
-        self.resize(350, 500)
-        self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
-        self.setAttribute(Qt.WA_TranslucentBackground)
-
-        # メインウィジェット
-        self.central_widget = QWidget()
-        self.central_widget.setObjectName("MainFrame")
-        self.setCentralWidget(self.central_widget)
-        
-        layout = QVBoxLayout(self.central_widget)
-        layout.setContentsMargins(20, 20, 20, 20)
-
-        # --- 1. ヘッダー (ドラッグハンドル兼務) ---
-        header = QHBoxLayout()
-        self.status_indicator = QLabel("● SYSTEM READY")
-        self.status_indicator.setObjectName("StatusText")
-        
-        self.close_btn = QPushButton("×")
-        self.close_btn.setFixedSize(24, 24)
-        self.close_btn.clicked.connect(self.close)
-        self.close_btn.setObjectName("CloseBtn")
-        
-        header.addWidget(self.status_indicator)
-        header.addStretch()
-        header.addWidget(self.close_btn)
-        layout.addLayout(header)
-
-        # --- 2. メインディスプレイ (シグナル表示) ---
-        self.display_box = QFrame()
-        self.display_box.setObjectName("DisplayBox")
-        display_layout = QVBoxLayout(self.display_box)
-        
-        self.label_symbol = QLabel("USD/JPY")
-        self.label_symbol.setAlignment(Qt.AlignCenter)
-        self.label_symbol.setObjectName("SymbolLabel")
-
-        self.label_main_signal = QLabel("WAITING")
-        self.label_main_signal.setAlignment(Qt.AlignCenter)
-        self.label_main_signal.setObjectName("MainSignal")
-        self.apply_glow(self.label_main_signal, "#00f3ff") # 初期値はシアン
-
-        self.label_price = QLabel("150.000")
-        self.label_price.setAlignment(Qt.AlignCenter)
-        self.label_price.setObjectName("PriceLabel")
-
-        display_layout.addWidget(self.label_symbol)
-        display_layout.addWidget(self.label_main_signal)
-        display_layout.addWidget(self.label_price)
-        layout.addWidget(self.display_box)
-
-        # --- 3. 詳細データグリッド ---
-        data_layout = QHBoxLayout()
-        self.info_left = QLabel("POWER: 0%")
-        self.info_left.setObjectName("DataLabel")
-        self.info_right = QLabel("VOL: LOW")
-        self.info_right.setObjectName("DataLabel")
-        
-        data_layout.addWidget(self.info_left)
-        data_layout.addStretch()
-        data_layout.addWidget(self.info_right)
-        layout.addLayout(data_layout)
-
-        # スタイルシート適用
-        self.setStyleSheet(self.get_cyber_qss())
-
-    def apply_glow(self, widget, color_hex):
-        """ネオン発光エフェクト"""
-        glow = QGraphicsDropShadowEffect()
-        glow.setBlurRadius(25)
-        glow.setColor(QColor(color_hex))
-        glow.setOffset(0, 0)
-        widget.setGraphicsEffect(glow)
-
-    @pyqtSlot(str, str, str)
-    def update_signal(self, signal_type, price, power):
-        """
-        ロジック側から呼ばれる更新関数
-        signal_type: 'HIGH', 'LOW', 'WAITING'
-        """
-        self.label_main_signal.setText(signal_type)
-        self.label_price.setText(price)
-        self.info_left.setText(f"POWER: {power}%")
-
-        if signal_type == "HIGH":
-            self.apply_glow(self.label_main_signal, "#00ff88") # ネオングリーン
-            self.label_main_signal.setStyleSheet("color: #00ff88;")
-        elif signal_type == "LOW":
-            self.apply_glow(self.label_main_signal, "#ff0055") # ネオンピンク
-            self.label_main_signal.setStyleSheet("color: #ff0055;")
-        else:
-            self.apply_glow(self.label_main_signal, "#00f3ff") # シアン
-            self.label_main_signal.setStyleSheet("color: #00f3ff;")
-
-    def get_cyber_qss(self):
-        return """
-            #MainFrame {
-                background-color: rgba(5, 5, 10, 230);
-                border: 2px solid #00f3ff;
-                border-radius: 0px; /* 角をあえて尖らせるのがサイバー風 */
-            }
-            #StatusText {
+    def setup_global_style(self):
+        """Streamlit全体の背景やフォントをサイバーパンク風に上書き"""
+        st.markdown("""
+            <style>
+            /* 全体の背景を漆黒に */
+            .stApp {
+                background-color: #05050a;
                 color: #00f3ff;
-                font-family: 'Consolas';
-                font-size: 10px;
-                font-weight: bold;
             }
-            #CloseBtn {
-                background: transparent;
-                color: #ff0055;
-                border: 1px solid #ff0055;
-                font-family: 'Arial';
+            /* サイドバーの装飾 */
+            [data-testid="stSidebar"] {
+                background-color: #0a0a15;
+                border-right: 1px solid #00f3ff;
             }
-            #CloseBtn:hover {
-                background: #ff0055;
+            /* タイトルのネオン発光 */
+            h1, h2, h3 {
+                color: #00f3ff !important;
+                text-shadow: 0 0 10px #00f3ff, 0 0 20px #00f3ff;
+                font-family: 'Courier New', monospace;
+                letter-spacing: 2px;
+            }
+            /* Streamlit標準ボタンのサイバー化 */
+            .stButton>button {
+                background-color: rgba(0, 243, 255, 0.1);
+                color: #00f3ff;
+                border: 1px solid #00f3ff;
+                border-radius: 0px;
+                transition: 0.3s;
+                width: 100%;
+            }
+            .stButton>button:hover {
+                background-color: #00f3ff;
                 color: #000;
+                box-shadow: 0 0 20px #00f3ff;
             }
-            #DisplayBox {
-                background-color: rgba(0, 243, 255, 15);
-                border-left: 5px solid #00f3ff;
-                margin: 10px 0px;
-            }
-            #SymbolLabel {
-                color: rgba(0, 243, 255, 0.6);
-                font-family: 'OCR A Extended', 'Consolas';
-                font-size: 14px;
-            }
-            #MainSignal {
-                color: #00f3ff;
-                font-family: 'Impact';
-                font-size: 56px;
-                font-weight: bold;
-                letter-spacing: 3px;
-            }
-            #PriceLabel {
-                color: #fff;
-                font-family: 'Digital-7', 'Consolas'; /* デジタルフォントがあれば最高 */
-                font-size: 28px;
-            }
-            #DataLabel {
-                color: #00f3ff;
-                font-family: 'Consolas';
-                font-size: 11px;
-                border-bottom: 1px solid rgba(0, 243, 255, 0.3);
-            }
+            </style>
+        """, unsafe_allow_html=True)
+
+    def render_signal_card(self, symbol, signal_type, price, power, volume="NORMAL"):
         """
+        メインのシグナル表示カード（HTML/CSS注入）
+        """
+        # 状態に応じたテーマカラーの切り替え
+        theme_color = "#00f3ff"  # シアン (Waiting)
+        glow_class = "glow-cyan"
+        
+        if signal_type == "HIGH":
+            theme_color = "#00ff88"  # ネオングリーン
+            glow_class = "glow-green"
+        elif signal_type == "LOW":
+            theme_color = "#ff0055"  # ネオンピンク
+            glow_class = "glow-pink"
 
-    # --- ドラッグ移動用ロジック ---
-    def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton:
-            self.oldPos = event.globalPos()
+        html_content = f"""
+        <div class="cyber-card {glow_class}">
+            <div class="scanline"></div>
+            <div class="header">
+                <span class="system-tag">SYSTEM_CORE_V4</span>
+                <span class="status-tag">ONLINE</span>
+            </div>
+            
+            <div class="symbol">{symbol}</div>
+            <div class="signal-text">{signal_type}</div>
+            <div class="price-display">{price}</div>
+            
+            <div class="footer-grid">
+                <div class="stat-box">
+                    <div class="label">POWER</div>
+                    <div class="value">{power}%</div>
+                </div>
+                <div class="stat-box" style="border-left: 1px solid {theme_color}44;">
+                    <div class="label">VOL</div>
+                    <div class="value">{volume}</div>
+                </div>
+            </div>
+        </div>
 
-    def mouseMoveEvent(self, event):
-        if event.buttons() == Qt.LeftButton:
-            delta = QPoint(event.globalPos() - self.oldPos)
-            self.move(self.x() + delta.x(), self.y() + delta.y())
-            self.oldPos = event.globalPos()
+        <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
 
+        .cyber-card {{
+            background: rgba(10, 10, 20, 0.9);
+            border: 2px solid {theme_color};
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+            font-family: 'Share Tech Mono', monospace;
+            color: {theme_color};
+            margin: 10px 0;
+            min-height: 220px;
+        }}
+
+        /* 走査線アニメーション */
+        .scanline {{
+            width: 100%;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.1);
+            position: absolute;
+            top: 0;
+            left: 0;
+            animation: scan 4s linear infinite;
+            z-index: 10;
+        }}
+        @keyframes scan {{
+            0% {{ top: 0; }}
+            100% {{ top: 100%; }}
+        }}
+
+        .glow-cyan {{ box-shadow: 0 0 20px rgba(0, 243, 255, 0.3), inset 0 0 10px rgba(0, 243, 255, 0.2); }}
+        .glow-green {{ box-shadow: 0 0 25px rgba(0, 255, 136, 0.4), inset 0 0 10px rgba(0, 255, 136, 0.2); border-color: #00ff88; }}
+        .glow-pink {{ box-shadow: 0 0 25px rgba(255, 0, 85, 0.4), inset 0 0 10px rgba(255, 0, 85, 0.2); border-color: #ff0055; }}
+
+        .header {{ display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 15px; border-bottom: 1px solid {theme_color}44; padding-bottom: 5px; }}
+        .symbol {{ font-size: 18px; letter-spacing: 3px; opacity: 0.8; }}
+        .signal-text {{ font-size: 68px; font-weight: bold; text-align: center; margin: 10px 0; text-shadow: 0 0 15px {theme_color}; }}
+        .price-display {{ font-size: 32px; text-align: center; color: #fff; letter-spacing: 2px; }}
+        
+        .footer-grid {{ display: grid; grid-template-columns: 1fr 1fr; margin-top: 20px; border-top: 1px solid {theme_color}44; padding-top: 10px; }}
+        .stat-box {{ text-align: center; }}
+        .label {{ font-size: 10px; opacity: 0.6; }}
+        .value {{ font-size: 18px; font-weight: bold; }}
+        </style>
+        """
+        # HTMLをStreamlitに描画
+        components.html(html_content, height=320)
+
+# --- 開発・テスト用実行ブロック ---
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    # フォントの微調整（システムにConsolasがない場合を考慮）
-    app.setStyle("Fusion")
+    st.set_page_config(page_title="checkSIGNALs Cyber", layout="wide")
     
-    gui = CyberMainUI()
-    gui.show()
+    ui = CyberUI()
+    st.title("⚡ checkSIGNALs V4 - CYBER")
     
-    # テスト用：3秒後にシグナルが変化するデモ
-    from PyQt5.QtCore import QTimer
-    QTimer.singleShot(3000, lambda: gui.update_signal("HIGH", "150.425", "88"))
-    QTimer.singleShot(6000, lambda: gui.update_signal("LOW", "149.880", "92"))
+    # テスト用入力
+    with st.sidebar:
+        st.header("Debug Console")
+        test_symbol = st.text_input("Symbol", "USD/JPY")
+        test_signal = st.radio("Signal State", ["WAITING", "HIGH", "LOW"])
+        test_price = st.text_input("Current Price", "150.452")
+        test_power = st.slider("Signal Power", 0, 100, 75)
 
-    sys.exit(app.exec_())
+    # メイン表示
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        ui.render_signal_card(test_symbol, test_signal, test_price, test_power)
