@@ -92,6 +92,13 @@ UI_REGISTRY = [
         "desc":   "FT寄りの newspaper skin。結果を記事化。",
         "module": "ui.newspaper.np_main",
     },
+   {
+        "key":    "CYBER",
+        "name":   "CYBER PANK",
+        "icon":   "🔴",
+        "desc":   "CYBERPANK CRT演出。",
+        "module": "ui.cyber.cyb_main",
+    },
 
     # ── 将来UIの追加例（コメントアウト） ──────────────────────
     # {
