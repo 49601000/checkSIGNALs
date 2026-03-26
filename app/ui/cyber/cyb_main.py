@@ -994,22 +994,45 @@ def _render_volume_pressure_boxplot(tech):
         st.info("出来高倍率箱ひげ図に必要なデータが不足しています。")
         return
 
-    vr   = vol_ratio.dropna()
+    vr = vol_ratio.dropna()
     mask = down_mask.reindex(vr.index).fillna(False).astype(bool)
+
+    if vr.empty:
+        st.info("出来高倍率箱ひげ図に必要なデータが不足しています。")
+        return
+
     clip_upper = float(vr.quantile(0.99))
     hist_df = pd.DataFrame({
-        "Type":        np.where(mask, "下落日", "上昇・横ばい日"),
+        "Type": np.where(mask, "下落日", "上昇・横ばい日"),
         "VolumeRatio": vr.clip(upper=clip_upper).values,
     })
+
     type_domain = ["上昇・横ばい日", "下落日"]
     type_range  = ["#00f3ff", "#ff0055"]
 
     base = alt.Chart(hist_df)
-    box  = base.mark_boxplot(extent="min-max", ticks=True,color="#00f3ff").encode(
+
+    box = base.mark_boxplot(
+        extent="min-max",
+        ticks=True
+    ).encode(
         x=alt.X("Type:N", sort=type_domain),
         y=alt.Y("VolumeRatio:Q", title="出来高倍率"),
-        color=alt.Color("Type:N", scale=alt.Scale(domain=type_domain, range=type_range), legend=None),
-    ).properties(height=280, background="transparent")
+        color=alt.Color(
+            "Type:N",
+            scale=alt.Scale(domain=type_domain, range=type_range),
+            legend=None
+        ),
+        opacity=alt.condition(
+            alt.datum.Type == "下落日",
+            alt.value(0.85),   # 下落日はやや強め
+            alt.value(0.45)    # 上昇・横ばい日は少し抑える
+        )
+    ).properties(
+        height=280,
+        background="transparent"
+    )
+
     st.altair_chart(box, use_container_width=True)
 
     pressure = (tech.get("d_raw") or {}).get("⑥_vol_pressure")
