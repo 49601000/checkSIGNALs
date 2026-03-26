@@ -965,24 +965,41 @@ def _render_defensive_radar(tech):
 
 
 def _render_close_vs_ma_chart(tech):
-    detail = (tech.get("d_detail") or {})
-    close  = detail.get("close")
-    ma200  = detail.get("ma200")
-    if close is None or ma200 is None:
+    detail = tech.get("d_detail") or {}
+    price_df = tech.get("d_price_df")
+    ma = detail.get("ma")
+
+    if price_df is None or ma is None or price_df.empty:
         st.info("終値 vs 200MA チャートに必要なデータが不足しています。")
         return
 
-    df = pd.DataFrame({"終値": close, "200MA": ma200}).dropna().tail(252)
-    df["date"] = df.index
+    close_df = price_df[["Close"]].copy()
+    close_df["MA200"] = ma.reindex(close_df.index)
+    close_df = (
+        close_df
+        .dropna(subset=["Close", "MA200"])
+        .reset_index()
+        .rename(columns={close_df.index.name or "index": "Date"})
+    )
 
-    base  = alt.Chart(df.reset_index()).transform_fold(["終値", "200MA"], as_=["series", "value"])
+    base = alt.Chart(close_df).transform_fold(
+        ["Close", "MA200"],
+        as_=["series", "value"]
+    )
+
     lines = base.mark_line().encode(
-        x=alt.X("index:T", title=None),
+        x=alt.X("Date:T", title=None),
         y=alt.Y("value:Q", title="価格"),
-        color=alt.Color("series:N", scale=alt.Scale(
-            domain=["終値", "200MA"], range=["#00f3ff", "#ff005588"]
-        )),
+        color=alt.Color(
+            "series:N",
+            scale=alt.Scale(
+                domain=["Close", "MA200"],
+                range=["#00f3ff", "#f5c542"]
+            ),
+            legend=alt.Legend(title=None)
+        ),
     ).properties(height=280, background="transparent")
+
     st.altair_chart(lines, use_container_width=True)
 
 
