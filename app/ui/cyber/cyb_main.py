@@ -1010,7 +1010,7 @@ def _render_close_vs_ma_chart(tech):
     st.altair_chart(lines, use_container_width=True)
 
 def _render_volume_pressure_boxplot(tech):
-    detail    = tech.get("d_detail") or {}
+    detail = tech.get("d_detail") or {}
     vol_ratio = detail.get("vol_ratio")
     down_mask = detail.get("down_mask")
     if vol_ratio is None or down_mask is None:
@@ -1031,7 +1031,7 @@ def _render_volume_pressure_boxplot(tech):
     })
 
     type_domain = ["上昇・横ばい日", "下落日"]
-    type_range  = ["#00f3ff", "#ff0055"]
+    type_range = ["#00f3ff", "#ff0055"]
 
     base = alt.Chart(hist_df)
 
@@ -1040,13 +1040,15 @@ def _render_volume_pressure_boxplot(tech):
         ticks=True
     ).encode(
         x=alt.X("Type:N", sort=type_domain),
-        y=alt.Y("VolumeRatio:Q", title="出来高倍率"),
+        y=alt.Y(
+            "VolumeRatio:Q",
+            title="出来高倍率",
             axis=alt.Axis(
                 labelColor="#e8f7ff",
                 titleColor="#e8f7ff",
-                gridColor="#3a4d66",   # 少し明るめ
+                gridColor="#3a4d66",
                 gridOpacity=0.55
-                ),
+            )
         ),
         color=alt.Color(
             "Type:N",
@@ -1061,9 +1063,8 @@ def _render_volume_pressure_boxplot(tech):
     st.altair_chart(box, use_container_width=True)
 
     pressure = (tech.get("d_raw") or {}).get("⑥_vol_pressure")
-    n_down   = detail.get("n_down")
+    n_down = detail.get("n_down")
     st.caption(f"圧力={_fmt_optional_float(pressure, 3)} / 下落日数={n_down or 0}")
-
 
 def _render_volume_pressure_histogram(tech):
     detail    = tech.get("d_detail") or {}
