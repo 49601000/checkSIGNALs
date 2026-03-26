@@ -975,12 +975,16 @@ def _render_close_vs_ma_chart(tech):
 
     close_df = price_df[["Close"]].copy()
     close_df["MA200"] = ma.reindex(close_df.index)
+
     close_df = (
         close_df
         .dropna(subset=["Close", "MA200"])
         .reset_index()
-        .rename(columns={close_df.index.name or "index": "Date"})
     )
+
+    # index名をDateに統一
+    if "index" in close_df.columns:
+        close_df = close_df.rename(columns={"index": "Date"})
 
     base = alt.Chart(close_df).transform_fold(
         ["Close", "MA200"],
@@ -998,10 +1002,12 @@ def _render_close_vs_ma_chart(tech):
             ),
             legend=alt.Legend(title=None)
         ),
-    ).properties(height=280, background="transparent")
+    ).properties(
+        height=280,
+        background="transparent"
+    )
 
     st.altair_chart(lines, use_container_width=True)
-
 def _render_volume_pressure_boxplot(tech):
     detail    = tech.get("d_detail") or {}
     vol_ratio = detail.get("vol_ratio")
