@@ -1005,7 +1005,7 @@ def _render_volume_pressure_boxplot(tech):
     type_range  = ["#00f3ff", "#ff0055"]
 
     base = alt.Chart(hist_df)
-    box  = base.mark_boxplot(extent="min-max", ticks=True).encode(
+    box  = base.mark_boxplot(extent="min-max", ticks=True,color="#00f3ff").encode(
         x=alt.X("Type:N", sort=type_domain),
         y=alt.Y("VolumeRatio:Q", title="出来高倍率"),
         color=alt.Color("Type:N", scale=alt.Scale(domain=type_domain, range=type_range), legend=None),
