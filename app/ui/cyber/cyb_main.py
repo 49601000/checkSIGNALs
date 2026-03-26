@@ -1002,7 +1002,6 @@ def _render_close_vs_ma_chart(tech):
 
     st.altair_chart(lines, use_container_width=True)
 
-
 def _render_volume_pressure_boxplot(tech):
     detail    = tech.get("d_detail") or {}
     vol_ratio = detail.get("vol_ratio")
