@@ -1,0 +1,39 @@
+﻿sector,industry,er_threshold_pct,ic_threshold_x,note
+Financial Services,Banks - Regional,4.0,1.0,銀行業基準(BIS Tier1目安)
+Financial Services,Banks - Diversified,4.0,1.0,銀行業基準(BIS Tier1目安)
+Financial Services,Insurance - Life,8.0,1.5,保険業基準
+Financial Services,Insurance - Diversified,8.0,1.5,保険業基準
+Financial Services,Insurance - Property & Casualty,8.0,1.5,保険業基準
+Financial Services,Insurance Brokers,8.0,1.5,保険業基準
+Financial Services,Capital Markets,8.0,1.5,証券・資本市場業基準
+Financial Services,Asset Management,8.0,1.5,資産運用業基準
+Financial Services,Credit Services,8.0,1.0,クレジット・リース業基準
+Financial Services,Mortgage Finance,6.0,1.0,住宅ローン業基準
+Financial Services,Financial Conglomerates,8.0,1.5,金融複合企業基準
+Financial Services,Financial Data & Stock Exchanges,15.0,3.0,金融データ・取引所(一般基準)
+Real Estate,Real Estate Services,20.0,1.5,不動産サービス業基準
+Real Estate,Real Estate - Diversified,15.0,1.5,不動産業基準
+Real Estate,Real Estate - Development,15.0,1.0,不動産開発業基準(高レバ正常)
+Real Estate,REIT - Diversified,30.0,1.5,REIT基準
+Real Estate,REIT - Office,30.0,1.5,REIT基準
+Real Estate,REIT - Industrial,30.0,1.5,REIT基準
+Real Estate,REIT - Retail,30.0,1.5,REIT基準
+Real Estate,REIT - Residential,30.0,1.5,REIT基準
+Real Estate,REIT - Hotel & Motel,30.0,1.5,REIT基準
+Real Estate,REIT - Healthcare Facilities,30.0,1.5,REIT基準
+Real Estate,REIT - Specialty,30.0,1.5,REIT基準
+Utilities,Utilities - Regulated Electric,20.0,2.0,規制電力業基準(高レバ許容)
+Utilities,Utilities - Regulated Gas,20.0,2.0,規制ガス業基準(高レバ許容)
+Utilities,Utilities - Regulated Water,20.0,2.0,規制水道業基準(高レバ許容)
+Utilities,Utilities - Diversified,20.0,2.0,公益複合企業基準
+Utilities,Utilities - Independent Power Producers,20.0,2.0,独立系電力業基準
+Utilities,Utilities - Renewable,20.0,2.0,再生可能エネルギー基準
+Industrials,Airlines,10.0,1.5,航空業基準
+Industrials,Rental & Leasing Services,10.0,1.5,レンタル・リース基準
+Industrials,Marine Shipping,10.0,1.5,海運業基準
+Consumer Cyclical,Auto & Truck Dealerships,10.0,1.5,自動車販売業基準
+Energy,Oil & Gas Integrated,15.0,2.0,石油・ガス総合基準
+Energy,Oil & Gas Refining & Marketing,15.0,2.0,石油精製・販売基準
+Energy,Oil & Gas E&P,20.0,1.5,石油・ガス探鉱基準
+Energy,Oil & Gas Equipment & Services,15.0,2.0,石油設備・サービス基準
+Energy,Thermal Coal,20.0,2.0,石炭業基準

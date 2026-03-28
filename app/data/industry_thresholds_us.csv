@@ -1,0 +1,12 @@
+﻿sector,er_threshold_pct,ic_threshold_x,note
+Financial Services,6.0,1.0,米国金融業基準
+Real Estate,30.0,1.5,米国不動産・REIT基準
+Utilities,20.0,2.0,米国公益事業基準
+Energy,20.0,2.0,米国エネルギー業基準
+Consumer Cyclical,15.0,2.0,米国一般消費財業基準
+Consumer Defensive,20.0,2.5,米国生活必需品業基準
+Basic Materials,20.0,2.0,米国素材業基準
+Communication Services,15.0,2.0,米国通信業基準
+Healthcare,20.0,1.5,米国医療業基準
+Industrials,20.0,2.5,米国工業基準
+Technology,25.0,3.0,米国テクノロジー業基準
